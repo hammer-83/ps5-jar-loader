@@ -42,8 +42,9 @@ Either modify the POM directly, or pass the new values from command line, exampl
 ## Notes
 1. To use with IntelliJ, simply point `File -> Open` dialog to the root of the project.
 2. If any of POMs are modified, it's necessary to do `Maven -> Reload Project` in IntelliJ to sync the project files. Syncing Maven project unfortunately modifies [.idea/compiler.xml](.idea/compiler.xml) to contain absolute system paths. Simply replace those with `$PROJECT_DIR$` macro again.
-3. Javadoc plugin is integrated into the build, but it is bound to the `verify` phase so that `package` phase is not slowed down. To generate the Javadoc, use `mvn verify` instead of `mvn package`.
-4. If you prefer Maven not to rescan all the subprojects for changes (it's a few seconds at most), use `mvn install` to put all the artifacts into your local maven repo. Then run all `mvn package` commands from [xploit](xploit) directory rather than from the root of the project.
+3. Project should be built once from command-line before attempting to open in IntelliJ. This is so that bdjstack JARs are downloaded. 
+4. Javadoc plugin is integrated into the build, but it is bound to the `verify` phase so that `package` phase is not slowed down. To generate the Javadoc, use `mvn verify` instead of `mvn package`.
+5. If you prefer Maven not to rescan all the subprojects for changes (it's a few seconds at most), use `mvn install` to put all the artifacts into your local maven repo. Then run all `mvn package` commands from [xploit](xploit) directory rather than from the root of the project.
 
 ## Credits
 There are so many who decided to share the knowledge with the community to make this project possible. Please see the Credits section in the [Webkit PS5 Exploit repo](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit#contributors--special-thanks). None of this would be possible without all these contributors. Additionally, big thanks to [psxdev](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically on BD-J.
