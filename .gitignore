@@ -1,0 +1,5 @@
+/lib/bdj*.jar
+/lib/bdj*.zip
+/lib/jsr*.jar
+/lib/jsr*.zip
+target

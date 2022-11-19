@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.ps5jb</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <groupId>org.ps5jb</groupId>
+    <artifactId>xploit</artifactId>
+    <packaging>jar</packaging>
+    <description>
+        This module contains the code that gets sent to the listener Xlet.
+        It contains both the part that gets executed as well as the utility that performs the sending.
+        Executing the JAR using "-jar" switch sends it to the target PS5 and executes the desired code.
+    </description>
+
+    <properties>
+        <bdjstack.dir>${project.basedir}/../lib</bdjstack.dir>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
+            <artifactId>xlet</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- When compiling, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime. -->
+            <!-- The code also does Unsafe and Classloader manipulation so it's necessary to declare access to them. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>--patch-module</arg>
+                        <arg>java.base=${bdjstack.dir}/bdj-base.jar</arg>
+                        <arg>--patch-module</arg>
+                        <arg>java.desktop=${bdjstack.dir}/bdj-desktop.jar</arg>
+                        <arg>--patch-module</arg>
+                        <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
+                        <arg>--add-exports</arg>
+                        <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                        <arg>--add-exports</arg>
+                        <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.ps5jb.client.JarMain</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- Generate Javadoc for this project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-javadoc</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>javadoc-no-fork</goal>
+                        </goals>
+                        <configuration>
+                            <additionalJOptions>
+                                <additionalJOption>--add-exports</additionalJOption>
+                                <additionalJOption>java.base/jdk.internal.misc=ALL-UNNAMED</additionalJOption>
+                                <additionalJOption>--add-exports</additionalJOption>
+                                <additionalJOption>java.base/jdk.internal.loader=ALL-UNNAMED</additionalJOption>
+                            </additionalJOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

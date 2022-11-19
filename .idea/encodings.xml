@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/assembly/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/assembly/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/bdjo/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/bdjo/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/grin/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/grin/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/id/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/id/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/index/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/index/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/movieobject/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/movieobject/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/security/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/security/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/bdj-tools/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stubs/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stubs/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xlet/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xlet/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xploit/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/xploit/src/main/resources" charset="UTF-8" />
+  </component>
+</project>

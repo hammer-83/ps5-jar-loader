@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.ps5jb</groupId>
+    <artifactId>parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <description>Parent BOM for all the subprojects. Contains version definitions for all the plugins and common configuration.</description>
+
+    <properties>
+        <!-- PS5 uses JDK 11, compile for the same target -->
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+
+        <!-- Skip a bunch of default plugins that are not in use -->
+        <maven.site.skip>true</maven.site.skip>
+        <maven.site.deploy.skip>true</maven.site.deploy.skip>
+        <maven.test.skip>true</maven.test.skip>
+
+        <!-- All source files use UTF-8 encoding -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- This is where all the BD-J stack classes are going to be downloaded and referenced from -->
+        <bdjstack.dir>${project.basedir}/lib</bdjstack.dir>
+
+        <!-- Name of the Xlet class from "xlet" module that will be run by BD-J when the BD-R disk is played -->
+        <xlet.className>org.ps5jb.loader.LoaderXlet</xlet.className>
+
+        <!-- Various application configuration properties -->
+        <loader.port>9025</loader.port>
+        <loader.resolution.width>1920</loader.resolution.width>
+        <loader.resolution.height>1080</loader.resolution.height>
+        <remote.logger.host></remote.logger.host>
+        <remote.logger.port>18194</remote.logger.port>
+        <remote.logger.timeout>5000</remote.logger.timeout>
+    </properties>
+
+    <modules>
+        <module>bdj-tools</module>
+        <module>stubs</module>
+        <module>xlet</module>
+        <module>assembly</module>
+        <module>xploit</module>
+    </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <!-- Requires a patched version which does not crash with NPE -->
+                    <version>3.10.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.3.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <archive>
+                            <!-- Do not include META-INF/maven directory to JARs -->
+                            <addMavenDescriptor>false</addMavenDescriptor>
+                        </archive>
+                        <excludes>
+                            <!-- Do not include Maven-specific module param descriptor to JARs -->
+                            <exclude>META-INF/jpms.args</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.4.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>1.2.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

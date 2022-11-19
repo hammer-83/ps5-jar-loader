@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.ps5jb</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <groupId>org.ps5jb</groupId>
+    <artifactId>stubs</artifactId>
+    <packaging>jar</packaging>
+    <description>
+        Downloads BD-J classes from HD Cookbook repository and organizes them to replace default classes in JDK's java.base module.
+        Additionally, this project stores stub classes that exist only on PS5 to be able to use them in the Xlet.
+    </description>
+
+    <properties>
+        <bdjstack.dir>${project.basedir}/../lib</bdjstack.dir>
+    </properties>
+
+    <build>
+        <plugins>
+            <!-- Use ant script to download BD-J classes and repackage them to work with JDK modules -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>get-bdj</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target xmlns:if="ant:if" xmlns:unless="ant:unless">
+                                <!-- Check if BD-J is already downloaded and set "bdj.exists" if so. The rest of tasks will be skipped if this property is set. -->
+                                <condition property="bdj.exists">
+                                    <and>
+                                        <available file="${bdjstack.dir}/bdj-base.jar" />
+                                        <available file="${bdjstack.dir}/bdj-desktop.jar" />
+                                        <available file="${bdjstack.dir}/bdj-rmi.jar" />
+                                        <available file="${bdjstack.dir}/bdj.jar" />
+                                        <available file="${bdjstack.dir}/jsr129.jar" />
+                                        <available file="${bdjstack.dir}/jsr129-javadoc.zip" />
+                                        <available file="${bdjstack.dir}/jsr927.jar" />
+                                        <available file="${bdjstack.dir}/jsr927-javadoc.zip" />
+                                    </and>
+                                </condition>
+                                <!-- Download HD Cookbook classes for BD-J. This contains J2ME classes which is a subset of Java SE 1.3 as well as BD-J specific API. -->
+                                <get src="https://github.com/zathras/java.net/raw/master/hdcookbook/lib/stubs/interactive/classes.zip"
+                                     dest="${bdjstack.dir}"
+                                     quiet="true"
+                                     usetimestamp="true"
+                                     skipexisting="true"
+                                     unless:set="bdj.exists" />
+                                <!-- Download Javadoc for JSR129 (Personal Basis Profile 1.0), which includes documentation for some of the classes in BD-J. -->
+                                <get src="http://download.oracle.com/otn-pub/jcp/pbp-1.0b-mr-oth-JSpec/pbp-1_0b-mr-spec-jdoc.zip"
+                                     dest="${bdjstack.dir}/jsr129-javadoc.zip"
+                                     quiet="true"
+                                     usetimestamp="true"
+                                     skipexisting="true"
+                                     unless:set="bdj.exists" />
+                                <!-- Download Javadoc for JSR927 (Java TV API 1.1.1), which includes more documentation for BD-J classes. -->
+                                <get src="http://download.oracle.com/otn-pub/jcp/java_tv-1.1.1-mrel-oth-JSpec/java_tv-1.1.1-mrel2-spec.zip"
+                                     dest="${bdjstack.dir}/jsr927-javadoc.zip"
+                                     quiet="true"
+                                     usetimestamp="true"
+                                     skipexisting="true"
+                                     unless:set="bdj.exists" />
+                                <!-- The archive above will be separated into different JARs. This is done to be able to use "patch-module" switch to replace default JDK classes in various modules with the older classed from BD-J. -->
+                                <mkdir dir="${bdjstack.dir}/classes/base" unless:set="bdj.exists" />
+                                <mkdir dir="${bdjstack.dir}/classes/bdj" unless:set="bdj.exists" />
+                                <mkdir dir="${bdjstack.dir}/classes/desktop" unless:set="bdj.exists" />
+                                <mkdir dir="${bdjstack.dir}/classes/rmi" unless:set="bdj.exists" />
+                                <mkdir dir="${bdjstack.dir}/classes/jsr129" unless:set="bdj.exists" />
+                                <mkdir dir="${bdjstack.dir}/classes/jsr927" unless:set="bdj.exists" />
+                                <!-- Unzip all BD-J classes that will be patched into java.base module -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/base" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="java/**" />
+                                        <include name="javax/net/**" />
+                                        <include name="javax/security/**" />
+                                        <exclude name="java/awt/**" />
+                                        <exclude name="java/beans/**" />
+                                        <exclude name="java/rmi/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- Unzip all BD-J classes that will be patched into java.desktop module -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/desktop" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="java/awt/**" />
+                                        <include name="java/beans/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- Unzip all BD-J classes that will be patched into java.rmi module -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/rmi" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="java/rmi/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- Unzip JSR 129 into its own directory -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/jsr129" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="javax/microedition/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- Unzip JSR 927 into its own directory -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/jsr927" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="javax/media/**" />
+                                        <include name="javax/tv/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- And finally unzip the rest which is specific to BD-J API -->
+                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/bdj" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
+                                    <patternset>
+                                        <include name="org/**" />
+                                    </patternset>
+                                </unzip>
+                                <!-- Now create the JARs and delete the downloaded zip file with all the classes -->
+                                <jar destfile="${bdjstack.dir}/bdj-base.jar" basedir="${bdjstack.dir}/classes/base" defaultexcludes="false" unless:set="bdj.exists" />
+                                <jar destfile="${bdjstack.dir}/bdj-desktop.jar" basedir="${bdjstack.dir}/classes/desktop" defaultexcludes="false" unless:set="bdj.exists" />
+                                <jar destfile="${bdjstack.dir}/bdj-rmi.jar" basedir="${bdjstack.dir}/classes/rmi" defaultexcludes="false" unless:set="bdj.exists" />
+                                <jar destfile="${bdjstack.dir}/bdj.jar" basedir="${bdjstack.dir}/classes/bdj" defaultexcludes="false" unless:set="bdj.exists" />
+                                <jar destfile="${bdjstack.dir}/jsr129.jar" basedir="${bdjstack.dir}/classes/jsr129" defaultexcludes="false" unless:set="bdj.exists" />
+                                <jar destfile="${bdjstack.dir}/jsr927.jar" basedir="${bdjstack.dir}/classes/jsr927" defaultexcludes="false" unless:set="bdj.exists" />
+                                <delete dir="${bdjstack.dir}/classes" includeemptydirs="true" unless:set="bdj.exists" />
+                                <delete file="${bdjstack.dir}/classes.zip" unless:set="bdj.exists" />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- When compiling PS5 stubs, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>--patch-module</arg>
+                        <arg>java.base=${bdjstack.dir}/bdj-base.jar</arg>
+                        <arg>--patch-module</arg>
+                        <arg>java.desktop=${bdjstack.dir}/bdj-desktop.jar</arg>
+                        <arg>--patch-module</arg>
+                        <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

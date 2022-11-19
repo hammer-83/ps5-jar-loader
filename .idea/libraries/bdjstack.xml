@@ -1,0 +1,16 @@
+<component name="libraryTable">
+  <library name="bdjstack">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/bdj-base.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bdj-desktop.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bdj-rmi.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsr129.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsr927.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/jsr129-javadoc.zip!/pbp-spec" />
+      <root url="jar://$PROJECT_DIR$/lib/jsr927-javadoc.zip!/javatv-spec" />
+    </JAVADOC>
+    <SOURCES />
+  </library>
+</component>

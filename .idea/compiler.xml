@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="grin" />
+        <module name="security" />
+        <module name="xploit" />
+        <module name="bdjo" />
+        <module name="index" />
+        <module name="xlet" />
+        <module name="id" />
+        <module name="movieobject" />
+        <module name="stubs" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="bdjo" options="" />
+      <module name="grin" options="" />
+      <module name="id" options="" />
+      <module name="index" options="" />
+      <module name="movieobject" options="" />
+      <module name="security" options="--add-exports jdk.jartool/sun.tools.jar=ALL-UNNAMED --add-exports jdk.jartool/sun.security.tools.jarsigner=ALL-UNNAMED --add-exports java.base/sun.security.util=ALL-UNNAMED --add-exports java.base/sun.security.pkcs=ALL-UNNAMED --add-exports java.base/sun.security.tools.keytool=ALL-UNNAMED --add-exports java.base/sun.security.x509=ALL-UNNAMED" />
+      <module name="stubs" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar" />
+      <module name="xlet" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar" />
+      <module name="xploit" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
+    </option>
+  </component>
+</project>
