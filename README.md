@@ -37,7 +37,7 @@ Either modify the POM directly, or pass the new values from command line, exampl
 5. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch.
 6. A message on screen should inform about loader waiting for JAR.
 7. Send the JAR using the command: `java --add-opens java.base/jdk.internal.loader=ALL-UNNAMED -jar xploit/target/xploit-[version].jar <ps5 ip address> [<ps5 port]`. PS5 should inform on screen about status of the upload and the execution.
-8. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #5 to retry.
+8. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #7 to retry.
 
 ## Notes
 1. To use with IntelliJ, simply point `File -> Open` dialog to the root of the project.
