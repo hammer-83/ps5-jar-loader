@@ -1,5 +1,6 @@
 package org.ps5jb.loader;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,8 +18,6 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
-import org.ps5jb.loader.jailbreak.JavaSecurityProxy;
 
 /**
  * Thread that creates a server socket and listens for the incoming connections sending the JARs for execution.
@@ -75,21 +74,23 @@ public class JarLoader implements Runnable {
                 // Listen for new incoming connection
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setSoTimeout(5000);
-                InputStream jar = clientSocket.getInputStream();
+                InputStream jarStream = clientSocket.getInputStream();
                 try {
-                    // Generate a unique JAR filename in the temporary directory
+                    // Generate a unique JAR filename in the temporary directory.
                     Path jarPath = Files.createTempFile("jarLoader", ".jar");
+                    File jarFile = jarPath.toFile();
                     try {
-                        jarPath.toFile().deleteOnExit();
+                        // Delete temp jar on exit if it is not cleaned up manually for some reason
+                        jarFile.deleteOnExit();
 
                         // Receive JAR data and save it to temporary file
-                        Status.println("Receiving JAR data to: " + jarPath);
+                        Status.println("Receiving JAR data to: " + jarFile);
                         byte[] buf = new byte[8192];
                         int readCount;
                         int totalSize = 0;
                         OutputStream jarOut = Files.newOutputStream(jarPath);
                         try {
-                            while ((readCount = jar.read(buf)) != -1) {
+                            while ((readCount = jarStream.read(buf)) != -1) {
                                 jarOut.write(buf, 0, readCount);
 
                                 Status.println("Received " + totalSize + " bytes...", totalSize != 0);
@@ -103,14 +104,14 @@ public class JarLoader implements Runnable {
 
                         // Read JAR manifest to get the main class
                         String mainClassName;
-                        JarFile jarFile = new JarFile(jarPath.toFile());
+                        JarFile jar = new JarFile(jarFile);
                         try {
-                            JarEntry manifestEntry = jarFile.getJarEntry("META-INF/MANIFEST.MF");
+                            JarEntry manifestEntry = jar.getJarEntry("META-INF/MANIFEST.MF");
                             if (manifestEntry == null) {
                                 throw new FileNotFoundException("Unable to find JAR manifest");
                             }
 
-                            InputStream manifestStream = jarFile.getInputStream(manifestEntry);
+                            InputStream manifestStream = jar.getInputStream(manifestEntry);
                             try {
                                 Manifest mf = new Manifest(manifestStream);
                                 mainClassName = mf.getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
@@ -121,7 +122,7 @@ public class JarLoader implements Runnable {
                                 manifestStream.close();
                             }
                         } finally {
-                            jarFile.close();
+                            jar.close();
                         }
                         Status.println("Reading JAR Manifest...Main Class: " + mainClassName, true);
 
@@ -130,25 +131,18 @@ public class JarLoader implements Runnable {
                         // This is important to be able to load the modified copy of the same class on the next iteration.
                         Status.println("Loading the JAR...");
 
-                        jdk.internal.access.JavaSecurityAccess real = jdk.internal.access.SharedSecrets.getJavaSecurityAccess();
-                        JavaSecurityProxy fake = new JavaSecurityProxy(real);
-                        jdk.internal.access.SharedSecrets.setJavaSecurityAccess(fake);
-                        try {
-                            java.net.URLClassLoader ldr = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarPath.toUri().toURL() }, getClass().getClassLoader());
-                            Class mainClass = ldr.loadClass(mainClassName);
-                            Method mainMethod = mainClass.getDeclaredMethod("main", new Class[] { String[].class });
-                            mainMethod.invoke(null, new Object[] { new String[0] });
-                        } finally {
-                            jdk.internal.access.SharedSecrets.setJavaSecurityAccess(real);
-                        }
+                        java.net.URLClassLoader ldr = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarPath.toUri().toURL() }, getClass().getClassLoader());
+                        Class mainClass = ldr.loadClass(mainClassName);
+                        Method mainMethod = mainClass.getDeclaredMethod("main", new Class[] { String[].class });
+                        mainMethod.invoke(null, new Object[] { new String[0] });
                     } finally {
                         // Delete the file containing the temporary JAR
-                        if (!jarPath.toFile().delete()) {
+                        if (!jarFile.delete()) {
                             Status.println("Failed to delete the temporary JAR");
                         }
                     }
                 } finally {
-                    jar.close();
+                    jarStream.close();
                 }
             } catch (InterruptedIOException e) {
                 // Do nothing, this is expected due to socket timeout.

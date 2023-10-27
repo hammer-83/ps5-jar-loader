@@ -6,7 +6,6 @@ import javax.tv.xlet.XletContext;
 
 import org.havi.ui.HScene;
 import org.havi.ui.HSceneFactory;
-import org.ps5jb.loader.jailbreak.SecurityManagerDisabler;
 
 /**
  * BD-J main entry point class.
@@ -30,10 +29,11 @@ public class LoaderXlet implements Xlet {
      */
     @Override
     public void initXlet(XletContext context) {
-        // Disable security manager first thing to be able to access the config file.
-        // With the security manager, access to read the config file in the JAR will be denied.
+        // Disable security manager first thing.
+        // Due to xlet jar being loaded relative to $JAVA_HOME/lib in bdjo descriptor,
+        // we are allowed to just set it to null by com.sony.bdjstack.security.BdjPolicyImpl.
         try {
-            if (SecurityManagerDisabler.execute()) {
+            if (DisableSecurityManagerAction.execute() == null) {
                 Status.println("Security Manager disabled");
             } else {
                 Status.println("Security Manager could not be disabled");
@@ -42,7 +42,8 @@ public class LoaderXlet implements Xlet {
             Status.printStackTrace("Security Manager disabler encountered an error", e);
         }
 
-        // Now setup the screen
+        // Now setup the screen.
+        // Note that config properties would be inaccessible if security manager is not disabled.
         Screen.getInstance().setSize(Config.getLoaderResolutionWidth(), Config.getLoaderResolutionHeight());
         scene = HSceneFactory.getInstance().getDefaultHScene();
         scene.add(Screen.getInstance(), BorderLayout.CENTER);

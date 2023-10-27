@@ -12,7 +12,7 @@
   <applicationManagementTable>
     <applications>
       <applicationDescriptor>
-        <baseDirectory>00000</baseDirectory>
+        <baseDirectory>file:///app0/cdc/lib/../../../disc/BDMV/JAR/00000.jar</baseDirectory>
         <binding>TITLE_BOUND_DISC_BOUND</binding>
         <classpathExtension></classpathExtension>
         <iconFlags>0x0</iconFlags>

@@ -30,21 +30,17 @@ Either modify the POM directly, or pass the new values from command line, exampl
 ## Usage
 1. Make sure environment variable `JAVA_HOME` points to the root of JDK 11. Add `${JAVA_HOME}/bin` directory to `${PATH}`.
 2. Also make sure that `MAVEN_HOME` points to the root of Apache Maven installation. Add `${MAVEN_HOME}/bin` directory to `${PATH}`.
-3. Execute `mvn package` from the root of the project. It should produce the following artifacts:
+3. Execute `mvn clean package` from the root of the project. It should produce the following artifacts:
     * Directory `assembly/target/assembly-[version]` contains all the files that should be burned to the BD-R.
     * File `xploit/target/xploit-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
-4. **IMPORTANT:** Maven-compiler-plugin has a bug that causes an NPE if unpatched. Execution of step #3 will likely fail on the first run. To fix the issue, replace the plugin in your local Maven repository with the patched version located in [lib](lib/maven-compiler-plugin-3.10.1.jar). Normally the replacement goes to `${HOME}/.m2/repository/org/apache/maven/plugins/maven-compiler-plugin/3.10.1`.   
-5. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch.
-6. A message on screen should inform about loader waiting for JAR.
-7. Send the JAR using the command: `java --add-opens java.base/jdk.internal.loader=ALL-UNNAMED -jar xploit/target/xploit-[version].jar <ps5 ip address> [<ps5 port]`. PS5 should inform on screen about status of the upload and the execution.
-8. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #7 to retry.
+4. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch.
+5. A message on screen should inform about loader waiting for JAR.
+6. Send the JAR using the command: `java --add-opens java.base/jdk.internal.loader=ALL-UNNAMED -jar xploit/target/xploit-[version].jar <ps5 ip address>`. PS5 should inform on screen about status of the upload and the execution.
+7. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #6 to retry as many times as necessary.
 
 ## Notes
 1. To use with IntelliJ, simply point `File -> Open` dialog to the root of the project.
 2. If any of POMs are modified, it's necessary to do `Maven -> Reload Project` in IntelliJ to sync the project files. Syncing Maven project unfortunately modifies [.idea/compiler.xml](.idea/compiler.xml) to contain absolute system paths. Simply replace those with `$PROJECT_DIR$` macro again.
-3. Project should be built once from command-line before attempting to open in IntelliJ. This is so that bdjstack JARs are downloaded. 
-4. Javadoc plugin is integrated into the build, but it is bound to the `verify` phase so that `package` phase is not slowed down. To generate the Javadoc, use `mvn verify` instead of `mvn package`.
-5. If you prefer Maven not to rescan all the subprojects for changes (it's a few seconds at most), use `mvn install` to put all the artifacts into your local maven repo. Then run all `mvn package` commands from [xploit](xploit) directory rather than from the root of the project.
 
 ## Credits
 There are so many who decided to share the knowledge with the community to make this project possible. Please see the Credits section in the [Webkit PS5 Exploit repo](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit#contributors--special-thanks). None of this would be possible without all these contributors. Additionally, big thanks to [psxdev](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically on BD-J.
