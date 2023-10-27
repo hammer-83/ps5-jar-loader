@@ -1,5 +1,5 @@
 # PlayStation 5 Remote JAR Loader
-This project uses vulnerabilities discovered in BD-J layer of PS5 firmware version 4.51 and earlier to deploy a loader that is able to listen to JAR files and execute their main class.
+This project uses vulnerabilities discovered in BD-J layer of PS5 firmware version 7.61 and earlier to deploy a loader that is able to listen to JAR files and execute their main class.
 This makes it easy to burn the BD-R disc with the loader just once and then keep on running new versions of the experimental code.
 This repository provides all the necessary setup needed to create both the loader BD-R disc filesystem and the JAR to send to the PS5.
 
@@ -33,7 +33,7 @@ Either modify the POM directly, or pass the new values from command line, exampl
 3. Execute `mvn clean package` from the root of the project. It should produce the following artifacts:
     * Directory `assembly/target/assembly-[version]` contains all the files that should be burned to the BD-R.
     * File `xploit/target/xploit-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
-4. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch.
+4. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
 5. A message on screen should inform about loader waiting for JAR.
 6. Send the JAR using the command: `java --add-opens java.base/jdk.internal.loader=ALL-UNNAMED -jar xploit/target/xploit-[version].jar <ps5 ip address>`. PS5 should inform on screen about status of the upload and the execution.
 7. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #6 to retry as many times as necessary.
