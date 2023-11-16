@@ -83,7 +83,7 @@
                                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                 </manifest>
                                 <manifestEntries>
-                                    <Class-Path>stubs-${project.version}.jar xlet-${project.version}.jar</Class-Path>
+                                    <Class-Path>stubs-${project.version}.jar xlet-${xlet.version}.jar</Class-Path>
                                     <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
                                 </manifestEntries>
                             </archive>
