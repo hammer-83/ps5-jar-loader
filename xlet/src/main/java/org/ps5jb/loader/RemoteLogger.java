@@ -7,22 +7,26 @@ import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.StringTokenizer;
 
 /**
- * Log over UDP, big thanks to psxdev
+ * Log over UDP, big thanks to psxdev.
  */
 public class RemoteLogger {
-    public int loggerPort;
-    public String loggerServer;
-    public DatagramSocket loggerSocket;
+    /** Remote port where the log messages are sent. */
+    protected int loggerPort;
+    /** Remote IP address or hostname where the log messages are sent. */
+    protected String loggerServer;
+    /** UDP socket created for message sending. */
+    protected DatagramSocket loggerSocket;
 
     /**
-     * Constructor for RemoteLogger
+     * Constructor for RemoteLogger.
      *
-     * @param server Hostname or IP of the remote machine receiving the logs
-     * @param port Port on which the remote machine receives the logs
-     * @param timeout Socket timeout for the remote logger (in milliseconds)
+     * @param server Hostname or IP of the remote machine receiving the logs.
+     * @param port Port on which the remote machine receives the logs.
+     * @param timeout Socket timeout for the remote logger (in milliseconds).
      */
     public RemoteLogger(String server, int port, int timeout) {
         if (server != null && server.length() > 0 && port > 0) {
@@ -39,7 +43,7 @@ public class RemoteLogger {
     }
 
     /**
-     * Terminates the remote logger by closing the socket
+     * Terminates the remote logger by closing the socket.
      */
     public void close() {
         if (loggerSocket != null) {
@@ -49,16 +53,23 @@ public class RemoteLogger {
     }
 
     /**
-     * Sends the binary data over the logging socket
+     * Sends the binary data over the logging socket.
      *
-     * @param buffer Buffer to send
-     * @param len Number of bytes in the buffer to send (typically, {@code buffer.length})
+     * @param buffer Buffer to send.
+     * @param len Number of bytes in the buffer to send (typically, {@code buffer.length}).
      */
     public void sendBytes(byte[] buffer, int len) {
         if (loggerSocket != null) {
             try {
-                DatagramPacket sendPacket = new DatagramPacket(buffer, len, InetAddress.getByName(loggerServer), loggerPort);
-                loggerSocket.send(sendPacket);
+                // Send in small chunks otherwise there may be an exception that packet is too large.
+                // This is a UDP protocol constraint
+                int i = 0;
+                while (i < len) {
+                    int curLen = Math.min(len - i, 1024);
+                    DatagramPacket sendPacket = new DatagramPacket(buffer, i, curLen, InetAddress.getByName(loggerServer), loggerPort);
+                    loggerSocket.send(sendPacket);
+                    i += curLen;
+                }
             } catch (Throwable e) {
                 Screen.println("Network data could not be sent");
                 Screen.getInstance().printStackTrace(e);
@@ -70,9 +81,9 @@ public class RemoteLogger {
     }
 
     /**
-     * Sends a string over the logging socket
+     * Sends a string over the logging socket. The string is sent in UTF-8 encoding.
      *
-     * @param message String to send
+     * @param message String to send.
      */
     private void sendString(String message) {
         if (loggerSocket != null) {

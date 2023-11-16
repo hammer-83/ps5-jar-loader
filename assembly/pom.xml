@@ -20,7 +20,7 @@
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>xlet</artifactId>
-            <version>${project.version}</version>
+            <version>${xlet.version}</version>
         </dependency>
     </dependencies>
 
@@ -31,6 +31,7 @@
                 <directory>${project.basedir}/src/main/resources</directory>
                 <includes>
                     <include>bdmv/bdjo.xml</include>
+                    <include>disc/AVCHD/BDMV/META/DL/bdmt_eng.xml</include>
                 </includes>
                 <filtering>true</filtering>
             </resource>
@@ -38,6 +39,7 @@
                 <directory>${project.basedir}/src/main/resources</directory>
                 <excludes>
                     <exclude>bdmv/bdjo.xml</exclude>
+                    <exclude>disc/AVCHD/BDMV/META/DL/bdmt_eng.xml</exclude>
                 </excludes>
                 <filtering>false</filtering>
             </resource>

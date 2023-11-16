@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/assembly/assembly.iml" filepath="$PROJECT_DIR$/assembly/assembly.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/bdjo/bdjo.iml" filepath="$PROJECT_DIR$/bdj-tools/bdjo/bdjo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/grin/grin.iml" filepath="$PROJECT_DIR$/bdj-tools/grin/grin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/id/id.iml" filepath="$PROJECT_DIR$/bdj-tools/id/id.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/index/index.iml" filepath="$PROJECT_DIR$/bdj-tools/index/index.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/movieobject/movieobject.iml" filepath="$PROJECT_DIR$/bdj-tools/movieobject/movieobject.iml" />
+      <module fileurl="file://$PROJECT_DIR$/parent.iml" filepath="$PROJECT_DIR$/parent.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sdk/sdk.iml" filepath="$PROJECT_DIR$/sdk/sdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/security/security.iml" filepath="$PROJECT_DIR$/bdj-tools/security/security.iml" />
+      <module fileurl="file://$PROJECT_DIR$/stubs/stubs.iml" filepath="$PROJECT_DIR$/stubs/stubs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/bdj-tools/tools.iml" filepath="$PROJECT_DIR$/bdj-tools/tools.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xlet/xlet.iml" filepath="$PROJECT_DIR$/xlet/xlet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xploit/xploit.iml" filepath="$PROJECT_DIR$/xploit/xploit.iml" />
+    </modules>
+  </component>
+</project>

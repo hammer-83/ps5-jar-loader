@@ -13,6 +13,7 @@
 
     <groupId>org.ps5jb</groupId>
     <artifactId>xlet</artifactId>
+    <version>${xlet.version}</version>
     <packaging>jar</packaging>
     <description>
         BD-J Xlet whose purpose is to disable PS5 security manager and start a network listener that expects a JAR file to be sent to it for execution.
@@ -27,29 +28,29 @@
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>bdjstack</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
             <scope>system</scope>
             <systemPath>${bdjstack.dir}/bdj.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>jsr129</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
             <scope>system</scope>
             <systemPath>${bdjstack.dir}/jsr129.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>jsr927</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
             <scope>system</scope>
             <systemPath>${bdjstack.dir}/jsr927.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>stubs</artifactId>
-            <version>${project.version}</version>
-            <scope>compile</scope>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -103,7 +104,7 @@
                     <dependency>
                         <groupId>net.java.bd.tools</groupId>
                         <artifactId>security</artifactId>
-                        <version>${project.version}</version>
+                        <version>${project.parent.version}</version>
                         <scope>runtime</scope>
                     </dependency>
                 </dependencies>

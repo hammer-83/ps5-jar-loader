@@ -1,5 +1,6 @@
 # Default ignored files
 /shelf/
+/libraries/Maven__*.xml
 /workspace.xml
 /jarRepositories.xml
 /uiDesigner.xml

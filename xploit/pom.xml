@@ -22,12 +22,27 @@
 
     <properties>
         <bdjstack.dir>${project.basedir}/../lib</bdjstack.dir>
+
+        <!-- Class name of the payload that will be executed when JAR is loaded. -->
+        <xploit.payload></xploit.payload>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>xlet</artifactId>
+            <version>${xlet.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
+            <artifactId>stubs</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
+            <artifactId>sdk</artifactId>
             <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
@@ -49,21 +64,75 @@
                         <arg>--patch-module</arg>
                         <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
                         <arg>--add-exports</arg>
-                        <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
-                        <arg>--add-exports</arg>
                         <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>
+            <!-- Generate the JAR with the main class in the manifest. Main class is needed by the JAR loader -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>org.ps5jb.client.JarMain</mainClass>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                                </manifest>
+                                <manifestEntries>
+                                    <Class-Path>stubs-${project.version}.jar xlet-${project.version}.jar</Class-Path>
+                                    <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Copy dependent JARs so that it's possible to execute it on a local development machine -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <includeScope>provided</includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Embed all the dependent classes directly inside the final JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-shade</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.ps5jb.client.JarMain</mainClass>
-                        </manifest>
-                    </archive>
+                    <filters>
+                        <filter>
+                            <artifact>org.ps5jb:sdk</artifact>
+                            <excludes>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+
+                    <outputFile>${project.build.directory}/${project.build.finalName}.jar</outputFile>
                 </configuration>
             </plugin>
             <!-- Generate Javadoc for this project -->
@@ -79,8 +148,6 @@
                         </goals>
                         <configuration>
                             <additionalJOptions>
-                                <additionalJOption>--add-exports</additionalJOption>
-                                <additionalJOption>java.base/jdk.internal.misc=ALL-UNNAMED</additionalJOption>
                                 <additionalJOption>--add-exports</additionalJOption>
                                 <additionalJOption>java.base/jdk.internal.loader=ALL-UNNAMED</additionalJOption>
                             </additionalJOptions>

@@ -4,7 +4,14 @@ package org.ps5jb.loader;
  * Helper class to output messaging on screen and to the remote logging machine.
  */
 public class Status {
+    /** Instance of the remote logger to double all the status output over the network */
     private static RemoteLogger LOGGER;
+
+    /**
+     * True if Xlet classes are detected on classpath.
+     * When <code>true</code>, output is done on Xlet screen; otherwise, it goes to stdout.
+     */
+    private static Boolean inXlet;
 
     /**
      * Default constructor. This class should be used statically, so the constructor is declared as private.
@@ -36,6 +43,11 @@ public class Status {
         }
     }
 
+    /**
+     * Same as {@link #println(String, boolean) println(msg, false)}.
+     *
+     * @param msg Message to show on screen and to log remotely.
+     */
     public static void println(String msg) {
         println(msg, false);
     }
@@ -44,11 +56,17 @@ public class Status {
      * Outputs a message. The message will be appended with the name of the current thread.
      *
      * @param msg Message to show on screen and to log remotely.
-     * @param replaceLast Whether to replace the last line of the screen output (not applicable to remote log)
+     * @param replaceLast Whether to replace the last line of the screen output
+     *   (not applicable to remote log or when not running in Xlet).
      */
     public static void println(String msg, boolean replaceLast) {
         String finalMsg = "[" + Thread.currentThread().getName() + "] " + msg;
-        Screen.println(finalMsg, true, replaceLast);
+
+        if (inXlet()) {
+            Screen.println(finalMsg, true, replaceLast);
+        } else {
+            System.out.println(finalMsg);
+        }
 
         // Remote logger does not seem to work before jailbreak
         if (System.getSecurityManager() == null) {
@@ -66,13 +84,40 @@ public class Status {
     public static void printStackTrace(String msg, Throwable e) {
         String finalMsg = "[" + Thread.currentThread().getName() + "] " + msg;
 
-        Screen.println(finalMsg);
-        Screen.getInstance().printStackTrace(e);
+        if (inXlet()) {
+            Screen.println(finalMsg);
+            Screen.getInstance().printStackTrace(e);
+        } else {
+            System.out.println(finalMsg);
+            e.printStackTrace();
+        }
 
         // Remote logger does not seem to work before jailbreak
         if (System.getSecurityManager() == null) {
             initLogger();
             LOGGER.error(finalMsg, e);
         }
+    }
+
+    /**
+     * Determine whether the status is being requested while running inside an Xlet.
+     * When this is not the case, output will be sent to standard out/err.
+     *
+     * @return True if Xlet is detected, false otherwise.
+     */
+    private static boolean inXlet() {
+        if (inXlet == null) {
+            synchronized (Status.class) {
+                if (inXlet == null) {
+                    inXlet = Boolean.TRUE;
+                    try {
+                        Class.forName("javax.tv.xlet.Xlet");
+                    } catch (ClassNotFoundException e) {
+                        inXlet = Boolean.FALSE;
+                    }
+                }
+            }
+        }
+        return inXlet.booleanValue();
     }
 }

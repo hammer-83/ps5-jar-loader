@@ -14,9 +14,25 @@
         <module name="xlet" />
         <module name="id" />
         <module name="movieobject" />
+        <module name="sdk" />
         <module name="stubs" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="assembly" target="11" />
+      <module name="bdjo" target="11" />
+      <module name="grin" target="11" />
+      <module name="id" target="11" />
+      <module name="index" target="11" />
+      <module name="movieobject" target="11" />
+      <module name="parent" target="11" />
+      <module name="sdk" target="11" />
+      <module name="security" target="11" />
+      <module name="stubs" target="11" />
+      <module name="tools" target="11" />
+      <module name="xlet" target="11" />
+      <module name="xploit" target="11" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
@@ -25,10 +41,11 @@
       <module name="id" options="" />
       <module name="index" options="" />
       <module name="movieobject" options="" />
+      <module name="sdk" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar --add-exports java.base/jdk.internal.misc=ALL-UNNAMED" />
       <module name="security" options="--add-exports jdk.jartool/sun.tools.jar=ALL-UNNAMED --add-exports jdk.jartool/sun.security.tools.jarsigner=ALL-UNNAMED --add-exports java.base/sun.security.util=ALL-UNNAMED --add-exports java.base/sun.security.pkcs=ALL-UNNAMED --add-exports java.base/sun.security.tools.keytool=ALL-UNNAMED --add-exports java.base/sun.security.x509=ALL-UNNAMED" />
       <module name="stubs" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar" />
       <module name="xlet" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar" />
-      <module name="xploit" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
+      <module name="xploit" options="--patch-module java.base=$PROJECT_DIR$/lib/bdj-base.jar --patch-module java.desktop=$PROJECT_DIR$/lib/bdj-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/lib/bdj-rmi.jar --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
     </option>
   </component>
 </project>
