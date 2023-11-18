@@ -49,6 +49,15 @@ public abstract class SocketListener implements Runnable {
     }
 
     /**
+     * Get the IPv4 address on which the server is listening.
+     *
+     * @return IPv4 address of the server.
+     */
+    public String getNetAddress() {
+        return netAddress;
+    }
+
+    /**
      * Socket listener thread entry point.
      */
     @Override
@@ -73,11 +82,7 @@ public abstract class SocketListener implements Runnable {
                     clientSocket.setSoTimeout(5000);
                     acceptClient(clientSocket);
                 } finally {
-                    try {
-                        clientSocket.close();
-                    } catch (IOException closeEx) {
-                        // Ignore, socket may have been closed by `acceptClient`.
-                    }
+                    disposeClient(clientSocket);
                 }
             } catch (InterruptedIOException e) {
                 // Do nothing, this is expected due to socket timeout.
@@ -96,7 +101,22 @@ public abstract class SocketListener implements Runnable {
      * @param clientSocket Socket created for the client connection.
      * @throws Exception Any exception thrown by the implementation.
      */
-    public abstract void acceptClient(Socket clientSocket) throws Exception;
+    protected abstract void acceptClient(Socket clientSocket) throws Exception;
+
+    /**
+     * Invoked when {@link #acceptClient(Socket)} returns. Default implementation
+     * closes the socket.
+     *
+     * @param clientSocket Socket to dispose.
+     * @throws Exception  Any exception thrown by the implementation.
+     */
+    protected void disposeClient(Socket clientSocket) throws Exception {
+        try {
+            clientSocket.close();
+        } catch (IOException closeEx) {
+            // Ignore, socket may have been closed.
+        }
+    }
 
     /**
      * Method called to handle an exception thrown by {@link #acceptClient(Socket)}.
@@ -106,7 +126,7 @@ public abstract class SocketListener implements Runnable {
      *
      * @param ex Exception to handle.
      */
-    public void handleException(Throwable ex) {
+    protected void handleException(Throwable ex) {
         Status.printStackTrace("Error occurred", ex);
     }
 

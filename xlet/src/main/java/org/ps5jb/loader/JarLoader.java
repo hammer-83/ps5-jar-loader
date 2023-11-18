@@ -45,7 +45,7 @@ public class JarLoader extends SocketListener {
      * @throws InvocationTargetException
      */
     @Override
-    public void acceptClient(Socket clientSocket) throws IOException, ClassNotFoundException,
+    protected void acceptClient(Socket clientSocket) throws IOException, ClassNotFoundException,
             NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         InputStream jarStream = clientSocket.getInputStream();
@@ -127,7 +127,7 @@ public class JarLoader extends SocketListener {
      * @param ex Handled exception.
      */
     @Override
-    public void handleException(Throwable ex) {
+    protected void handleException(Throwable ex) {
         if (ex instanceof InvocationTargetException) {
             Status.printStackTrace("Execution of JAR threw an exception", ((InvocationTargetException) ex).getTargetException());
         } else if (ex instanceof NoSuchMethodException) {
