@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -55,7 +56,10 @@ import org.ps5jb.sdk.lib.LibKernel;
  * @author Moritz Stueckler
  *
  */
-public class FtpWorker implements Runnable {
+public class FtpWorker extends Thread {
+    static final String DEFAULT_USERNAME = "ps5jb";
+    static final String DEFAULT_PASSWORD = "";
+
     /**
      * Enable debugging output to console
      */
@@ -103,8 +107,8 @@ public class FtpWorker implements Runnable {
 
     // user properly logged in?
     private String currentUserStatus = userStatus.NOTLOGGEDIN;
-    private String validUser = "ps5jb";
-    private String validPassword = "";
+    private String validUser = DEFAULT_USERNAME;
+    private String validPassword = DEFAULT_PASSWORD;
     private FtpServer server;
     private LibKernel libKernel;
     private FCntl fcntl;
@@ -119,7 +123,9 @@ public class FtpWorker implements Runnable {
      * @param dataPort The port for the data connection.
      * @throws IOException If any I/O errors occur.
      */
-    public FtpWorker(FtpServer server, Socket client, int dataPort) throws IOException {
+    public FtpWorker(FtpServer server, Socket client, int dataPort, String name) throws IOException {
+        super(name);
+
         this.server = server;
         this.controlSocket = client;
         this.dataPort = dataPort;
@@ -142,6 +148,17 @@ public class FtpWorker implements Runnable {
         this.fcntl = new FCntl(libKernel);
     }
 
+    public void terminate() {
+        quitCommandLoop = true;
+
+        try {
+            controlSocket.close();
+        } catch (IOException e) {
+            // Don't print the full stacktrace, but output exception message as a one liner.
+            Status.println("Warning, the socket could not be closed. This can usually be safely ignored. Cause: " + e.getMessage());
+        }
+    }
+
     /**
      * Worker entry point.
      */
@@ -160,10 +177,16 @@ public class FtpWorker implements Runnable {
 
                     // Get new command from client
                     while (!quitCommandLoop) {
-                        String command = controlIn.readLine();
-                        if (command != null) {
-                            executeCommand(command);
-                        } else {
+                        try {
+                            String command = controlIn.readLine();
+                            if (command != null) {
+                                executeCommand(command);
+                            } else {
+                                quitCommandLoop = true;
+                            }
+                        } catch (SocketException e) {
+                            // This usually happens when server forcefully exits so don't print full stacktrace.
+                            Status.println(e.getMessage());
                             quitCommandLoop = true;
                         }
                     }
@@ -173,7 +196,7 @@ public class FtpWorker implements Runnable {
             } finally {
                 controlIn.close();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             Status.printStackTrace(e.getMessage(), e);
         } finally {
             // Clean up
@@ -575,7 +598,7 @@ public class FtpWorker implements Runnable {
         Date lastModified = new Date(f.lastModified());
         String month = fileMonthFormat.format(lastModified).substring(0, 3);
         String restOfDate;
-        if ((System.currentTimeMillis() - lastModified.getTime()) > (182 * 60 * 60 * 100)) {
+        if ((System.currentTimeMillis() - lastModified.getTime()) > (182 * 60 * 60 * 1000)) {
             restOfDate = fileDayYearFormat.format(lastModified);
         } else {
             restOfDate = fileDayHourFormat.format(lastModified);
