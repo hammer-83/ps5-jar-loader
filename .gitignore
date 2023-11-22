@@ -1,5 +1,3 @@
-/lib/bdj*.jar
-/lib/bdj*.zip
-/lib/jsr*.jar
-/lib/jsr*.zip
+/lib/*.jar
+/lib/*.zip
 target

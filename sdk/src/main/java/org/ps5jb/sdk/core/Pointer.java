@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.security.PrivilegedActionException;
 
@@ -32,7 +31,7 @@ public class Pointer {
                     throw new SdkRuntimeException(((InvocationTargetException) e.getException()).getTargetException());
                 }
                 throw new SdkRuntimeException(e.getException());
-            } catch (NoSuchFieldException e) {
+            } catch (NoSuchFieldException | RuntimeException | Error e) {
                 throw new SdkRuntimeException(e);
             }
         }

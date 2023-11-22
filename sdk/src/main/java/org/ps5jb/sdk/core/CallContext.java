@@ -1,5 +1,8 @@
 package org.ps5jb.sdk.core;
 
+import java.util.Arrays;
+
+import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
@@ -10,12 +13,19 @@ class CallContext {
     private static Pointer rtld_JVM_NativePath;
     private static Pointer libc_setjmp;
     private static Pointer libkernel___Ux86_64_setcontext;
+    /** Stores the handle value of libjava native library. Most useful for debugging, since this value varies in different firmware versions. */
+    static int libjava_handle;
 
     private native long multiNewArray(long componentType, int[] dimensions);
 
     static {
-        initSymbols();
-        installMultiNewArrayHook();
+        try {
+            initSymbols();
+            installMultiNewArrayHook();
+        } catch (Throwable e) {
+            Status.printStackTrace(e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**
@@ -33,6 +43,50 @@ class CallContext {
 
         Library libkernel = new Library(0x2001);
         libkernel___Ux86_64_setcontext = libkernel.addrOf("__Ux86_64_setcontext");
+    }
+
+    private static Pointer findMultiNewArrayAddress() {
+        Pointer result = null;
+        SdkSymbolNotFoundException lastException = null;
+
+        // First try the known handles
+        int[] knownHandles = { 0x4A, 0x4B };
+        int handleLibJava = 0;
+        for (int handle : knownHandles) {
+            Library libjava = new Library(handle);
+            try {
+                result = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
+                handleLibJava = handle;
+                break;
+            } catch (SdkSymbolNotFoundException e) {
+                lastException = e;
+            }
+        }
+
+        // If that does not work, try to find it by trial and error
+        for (int handle = 0x30; handle < 0x80; ++handle) {
+            if (Arrays.binarySearch(knownHandles, handle) < 0) {
+                try {
+                    Library libjava = new Library(handle);
+                    result = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
+                    handleLibJava = handle;
+                    break;
+                } catch (SdkSymbolNotFoundException e) {
+                    // Continue, this is expected for most libraries
+                } catch (SdkRuntimeException e) {
+                    // Could be a problem with loading a library for a given handle, ignore.
+                }
+            }
+        }
+
+        // Nothing found, throw the original symbol not found exception for the last known handle
+        if (result == null) {
+            throw lastException;
+        }
+
+        libjava_handle = handleLibJava;
+
+        return result;
     }
 
     /**
@@ -58,16 +112,7 @@ class CallContext {
             String name = nameSymbol.inc(0x06).readString(new Integer(nameLength));
 
             if (name.equals("multiNewArray")) {
-                Pointer libjava_Java_java_lang_reflect_Array_multiNewArray;
-                Library libjava = new Library(0x4B);
-                try {
-                    libjava_Java_java_lang_reflect_Array_multiNewArray = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
-                } catch (SdkSymbolNotFoundException e) {
-                    // Library id of libjava is different between firmware versions
-                    libjava = new Library(0x4A);
-                    libjava_Java_java_lang_reflect_Array_multiNewArray = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
-                }
-                method.write8(0x50, libjava_Java_java_lang_reflect_Array_multiNewArray.addr());
+                method.write8(0x50, findMultiNewArrayAddress().addr());
                 installed = true;
                 break;
             }
@@ -208,7 +253,7 @@ class CallContext {
             return ret;
         } catch (SdkRuntimeException e) {
             throw e;
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
             throw new SdkRuntimeException(e.getMessage(), e);
         } finally {
             this.executing = false;

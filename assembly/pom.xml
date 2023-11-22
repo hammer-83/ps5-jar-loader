@@ -16,6 +16,10 @@
     <packaging>pom</packaging>
     <description>Builds the filesystem that can be burned onto a BD-R disc to be run on PS5.</description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../lib</bdjstack.dir>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.ps5jb</groupId>

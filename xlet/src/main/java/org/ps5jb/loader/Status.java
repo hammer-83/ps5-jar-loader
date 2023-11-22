@@ -111,8 +111,8 @@ public class Status {
                 if (inXlet == null) {
                     inXlet = Boolean.TRUE;
                     try {
-                        Class.forName("javax.tv.xlet.Xlet");
-                    } catch (ClassNotFoundException e) {
+                        Class.forName("com.sun.xlet.XletClassLoader");
+                    } catch (ClassNotFoundException | Error e) {
                         inXlet = Boolean.FALSE;
                     }
                 }

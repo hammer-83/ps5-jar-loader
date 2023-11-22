@@ -55,7 +55,10 @@ public class FtpServer extends SocketListener implements UserEventListener {
         workers = new ArrayList();
 
         // Subscribe to all events
-        EventManager.getInstance().addUserEventListener(this, new OverallRepository());
+        EventManager eventManager = EventManager.getInstance();
+        if (eventManager != null) {
+            eventManager.addUserEventListener(this, new OverallRepository());
+        }
 
         Status.println("Welcome to " + this.listenerName +
                 ". You can login anonymously using the username '" + FtpWorker.DEFAULT_USERNAME + "' and " +
@@ -87,7 +90,10 @@ public class FtpServer extends SocketListener implements UserEventListener {
         super.run();
 
         // Unsubscribe from events
-        EventManager.getInstance().removeUserEventListener(this);
+        EventManager eventManager = EventManager.getInstance();
+        if (eventManager != null) {
+            eventManager.removeUserEventListener(this);
+        }
 
         // Close all the workers
         Iterator workerIter = workers.iterator();

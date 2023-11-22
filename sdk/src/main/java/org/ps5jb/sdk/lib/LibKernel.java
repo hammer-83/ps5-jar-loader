@@ -1,6 +1,5 @@
 package org.ps5jb.sdk.lib;
 
-import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Library;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.include.sys.ErrNo;

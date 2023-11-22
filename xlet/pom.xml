@@ -27,24 +27,15 @@
     <dependencies>
         <dependency>
             <groupId>org.ps5jb</groupId>
-            <artifactId>bdjstack</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>system</scope>
-            <systemPath>${bdjstack.dir}/bdj.jar</systemPath>
+            <artifactId>bdj-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
-            <artifactId>jsr129</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>system</scope>
-            <systemPath>${bdjstack.dir}/jsr129.jar</systemPath>
+            <artifactId>javatv-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
-            <artifactId>jsr927</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>system</scope>
-            <systemPath>${bdjstack.dir}/jsr927.jar</systemPath>
+            <artifactId>gem-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
@@ -71,11 +62,13 @@
                 <configuration>
                     <compilerArgs>
                         <arg>--patch-module</arg>
-                        <arg>java.base=${bdjstack.dir}/bdj-base.jar</arg>
+                        <arg>java.base=${bdjstack.dir}/pbp-base.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.desktop=${bdjstack.dir}/bdj-desktop.jar</arg>
+                        <arg>java.desktop=${bdjstack.dir}/pbp-desktop.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
+                        <arg>java.rmi=${bdjstack.dir}/pbp-rmi.jar</arg>
+                        <arg>--limit-modules</arg>
+                        <arg>java.base,java.desktop,java.rmi</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

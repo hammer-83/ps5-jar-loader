@@ -29,7 +29,7 @@
         <xlet.className>org.ps5jb.loader.LoaderXlet</xlet.className>
 
         <!-- Do not the same version as parent project for Xlet because it will be modified less frequently. We only want to burn new disc if Xlet changes -->
-        <xlet.version>1.1</xlet.version>
+        <xlet.version>1.1.1</xlet.version>
 
         <!-- Various application configuration properties -->
         <loader.port>9025</loader.port>
@@ -48,6 +48,32 @@
         <module>sdk</module>
         <module>xploit</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.ps5jb</groupId>
+                <artifactId>bdj-api</artifactId>
+                <version>${project.version}</version>
+                <scope>system</scope>
+                <systemPath>${bdjstack.dir}/bdj.jar</systemPath>
+            </dependency>
+            <dependency>
+                <groupId>org.ps5jb</groupId>
+                <artifactId>javatv-api</artifactId>
+                <version>${project.version}</version>
+                <scope>system</scope>
+                <systemPath>${bdjstack.dir}/javatv.jar</systemPath>
+            </dependency>
+            <dependency>
+                <groupId>org.ps5jb</groupId>
+                <artifactId>gem-api</artifactId>
+                <version>${project.version}</version>
+                <scope>system</scope>
+                <systemPath>${bdjstack.dir}/gem.jar</systemPath>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <pluginManagement>

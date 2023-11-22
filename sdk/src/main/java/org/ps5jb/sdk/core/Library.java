@@ -39,7 +39,7 @@ public class Library {
 
             NativeLibrary_handle = nativeLibraryClass.getDeclaredField("handle");
             NativeLibrary_handle.setAccessible(true);
-        } catch (NoSuchFieldException | IllegalArgumentException | NoSuchMethodException | ClassNotFoundException e) {
+        } catch (NoSuchFieldException | NoSuchMethodException | ClassNotFoundException | RuntimeException | Error e) {
             throw new SdkRuntimeException(e);
         }
     }
@@ -61,7 +61,7 @@ public class Library {
             NativeLibrary_handle.set(nativeLibraryInstance, h);
         } catch (InvocationTargetException e) {
             throw new SdkRuntimeException(e.getTargetException().getMessage(), e.getTargetException());
-        } catch (IllegalAccessException | InstantiationException | RuntimeException e) {
+        } catch (IllegalAccessException | InstantiationException | RuntimeException | Error e) {
             throw new SdkRuntimeException(e.getMessage(), e);
         }
     }
@@ -78,9 +78,19 @@ public class Library {
             NativeLibrary_load.invoke(nativeLibraryInstance, new Object[0]);
         } catch (InvocationTargetException e) {
             throw new SdkRuntimeException(e.getTargetException().getMessage(), e.getTargetException());
-        } catch (IllegalAccessException | InstantiationException | RuntimeException e) {
+        } catch (IllegalAccessException | InstantiationException | RuntimeException | Error e) {
             throw new SdkRuntimeException(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Returns the handle value of libjava native library used for hooking native calls.
+     * Not exposed publicly but can be obtained via reflection.
+     *
+     * @return Libjava native library handle.
+     */
+    static int getLibJavaHandle() {
+        return CallContext.libjava_handle;
     }
 
     /**
@@ -136,7 +146,7 @@ public class Library {
     public long getHandle() {
         try {
             return ((Long) NativeLibrary_handle.get(nativeLibraryInstance)).longValue();
-        } catch (IllegalAccessException | RuntimeException e) {
+        } catch (IllegalAccessException | RuntimeException | Error e) {
             throw new SdkRuntimeException(e.getMessage(), e);
         }
     }
@@ -156,9 +166,11 @@ public class Library {
                 throw new SdkSymbolNotFoundException(ErrorMessages.getClassErrorMessage(Library.class,"symbolNotFound",symbolName, "0x" + Long.toHexString(getHandle())));
             }
             return Pointer.valueOf(symbolAddr.longValue());
+        } catch (SdkRuntimeException e) {
+            throw e;
         } catch (InvocationTargetException e) {
             throw new SdkRuntimeException(e.getTargetException().getMessage(), e.getTargetException());
-        } catch (IllegalAccessException | RuntimeException e) {
+        } catch (IllegalAccessException | RuntimeException | Error e) {
             throw new SdkRuntimeException(e.getMessage(), e);
         }
     }

@@ -12,7 +12,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="xlet" scope="PROVIDED" />
     <orderEntry type="module-library" scope="PROVIDED">
-      <library name="Maven: org.ps5jb:bdjstack:1.0-SNAPSHOT">
+      <library name="Maven: org.ps5jb:bdj-api:1.0-SNAPSHOT">
         <CLASSES>
           <root url="jar://$MODULE_DIR$/../xlet/../lib/bdj.jar!/" />
         </CLASSES>
@@ -20,25 +20,25 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module-library" scope="PROVIDED">
-      <library name="Maven: org.ps5jb:jsr129:1.0-SNAPSHOT">
+    <orderEntry type="module-library">
+      <library name="Maven: org.ps5jb:javatv-api:1.0-SNAPSHOT">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../xlet/../lib/jsr129.jar!/" />
+          <root url="jar://$MODULE_DIR$/../xlet/../lib/javatv.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module-library" scope="PROVIDED">
-      <library name="Maven: org.ps5jb:jsr927:1.0-SNAPSHOT">
+    <orderEntry type="module-library">
+      <library name="Maven: org.ps5jb:gem-api:1.0-SNAPSHOT">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../xlet/../lib/jsr927.jar!/" />
+          <root url="jar://$MODULE_DIR$/../xlet/../lib/gem.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
     <orderEntry type="module" module-name="stubs" scope="PROVIDED" />
-    <orderEntry type="module" module-name="sdk" scope="PROVIDED" />
+    <orderEntry type="module" module-name="sdk" />
   </component>
 </module>

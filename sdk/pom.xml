@@ -41,11 +41,13 @@
                 <configuration>
                     <compilerArgs>
                         <arg>--patch-module</arg>
-                        <arg>java.base=${bdjstack.dir}/bdj-base.jar</arg>
+                        <arg>java.base=${bdjstack.dir}/pbp-base.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.desktop=${bdjstack.dir}/bdj-desktop.jar</arg>
+                        <arg>java.desktop=${bdjstack.dir}/pbp-desktop.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
+                        <arg>java.rmi=${bdjstack.dir}/pbp-rmi.jar</arg>
+                        <arg>--limit-modules</arg>
+                        <arg>java.base,java.desktop,java.rmi</arg>
                         <arg>--add-exports</arg>
                         <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
                     </compilerArgs>

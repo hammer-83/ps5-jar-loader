@@ -33,6 +33,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -46,6 +48,7 @@ import java.util.StringTokenizer;
 
 import org.ps5jb.client.payloads.ListDirEnts;
 import org.ps5jb.loader.Status;
+import org.ps5jb.sdk.core.Library;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.FCntl;
 import org.ps5jb.sdk.lib.LibKernel;
@@ -112,6 +115,7 @@ public class FtpWorker extends Thread {
     private FtpServer server;
     private LibKernel libKernel;
     private FCntl fcntl;
+    private boolean useNativeCalls;
 
     private boolean quitCommandLoop = false;
 
@@ -144,8 +148,18 @@ public class FtpWorker extends Thread {
             this.currDirectory = curDir.getAbsolutePath();
         }
 
-        this.libKernel = new LibKernel();
-        this.fcntl = new FCntl(libKernel);
+        try {
+            Method getLibJavaHandleMethod = Library.class.getDeclaredMethod("getLibJavaHandle", new Class[0]);
+            getLibJavaHandleMethod.setAccessible(true);
+            int libJavaHandle = ((Integer) getLibJavaHandleMethod.invoke(null, new Object[0])).intValue();
+            this.libKernel = new LibKernel();
+            this.fcntl = new FCntl(libKernel);
+            this.useNativeCalls = true;
+            debugOutput("Using native calls from libjava @ 0x" + Integer.toHexString(libJavaHandle));
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | NoClassDefFoundError e) {
+            this.useNativeCalls = false;
+            debugOutput("Using Java file I/O");
+        }
     }
 
     public void terminate() {
@@ -206,7 +220,9 @@ public class FtpWorker extends Thread {
                 Status.printStackTrace("Could not close the socket", e);
             }
             closeDataConnection();
-            libKernel.closeLibrary();
+            if (libKernel != null) {
+                libKernel.closeLibrary();
+            }
             debugOutput("Worker stopped");
         }
     }
@@ -557,13 +573,21 @@ public class FtpWorker extends Thread {
         File f = toAbsoluteFile(args);
         if (isFileValid(f, true)) {
             if (isDirectory(f)) {
-                ListDirEnts list = new ListDirEnts();
                 List files = new ArrayList();
-
-                try {
-                    list.getDirEnts(files, f.getAbsolutePath(), libKernel, fcntl, false);
-                } catch (SdkException e) {
-                    Status.printStackTrace(e.getMessage(), e);
+                if (this.useNativeCalls) {
+                    ListDirEnts list = new ListDirEnts();
+                    try {
+                        list.getDirEnts(files, f.getAbsolutePath(), libKernel, fcntl, false);
+                    } catch (SdkException e) {
+                        Status.printStackTrace(e.getMessage(), e);
+                    }
+                } else {
+                    String[] children = f.list();
+                    if (children != null) {
+                        for (String child : children) {
+                            files.add(new File(f, child));
+                        }
+                    }
                 }
 
                 if (files.size() > 0) {

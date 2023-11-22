@@ -54,7 +54,7 @@ public final class ErrorMessages {
             resourceBundle = ResourceBundle.getBundle(packagePrefix + ".error_messages", getLocale());
         } catch (MissingResourceException e) {
             // Resource bundle could not be loaded, all messages will be just the message key names
-            Status.printStackTrace(null, e);
+            Status.printStackTrace(e.getMessage(), e);
         }
     }
 

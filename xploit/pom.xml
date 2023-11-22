@@ -30,6 +30,21 @@
     <dependencies>
         <dependency>
             <groupId>org.ps5jb</groupId>
+            <artifactId>bdj-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
+            <artifactId>javatv-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
+            <artifactId>gem-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ps5jb</groupId>
             <artifactId>xlet</artifactId>
             <version>${xlet.version}</version>
             <scope>provided</scope>
@@ -58,11 +73,13 @@
                 <configuration>
                     <compilerArgs>
                         <arg>--patch-module</arg>
-                        <arg>java.base=${bdjstack.dir}/bdj-base.jar</arg>
+                        <arg>java.base=${bdjstack.dir}/pbp-base.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.desktop=${bdjstack.dir}/bdj-desktop.jar</arg>
+                        <arg>java.desktop=${bdjstack.dir}/pbp-desktop.jar</arg>
                         <arg>--patch-module</arg>
-                        <arg>java.rmi=${bdjstack.dir}/bdj-rmi.jar</arg>
+                        <arg>java.rmi=${bdjstack.dir}/pbp-rmi.jar</arg>
+                        <arg>--limit-modules</arg>
+                        <arg>java.base,java.desktop,java.rmi</arg>
                         <arg>--add-exports</arg>
                         <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
                     </compilerArgs>
@@ -83,7 +100,7 @@
                                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                 </manifest>
                                 <manifestEntries>
-                                    <Class-Path>stubs-${project.version}.jar xlet-${xlet.version}.jar</Class-Path>
+                                    <Class-Path>stubs-${project.version}.jar xlet-${xlet.version}.jar gem-api-${project.version}.jar javatv-api-${project.version}.jar bdj-api-${project.version}.jar</Class-Path>
                                     <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
                                 </manifestEntries>
                             </archive>
@@ -104,7 +121,7 @@
                         </goals>
                         <configuration>
                             <outputDirectory>${project.build.directory}</outputDirectory>
-                            <includeScope>provided</includeScope>
+                            <includeScope>compile</includeScope>
                         </configuration>
                     </execution>
                 </executions>
