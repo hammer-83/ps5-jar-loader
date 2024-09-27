@@ -23,6 +23,10 @@
         and what should be launched when.
     </description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.hdcookbook</groupId>

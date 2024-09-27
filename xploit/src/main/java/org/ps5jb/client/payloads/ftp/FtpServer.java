@@ -24,8 +24,10 @@ SOFTWARE.
 package org.ps5jb.client.payloads.ftp;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -37,13 +39,13 @@ import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
+import org.ps5jb.sdk.core.OpenModuleAction;
 
 /**
  * A very simple FTP Server class. On receiving a new connection it creates a
  * new worker thread.
  *
  * @author Moritz Stueckler
- *
  */
 public class FtpServer extends SocketListener implements UserEventListener {
     private List workers;
@@ -85,8 +87,42 @@ public class FtpServer extends SocketListener implements UserEventListener {
         w.start();
     }
 
+    /**
+     * PS5 BDJ runtime includes a mechanism to proxy all instances of key I/O classes
+     * such as {@link java.io.File} to restrict access to sensitive information.
+     * This method disables the proxying.
+     *
+     * @author astrelsky
+     */
+    protected void disableIOProxyFactory() {
+        final String BDJ_FACTORY_CLASS_NAME = "com.oracle.orbis.io.BDJFactory";
+
+        try {
+            OpenModuleAction.execute(BDJ_FACTORY_CLASS_NAME);
+        } catch (PrivilegedActionException e) {
+            Status.println("Error while opening PS5-specific com.oracle.orbis.io package. " +
+                    "Assuming this package does not exist in the current execution environment. " +
+                    "Error: " + e.getException().getClass() + "; " +
+                    "Message: " + e.getException().getMessage());
+            return;
+        }
+
+        try {
+            Class bdjFactoryClass = Class.forName(BDJ_FACTORY_CLASS_NAME);
+            Field bdjFactoryInstance = bdjFactoryClass.getDeclaredField("instance");
+            bdjFactoryInstance.setAccessible(true);
+            bdjFactoryInstance.set(null, null);
+        } catch (Throwable e) {
+            handleException(e);
+        }
+    }
+
     @Override
     public void run() {
+        // Disable I/O proxies
+        disableIOProxyFactory();
+
+        // Execute the socket listener
         super.run();
 
         // Unsubscribe from events

@@ -21,6 +21,10 @@
         * BDCredentialSigner - This tool is for signing the application along with generating the credentials in the permission request file, for across disc access of the local storage.
     </description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.bouncycastle</groupId>

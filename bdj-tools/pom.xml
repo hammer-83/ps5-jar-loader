@@ -16,6 +16,10 @@
     <packaging>pom</packaging>
     <description>Tools from HD Cookbook that were adapted to work with JDK 11 and embedded into the build process of the project without any additional steps.</description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../lib</bdjstack.dir>
+    </properties>
+
     <modules>
         <module>security</module>
         <module>grin</module>

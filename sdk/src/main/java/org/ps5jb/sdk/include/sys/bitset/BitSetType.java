@@ -23,9 +23,7 @@ public class BitSetType {
         this.ptr = pointer;
         this.__bitset_words = (size + (_BITSET_BITS - 1)) / _BITSET_BITS;
         this.__bits = new long[this.__bitset_words];
-        for (int i = 0; i < this.__bitset_words; ++i) {
-            this.__bits[i] = ptr.read8(i * 8);
-        }
+        this.refresh();
     }
 
     private long __bitset_mask(int n) {
@@ -101,7 +99,7 @@ public class BitSetType {
     /**
      * Counts the number of set bits.
      *
-     * @return
+     * @return Number of set bits.
      */
     public int getCount() {
         int count = 0;
@@ -118,5 +116,23 @@ public class BitSetType {
      */
     public Pointer getPointer() {
         return this.ptr;
+    }
+
+    /**
+     * Updates the value of this bitset in case the native memory was changed externally.
+     */
+    public void refresh() {
+        for (int i = 0; i < this.__bitset_words; ++i) {
+            this.__bits[i] = ptr.read8(i * 8);
+        }
+    }
+
+    @Override
+    public String toString() {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < this.__bitset_words; ++i) {
+            sb.append(Long.toHexString(this.__bits[i]));
+        }
+        return sb.toString();
     }
 }

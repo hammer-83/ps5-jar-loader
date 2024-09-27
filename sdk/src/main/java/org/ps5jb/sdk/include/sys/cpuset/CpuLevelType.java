@@ -59,7 +59,7 @@ public final class CpuLevelType implements Comparable {
             }
         }
 
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(CpuLevelType.class,"invalidValue",Integer.toString(value)));
+        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(CpuLevelType.class,"invalidValue", Integer.toString(value)));
     }
 
     /**

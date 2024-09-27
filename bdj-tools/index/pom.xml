@@ -16,6 +16,10 @@
     <packaging>jar</packaging>
     <description>Index tool converts an index.bdmv file to an xml format and back. File index.bdmv is located in the BDMV directory and contains information about the first playback, topmenu and titles on the disc.</description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>jakarta.xml.bind</groupId>

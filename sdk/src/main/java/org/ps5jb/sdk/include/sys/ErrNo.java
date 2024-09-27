@@ -1,12 +1,16 @@
 package org.ps5jb.sdk.include.sys;
 
+import java.util.Arrays;
+
 import org.ps5jb.sdk.core.SdkException;
+import org.ps5jb.sdk.include.sys.errno.BadFileDescriptorException;
 import org.ps5jb.sdk.include.sys.errno.DeadlockException;
 import org.ps5jb.sdk.include.sys.errno.InvalidSizeException;
 import org.ps5jb.sdk.include.sys.errno.InvalidValueException;
 import org.ps5jb.sdk.include.sys.errno.MemoryFaultException;
 import org.ps5jb.sdk.include.sys.errno.NotFoundException;
 import org.ps5jb.sdk.include.sys.errno.OperationNotPermittedException;
+import org.ps5jb.sdk.include.sys.errno.OutOfMemoryException;
 import org.ps5jb.sdk.lib.LibKernel;
 import org.ps5jb.sdk.res.ErrorMessages;
 
@@ -215,6 +219,23 @@ public class ErrNo {
         EOWNERDEAD
     };
 
+    /**
+     * Returns the numeric value from the string error constant.
+     *
+     * @param errNo One of the error constants defined in this class.
+     * @return Numeric value for the error constant. If constant cannot be found, 0 is returned.
+     */
+    public static int ord(String errNo) {
+        int result = 0;
+        for (int i = 0; i < errorCodes.length; ++i) {
+            if (errorCodes[i].equals(errNo)) {
+                result = i + 1;
+                break;
+            }
+        }
+        return result;
+    }
+
     private final LibKernel libKernel;
 
     /**
@@ -291,6 +312,10 @@ public class ErrNo {
             result = new InvalidSizeException(errorMessage);
         } else if (lastError == ErrNo.EPERM || lastError == ErrNo.EACCES) {
             result = new OperationNotPermittedException(errorMessage);
+        } else if (lastError == ErrNo.EBADF) {
+            result = new BadFileDescriptorException(errorMessage);
+        } else if (lastError == ErrNo.ENOMEM) {
+            result = new OutOfMemoryException(errorMessage);
         } else {
             result = new SdkException(ErrorMessages.getClassErrorMessage(clazz, errorMessageKey, lastError));
         }

@@ -16,4 +16,8 @@
     <packaging>jar</packaging>
     <description>This is sort of a lightweight SMIL: it provides a simple timeline, and an extensible presentation engine for certain kinds of animations.</description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
+    </properties>
+
 </project>

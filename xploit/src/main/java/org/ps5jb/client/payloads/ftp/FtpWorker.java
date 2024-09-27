@@ -125,6 +125,7 @@ public class FtpWorker extends Thread {
      * @param server The server instance.
      * @param client The socket for the current client.
      * @param dataPort The port for the data connection.
+     * @param name Name of the worker thread.
      * @throws IOException If any I/O errors occur.
      */
     public FtpWorker(FtpServer server, Socket client, int dataPort, String name) throws IOException {

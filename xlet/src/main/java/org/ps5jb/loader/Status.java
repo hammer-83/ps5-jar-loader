@@ -71,7 +71,7 @@ public class Status {
         // Remote logger does not seem to work before jailbreak
         if (System.getSecurityManager() == null) {
             initLogger();
-            LOGGER.info(msg);
+            LOGGER.info(finalMsg);
         }
     }
 

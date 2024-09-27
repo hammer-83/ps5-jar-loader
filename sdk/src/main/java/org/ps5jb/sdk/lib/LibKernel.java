@@ -22,15 +22,35 @@ import org.ps5jb.sdk.include.sys.ErrNo;
  */
 public class LibKernel extends Library {
     private Pointer __error;
+    private Pointer cpuset_getaffinity;
     private Pointer cpuset_setaffinity;
     private Pointer sceKernelSendNotificationRequest;
     private Pointer getuid;
     private Pointer setuid;
+    private Pointer getpid;
     private Pointer open;
     private Pointer close;
     private Pointer getdents;
     private Pointer stat;
+    private Pointer fstat;
     private Pointer sceKernelCheckReachability;
+    private Pointer pthread_rename_np;
+    private Pointer pthread_self;
+    private Pointer rtprio_thread;
+    private Pointer pipe;
+    private Pointer shm_open;
+    private Pointer shm_unlink;
+    private Pointer mmap;
+    private Pointer munmap;
+    private Pointer ftruncate;
+    private Pointer select;
+    private Pointer ioctl;
+    private Pointer read;
+    private Pointer write;
+    private Pointer _umtx_op;
+    private Pointer mprotect;
+    private Pointer sched_yield;
+    private Pointer sceKernelGetCurrentCpu;
 
     /**
      * Constructor.
@@ -54,6 +74,31 @@ public class LibKernel extends Library {
         } finally {
             buf.free();
         }
+    }
+
+    /**
+     * Retrieves the mask from the object specified by <code>level</code>, <code>which</code> and <code>id</code>
+     * and stores it in the space provided by <code>mask</code>.
+     *
+     * @param level One of {@link org.ps5jb.sdk.include.sys.cpuset.CpuLevelType} values.
+     *   See FreeBSD documentation for possible combinations of <code>level</code> and <code>which</code>.
+     * @param which One of {@link org.ps5jb.sdk.include.sys.cpuset.CpuWhichType} values.
+     *   See FreeBSD documentation for possible combinations of <code>level</code> and <code>which</code>.
+     * @param id The id of -1 may be used with a <code>which</code> of
+     *   {@link org.ps5jb.sdk.include.sys.cpuset.CpuWhichType#CPU_WHICH_TID CPU_WHICH_TID},
+     *   {@link org.ps5jb.sdk.include.sys.cpuset.CpuWhichType#CPU_WHICH_PID CPU_WHICH_PID}, or
+     *   {@link org.ps5jb.sdk.include.sys.cpuset.CpuWhichType#CPU_WHICH_CPUSET CPU_WHICH_CPUSET}
+     *   to mean the current thread, process, or current thread's cpuset.
+     * @param setsize Size of the native memory allocated by {@link org.ps5jb.sdk.include.sys.cpuset.CpuSetType}.
+     * @param mask Pointer to the native memory allocated by {@link org.ps5jb.sdk.include.sys.cpuset.CpuSetType}.
+     * @return Upon successful completion, the value 0 is returned; otherwise the value -1 is returned
+     *   and the global variable {@link ErrNo#errno() errno} is set to indicate the error.
+     */
+    public int cpuset_getaffinity(int level, int which, long id, long setsize, Pointer mask) {
+        if (cpuset_getaffinity == null) {
+            cpuset_getaffinity = addrOf("cpuset_getaffinity");
+        }
+        return (int) call(cpuset_getaffinity, level, which, id, setsize, mask.addr());
     }
 
     /**
@@ -87,7 +132,6 @@ public class LibKernel extends Library {
      * the initial thread. For the initial theread and non-threaded processes, <code>__errno()</code>
      * returns a pointer to a global <code>errno</code> variable that is compatible with the previous
      * definition.
-     *
      * When a system call detects an error, it returns an integer value indicating faulure (usually -1)
      * and sets the variable <code>errno</code> accordingly. Successful calls never set <code>errno</code>;
      * once set it remains unil another error occurs. it should only be examined after an error.
@@ -129,6 +173,18 @@ public class LibKernel extends Library {
             setuid = addrOf("setuid");
         }
         return (int) call(setuid, uid);
+    }
+
+    /**
+     * Return the process ID of the calling process.
+     *
+     * @return Process ID
+     */
+    public int getpid() {
+        if (getpid == null) {
+            getpid = addrOf("getpid");
+        }
+        return (int) call(getpid);
     }
 
     /**
@@ -206,6 +262,22 @@ public class LibKernel extends Library {
         }
     }
 
+    /**
+     * Get status of an open file known by the file descriptor.
+     *
+     * @param fd File descriptor.
+     * @param sb Buffer where the status is stored.
+     * @return Upon successful completion, the value 0 is returned; otherwise the value -1 is returned
+     *   and the global variable {@link ErrNo#errno() errno} is set to indicate the error.
+     */
+    public int fstat(int fd, Pointer sb) {
+        if (fstat == null) {
+            fstat = addrOf("fstat");
+        }
+
+        return (int) call(fstat, fd, sb.addr());
+    }
+
     public int sceKernelCheckReachability(String path) {
         if (sceKernelCheckReachability == null) {
             sceKernelCheckReachability = addrOf("sceKernelCheckReachability");
@@ -217,5 +289,145 @@ public class LibKernel extends Library {
         } finally {
             buf.free();
         }
+    }
+
+    public int pthread_rename_np(Pointer thread, String name) {
+        if (pthread_rename_np == null) {
+            pthread_rename_np = addrOf("pthread_rename_np");
+        }
+
+        Pointer buf = Pointer.fromString(name);
+        try {
+            return (int) call(pthread_rename_np, thread.addr(), buf.addr());
+        } finally {
+            buf.free();
+        }
+    }
+
+    public Pointer pthread_self() {
+        if (pthread_self == null) {
+            pthread_self = addrOf("pthread_self");
+        }
+
+        return Pointer.valueOf(call(pthread_self));
+    }
+
+    public int rtprio_thread(int function, int lwpid, Pointer rtprio) {
+        if (rtprio_thread == null) {
+            rtprio_thread = addrOf("rtprio_thread");
+        }
+
+        return (int) call(rtprio_thread, function, lwpid, rtprio.addr());
+    }
+
+    public int pipe(Pointer fildes) {
+        if (pipe == null) {
+            pipe = addrOf("pipe");
+        }
+
+        return (int) call(pipe, fildes.addr());
+    }
+
+    public int shm_open(Pointer path, int flags, int mode) {
+        if (shm_open == null) {
+            shm_open = addrOf("shm_open");
+        }
+
+        return (int) call(shm_open, path.addr(), flags, mode);
+    }
+
+    public int shm_unlink(Pointer path) {
+        if (shm_unlink == null) {
+            shm_unlink = addrOf("shm_unlink");
+        }
+
+        return (int) call(shm_unlink);
+    }
+
+    public Pointer mmap(Pointer addr, long len, int prot, int flags, int fd, long offset) {
+        if (mmap == null) {
+            mmap = addrOf("mmap");
+        }
+
+        return Pointer.valueOf(call(mmap, addr.addr(), len, prot, flags, fd, offset));
+    }
+
+    public int munmap(Pointer addr, long len) {
+        if (munmap == null) {
+            munmap = addrOf("munmap");
+        }
+
+        return (int) call(munmap);
+    }
+
+    public int ftruncate(int fd, long length) {
+        if (ftruncate == null) {
+            ftruncate = addrOf("ftruncate");
+        }
+
+        return (int) call(ftruncate, fd, length);
+    }
+
+    public int select(int nfds, Pointer readfds, Pointer writefds, Pointer exceptfds, Pointer timeout) {
+        if (select == null) {
+            select = addrOf("select");
+        }
+
+        return (int) call(select, nfds, readfds.addr(), writefds.addr(), exceptfds.addr(), timeout.addr());
+    }
+
+    public int ioctl(int fd, long request, long argp) {
+        if (ioctl == null) {
+            ioctl = addrOf("ioctl");
+        }
+
+        return (int) call(ioctl, fd, request, argp);
+    }
+
+    public long read(int fd, Pointer buf, long nbytes) {
+        if (read == null) {
+            read = addrOf("read");
+        }
+
+        return (int) call(read, fd, buf.addr(), nbytes);
+    }
+
+    public int write(int fd, Pointer buf, long nbytes) {
+        if (write == null) {
+            write = addrOf("write");
+        }
+
+        return (int) call(write);
+    }
+
+    public int _umtx_op(Pointer obj, int op, long val, Pointer uaddr, Pointer uaddr2) {
+        if (_umtx_op == null) {
+            _umtx_op = addrOf("_umtx_op");
+        }
+
+        return (int) call(_umtx_op, obj.addr(), op, val, uaddr.addr(), uaddr2.addr());
+    }
+
+    public int mprotect(Pointer addr, long len, int prot) {
+        if (mprotect == null) {
+            mprotect = addrOf("mprotect");
+        }
+
+        return (int) call(mprotect, addr.addr(), len, prot);
+    }
+
+    public int sched_yield(long unused) {
+        if (sched_yield == null) {
+            sched_yield = addrOf("sched_yield");
+        }
+
+        return (int) call(sched_yield, unused);
+    }
+
+    public int sceKernelGetCurrentCpu() {
+        if (sceKernelGetCurrentCpu == null) {
+            sceKernelGetCurrentCpu = addrOf("sceKernelGetCurrentCpu");
+        }
+        return (int) call(sceKernelGetCurrentCpu);
     }
 }

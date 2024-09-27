@@ -16,6 +16,10 @@
     <packaging>jar</packaging>
     <description>ID tool converts an id.bdmv file to an xml format and back. File id.bdmv includes the disc ID and org ID for a given BD image, and required to be present under the CERTIFICATE dir.</description>
 
+    <properties>
+        <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.hdcookbook</groupId>

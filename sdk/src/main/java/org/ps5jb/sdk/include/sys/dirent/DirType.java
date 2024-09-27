@@ -78,7 +78,7 @@ public final class DirType implements Comparable {
             }
         }
 
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(DirType.class,"invalidValue",Integer.toString(value)));
+        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(DirType.class,"invalidValue", Integer.toString(value)));
     }
 
     /**

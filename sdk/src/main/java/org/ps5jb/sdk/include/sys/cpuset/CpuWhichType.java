@@ -68,7 +68,7 @@ public final class CpuWhichType implements Comparable {
             }
         }
 
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(CpuWhichType.class,"invalidValue",Integer.toString(value)));
+        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(CpuWhichType.class,"invalidValue", Integer.toString(value)));
     }
 
     /**

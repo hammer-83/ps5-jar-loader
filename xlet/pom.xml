@@ -28,14 +28,17 @@
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>bdj-api</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>javatv-api</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>
             <artifactId>gem-api</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.ps5jb</groupId>

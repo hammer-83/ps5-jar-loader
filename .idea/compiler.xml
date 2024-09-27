@@ -18,21 +18,6 @@
         <module name="stubs" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="assembly" target="11" />
-      <module name="bdjo" target="11" />
-      <module name="grin" target="11" />
-      <module name="id" target="11" />
-      <module name="index" target="11" />
-      <module name="movieobject" target="11" />
-      <module name="parent" target="11" />
-      <module name="sdk" target="11" />
-      <module name="security" target="11" />
-      <module name="stubs" target="11" />
-      <module name="tools" target="11" />
-      <module name="xlet" target="11" />
-      <module name="xploit" target="11" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

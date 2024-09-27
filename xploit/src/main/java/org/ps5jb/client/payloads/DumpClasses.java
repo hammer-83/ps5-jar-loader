@@ -33,12 +33,12 @@ import org.ps5jb.sdk.core.OpenModuleAction;
  * </p>
  * <p>
  *   To use, simply send this class to the PS5 for execution in the JAR Loader.
- *   Then use nc or another tool to connect to the PS5:<br>
+ *   Then use `nc` or another tool to connect to the PS5:<br>
  *   <code>nc [PS5 IP] 9125 &gt; classpath.zip</code>
  * </p>
  * <p>
  * Upon connection, the classpath will be dumped and sent back to `nc`.
- * Depending on OS `nc` may not terminate by itself. When PS5 reports that
+ * Depending on OS, `nc` may not terminate by itself. When PS5 reports that
  * the dump is finished, simply terminate it by force.
  * </p>
  */
@@ -208,7 +208,7 @@ public class DumpClasses extends SocketListener {
             OpenModuleAction.execute("java.lang.module.ModuleReference");
             OpenModuleAction.execute("jdk.internal.module.SystemModuleFinders");
 
-            // On PS5, stream API is put away in jdk.internal.utl package.
+            // On PS5, stream API is put away in jdk.internal.util package.
             // Because of this, all the calls to iterate over modules below have to use reflection.
             try {
                 OpenModuleAction.execute("jdk.internal.util.Optional");
@@ -237,15 +237,12 @@ public class DumpClasses extends SocketListener {
 
                     final ModuleReader mr = mref.open();
                     try {
-                        Method listMethod = mr.getClass().getMethod("list", new Class[0]);
-                        listMethod.setAccessible(true);
+                        Method listMethod = getMethod(mr.getClass(), "list", new Class[0]);
 
-                        Method openMethod = mr.getClass().getMethod("open", new Class[] { String.class });
-                        openMethod.setAccessible(true);
+                        Method openMethod = getMethod(mr.getClass(), "open", new Class[] { String.class });
 
                         Object resourceStream = listMethod.invoke(mr, new Object[0]);
-                        Method toArrayMethod = resourceStream.getClass().getMethod("toArray", new Class[0]);
-                        toArrayMethod.setAccessible(true);
+                        Method toArrayMethod = getMethod(resourceStream.getClass(), "toArray", new Class[0]);
 
                         Object[] resources = (Object[]) toArrayMethod.invoke(resourceStream, new Object[0]);
                         for (Object res : resources) {
@@ -253,13 +250,11 @@ public class DumpClasses extends SocketListener {
                             if (!dumpedEntries.contains(resName)) {
                                 Object isOptional = openMethod.invoke(mr, new Object[] { res });
 
-                                Method isPresentMethod = isOptional.getClass().getMethod("isPresent", new Class[0]);
-                                isPresentMethod.setAccessible(true);
-                                Method getMethod = isOptional.getClass().getMethod("get", new Class[0]);
-                                getMethod.setAccessible(true);
+                                Method Optional_isPresentMethod = getMethod(isOptional.getClass(), "isPresent", new Class[0]);
+                                Method Optional_getMethod = getMethod(isOptional.getClass(), "get", new Class[0]);
 
-                                if (((Boolean) isPresentMethod.invoke(isOptional, new Object[0])).booleanValue()) {
-                                    InputStream is = (InputStream) getMethod.invoke(isOptional, new Object[0]);
+                                if (((Boolean) Optional_isPresentMethod.invoke(isOptional, new Object[0])).booleanValue()) {
+                                    InputStream is = (InputStream) Optional_getMethod.invoke(isOptional, new Object[0]);
                                     try {
                                         createZipEntry(is, resName, zip);
                                         dumpedEntries.add(resName);
@@ -285,6 +280,52 @@ public class DumpClasses extends SocketListener {
         }
 
         return false;
+    }
+
+    /**
+     * Returns the method by reflection and makes it accessible. If method is not found,
+     * prints the existing methods of the class for debugging purposes.
+     *
+     * @param cl Class whose method to return.
+     * @param methodName Name of the method.
+     * @param parameterTypes Parameter types of the method.
+     * @return Reflective reference to the method.
+     * @throws NoSuchMethodException If the method could not be found.
+     * @see Class#getMethod(String, Class[])
+     * @see Method#setAccessible(boolean) 
+     */
+    protected Method getMethod(Class cl, String methodName, Class[] parameterTypes) throws NoSuchMethodException {
+        try {
+            Method result = cl.getMethod(methodName, new Class[0]);
+            result.setAccessible(true);
+
+            return result;
+        } catch (NoSuchMethodException e) {
+            // Print methods to debug why its not found
+            printClassMethods(cl, "");
+            throw e;
+        }
+    }
+
+    /**
+     * Prints the all the methods of the given class and its descendants.
+     *
+     * @param cl Class whose methods to print.
+     * @param indent Indent to use when printing.
+     */
+    protected void printClassMethods(Class cl, String indent) {
+        Method[] methods = cl.getDeclaredMethods();
+        String nextIndent = indent + "  ";
+        if (methods.length > 0) {
+            Status.println(indent + cl.getName() + ":");
+            for (Method method : methods) {
+                Status.println(nextIndent + method.toString());
+            }
+        }
+
+        if (cl.getSuperclass() != null) {
+            printClassMethods(cl.getSuperclass(), nextIndent);
+        }
     }
 
     /**

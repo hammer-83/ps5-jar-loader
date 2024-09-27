@@ -101,7 +101,7 @@ public final class OpenFlag implements Comparable {
             }
         }
 
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(OpenFlag.class,"invalidValue",Integer.toString(value)));
+        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(OpenFlag.class,"invalidValue", Integer.toString(value)));
     }
 
     /**

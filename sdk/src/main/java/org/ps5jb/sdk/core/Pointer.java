@@ -115,6 +115,7 @@ public class Pointer {
      * native string is null-terminated.
      *
      * @param string String to convert to a native null-terminated string.
+     * @param charset Character set to use to convert from native bytes to a Java string.
      * @return Pointer to the allocated buffer.
      * @throws OutOfMemoryError if the allocation is refused by the system.
      */
@@ -212,6 +213,7 @@ public class Pointer {
      * Constructor of a pointer where the size is known.
      *
      * @param addr Memory address of the pointer.
+     * @param size Size of the memory.
      */
     public Pointer(long addr, Long size) {
         this.addr = addr;
@@ -301,6 +303,7 @@ public class Pointer {
     /**
      * Read the given number of bytes from the address pointed to by this pointer instance.
      *
+     * @param size Number of bytes to read.
      * @return Value read from the memory as an array of bytes.
      */
     public byte[] read(int size) {
@@ -505,6 +508,23 @@ public class Pointer {
 
     public void writeString(String string) {
         writeString(0, string, Charset.defaultCharset().name());
+    }
+
+    /**
+     * Copies values in native memory associated with this pointer to a pointer specified by <code>dest</code>.
+     *
+     * @param dest Pointer to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
+     * @param offset Offset in this memory to read the data from.
+     * @param size Size of data to copy.
+     * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
+     */
+    public void copyTo(Pointer dest, long offset, int size) {
+        overflow(this, offset, size);
+        overflow(dest, 0, size);
+
+        byte[] data = new byte[size];
+        read(offset, data, 0, size);
+        dest.write(0, data, 0, size);
     }
 
     /**
