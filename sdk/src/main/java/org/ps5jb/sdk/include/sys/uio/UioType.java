@@ -85,7 +85,7 @@ public class UioType {
     /**
      * Set address space.
      *
-     * @param val New length.
+     * @param val New address space.
      */
     public void setSegmentFlag(UioSegmentFlag val) {
         this.ptr.write4(OFFSET_SEGMENT_FLAG, val.value());

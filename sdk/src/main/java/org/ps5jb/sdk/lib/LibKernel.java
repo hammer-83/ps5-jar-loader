@@ -392,15 +392,15 @@ public class LibKernel extends Library {
             read = addrOf("read");
         }
 
-        return (int) call(read, fd, buf.addr(), nbytes);
+        return call(read, fd, buf.addr(), nbytes);
     }
 
-    public int write(int fd, Pointer buf, long nbytes) {
+    public long write(int fd, Pointer buf, long nbytes) {
         if (write == null) {
             write = addrOf("write");
         }
 
-        return (int) call(write, fd, buf.addr(), nbytes);
+        return call(write, fd, buf.addr(), nbytes);
     }
 
     public int _umtx_op(Pointer obj, int op, long val, Pointer uaddr, Pointer uaddr2) {
