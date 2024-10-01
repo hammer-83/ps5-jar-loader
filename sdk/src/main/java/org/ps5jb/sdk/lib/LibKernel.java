@@ -2,7 +2,9 @@ package org.ps5jb.sdk.lib;
 
 import org.ps5jb.sdk.core.Library;
 import org.ps5jb.sdk.core.Pointer;
+import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.include.sys.ErrNo;
+import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
  * <p>
@@ -51,6 +53,7 @@ public class LibKernel extends Library {
     private Pointer mprotect;
     private Pointer sched_yield;
     private Pointer sceKernelGetCurrentCpu;
+    private Pointer sceKernelGetProsperoSystemSwVersion;
 
     /**
      * Constructor.
@@ -60,7 +63,7 @@ public class LibKernel extends Library {
     }
 
     public int sceKernelSendNotificationRequest(String msg) {
-        long size = 0xC30;
+        final long size = 0xC30;
         Pointer buf = Pointer.calloc(size);
         try {
             buf.write4(0x10, -1);
@@ -341,7 +344,7 @@ public class LibKernel extends Library {
             shm_unlink = addrOf("shm_unlink");
         }
 
-        return (int) call(shm_unlink);
+        return (int) call(shm_unlink, path.addr());
     }
 
     public Pointer mmap(Pointer addr, long len, int prot, int flags, int fd, long offset) {
@@ -349,7 +352,7 @@ public class LibKernel extends Library {
             mmap = addrOf("mmap");
         }
 
-        return Pointer.valueOf(call(mmap, addr.addr(), len, prot, flags, fd, offset));
+        return new Pointer(call(mmap, addr.addr(), len, prot, flags, fd, offset), new Long(len));
     }
 
     public int munmap(Pointer addr, long len) {
@@ -357,7 +360,7 @@ public class LibKernel extends Library {
             munmap = addrOf("munmap");
         }
 
-        return (int) call(munmap);
+        return (int) call(munmap, addr.addr(), len);
     }
 
     public int ftruncate(int fd, long length) {
@@ -397,7 +400,7 @@ public class LibKernel extends Library {
             write = addrOf("write");
         }
 
-        return (int) call(write);
+        return (int) call(write, fd, buf.addr(), nbytes);
     }
 
     public int _umtx_op(Pointer obj, int op, long val, Pointer uaddr, Pointer uaddr2) {
@@ -429,5 +432,37 @@ public class LibKernel extends Library {
             sceKernelGetCurrentCpu = addrOf("sceKernelGetCurrentCpu");
         }
         return (int) call(sceKernelGetCurrentCpu);
+    }
+
+    /**
+     * Retrieve the PS5 system software version information.
+     *
+     * @return Buffer with the version information.
+     * @throws org.ps5jb.sdk.core.SdkRuntimeException If an error occurred while retrieving the version.
+     */
+    public byte[] sceKernelGetProsperoSystemSwVersion() {
+        final long size = 0x28;
+        Pointer buf = Pointer.calloc(size);
+        try {
+            buf.write8(size);
+
+            if (sceKernelGetProsperoSystemSwVersion == null) {
+                sceKernelGetProsperoSystemSwVersion = addrOf("sceKernelGetProsperoSystemSwVersion");
+            }
+
+            int ret = (int) call(sceKernelGetProsperoSystemSwVersion, buf.addr());
+
+            if (ret != 0) {
+                throw new SdkRuntimeException(ErrorMessages.getClassErrorMessage(LibKernel.class, "sceKernelGetProsperoSystemSwVersion", "0x" + Integer.toHexString(ret)));
+            }
+
+            final long resultOffset = 0x8L;
+            final int resultSize = (int) (size - resultOffset);
+            byte[] result = new byte[resultSize];
+            buf.read(resultOffset, result, 0, resultSize);
+            return result;
+        } finally {
+            buf.free();
+        }
     }
 }

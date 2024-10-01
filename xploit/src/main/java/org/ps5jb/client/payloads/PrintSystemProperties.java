@@ -4,7 +4,9 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 
+import org.ps5jb.loader.Config;
 import org.ps5jb.loader.Status;
 
 /**
@@ -16,6 +18,14 @@ public class PrintSystemProperties implements Runnable {
      */
     @Override
     public void run() {
+        // Sample: disable remote logger
+        Status.resetLogger(null, 0, 0);
+        Status.println("The following message will not show up on the remote logging server");
+
+        // Sample: enable default remote logger
+        Status.resetLogger(Config.getLoggerHost(), Config.getLoggerPort(), Config.getLoggerTimeout());
+        Status.println("The following message will show up on the remote logging server");
+
         Properties props = System.getProperties();
 
         Enumeration propNames = props.propertyNames();

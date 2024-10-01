@@ -126,7 +126,7 @@ public class MMan {
     public void memoryProtect(Pointer addr, long len, ProtectionFlag ... prot) throws InvalidValueException, OperationNotPermittedException {
         long ret = this.libKernel.mprotect(addr, len, ProtectionFlag.or(prot));
         if (ret == -1) {
-            SdkException ex = errNo.getLastException(getClass(), "memoryUnmap");
+            SdkException ex = errNo.getLastException(getClass(), "memoryProtect");
             if (ex instanceof InvalidValueException) {
                 throw (InvalidValueException) ex;
             } else if (ex instanceof OperationNotPermittedException) {

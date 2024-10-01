@@ -38,8 +38,27 @@ public class Status {
      * Cleanup method which should be called just before the app termination to release the resources.
      */
     public static void close() {
-        if (LOGGER != null) {
-            LOGGER.close();
+        synchronized (Status.class) {
+            if (LOGGER != null) {
+                LOGGER.close();
+            }
+        }
+    }
+
+    /**
+     * Change the address of the server receiving remote logging output.
+     *
+     * @param host IP address or the hostname of the remote logging server. If null, remote logger will be deactivated.
+     * @param port Port on which the server listens for logging message.
+     * @param timeout Connect timeout to the remote logging server.
+     */
+    public static void resetLogger(String host, int port, int timeout) {
+        synchronized (Status.class) {
+            close();
+
+            if (System.getSecurityManager() == null && host != null) {
+                LOGGER = new RemoteLogger(host, port, timeout);
+            }
         }
     }
 

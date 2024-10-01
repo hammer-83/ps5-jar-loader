@@ -3,6 +3,12 @@ This project uses vulnerabilities discovered in BD-J layer of PS5 firmware versi
 This makes it easy to burn the BD-R disc with the loader just once and then keep on running new versions of the experimental code.
 This repository provides all the necessary setup needed to create both the loader BD-R disc filesystem and the JAR to send to the PS5.
 
+## Quickstart
+1. Download the JAR Loader ISO release.
+2. Burn it to a BD-R(E) disc and run it from the PS5 "Media" tab.
+3. Download one of the pre-compiled JARs or compile your own by reading the steps below.
+4. Send the JAR to the JAR Loader using NetCat, or using the JAR file itself, if the machine has Java installed: `java -jar [jarfile].jar [ip] [host]`.
+
 ## Prerequisites
 * JDK 11 (PS5 uses Java 11 runtime)
 * Apache Maven
@@ -26,24 +32,27 @@ The following properties in [pom.xml](pom.xml) can be adjusted before compiling 
 * `remote.logger.port` - Port on which remote logger will send the status messages.
 * `remote.logger.timeout` - Number of milliseconds to wait before abandoning attempts to connect to the remote logging host. If host is down after this timeout on the first send attempt, no further tries to do remote logging will be done.
 
-Either modify the POM directly, or pass the new values from command line, example: `mvn ... -Dloader.port=9025 -Dremote.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
+Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -Dremote.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
+
+Even if the remote logger is not active by default in the Xlet burned on disc, it is possible to programmatically change the remote logging server directly from the payload in the JAR file by calling [Status#resetLogger](xlet/src/main/java/org/ps5jb/loader/Status.java). 
 
 ## Usage
 1. Make sure environment variable `JAVA_HOME` points to the root of JDK 11. Add `${JAVA_HOME}/bin` directory to `${PATH}`.
 2. Also make sure that `MAVEN_HOME` points to the root of Apache Maven installation. Add `${MAVEN_HOME}/bin` directory to `${PATH}`.
 3. Create a payload to execute on PS5 by adding the implementation to the `xploit` submodule. There is no need to modify any existing files (though you are welcome if you want). Simply add your payload class in [org.ps5jb.client.payloads](xploit/src/main/java/org/ps5jb/client/payloads) package and specify its name as a parameter when compiling the project (see the next step). A few sample payloads are provided in this package already.
 4. Execute `mvn clean package -Dxploit.payload=[payload classname]` from the root of the project. It should produce the following artifacts:
-    * Directory `assembly/target/assembly-[version]` contains all the files that should be burned to the BD-R.
-    * File `xploit/target/xploit-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
-    To avoid having to specify the payload every time with a `-D` switch (in step 8 as well), you can also change the property `xploit.payload` in [pom.xml](xploit/pom.xml) of the [xploit](xploit) project.
-5. Burn the BD-R (better yet BD-RE), then insert it into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
-6. A message on screen should inform about loader waiting for JAR.
-7. Send the JAR using the command:
+    a. Directory `assembly/target/assembly-[version]` contains all the files that should be burned to a BD-R disc.
+    b. File `xploit/target/xploit-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
+    To avoid having to specify the payload every time with a `-D` switch (in step 9 as well), you can also change the property `xploit.payload` in [pom.xml](xploit/pom.xml) of the [xploit](xploit) project.
+5. Burn the BD-R (better yet BD-RE) with the contents from the directory mentioned in the step 4a. Note that re-burning the JAR loader disc is only necessary when the source of [xlet](xlet) or [assembly](assembly) modules is changed.
+6. Insert the disc into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
+7. A message on screen should inform about loader waiting for JAR.
+8. Send the JAR using the command:
     ```shell
     java -jar xploit/target/xploit-[version].jar <ps5 ip address>`
     ```
     PS5 should inform on screen about the status of the upload and the execution.
-8. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute #7 to retry as many times as necessary.
+9. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute step 8 to retry as many times as necessary.
 
 ## Notes
 1. To use with IntelliJ, point `File -> Open` dialog to the root of the project. Maven import will occur. Then follow manual steps in [IntelliJ Project Structure](#intellij-project-structure) to adjust the dependencies so that IntelliJ sees BD-J classes ahead of JDK classes.

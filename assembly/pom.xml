@@ -13,6 +13,7 @@
 
     <groupId>org.ps5jb</groupId>
     <artifactId>assembly</artifactId>
+    <version>${xlet.version}</version>
     <packaging>pom</packaging>
     <description>Builds the filesystem that can be burned onto a BD-R disc to be run on PS5.</description>
 
@@ -139,25 +140,25 @@
                     <dependency>
                         <groupId>net.java.bd.tools</groupId>
                         <artifactId>bdjo</artifactId>
-                        <version>${project.version}</version>
+                        <version>${project.parent.version}</version>
                         <scope>runtime</scope>
                     </dependency>
                     <dependency>
                         <groupId>net.java.bd.tools</groupId>
                         <artifactId>movieobject</artifactId>
-                        <version>${project.version}</version>
+                        <version>${project.parent.version}</version>
                         <scope>runtime</scope>
                     </dependency>
                     <dependency>
                         <groupId>net.java.bd.tools</groupId>
                         <artifactId>index</artifactId>
-                        <version>${project.version}</version>
+                        <version>${project.parent.version}</version>
                         <scope>runtime</scope>
                     </dependency>
                     <dependency>
                         <groupId>net.java.bd.tools</groupId>
                         <artifactId>id</artifactId>
-                        <version>${project.version}</version>
+                        <version>${project.parent.version}</version>
                         <scope>runtime</scope>
                     </dependency>
                 </dependencies>

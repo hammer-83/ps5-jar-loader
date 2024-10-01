@@ -317,7 +317,7 @@ public class ErrNo {
         } else if (lastError == ErrNo.ENOMEM) {
             result = new OutOfMemoryException(errorMessage);
         } else {
-            result = new SdkException(ErrorMessages.getClassErrorMessage(clazz, errorMessageKey, lastError));
+            result = new SdkException(ErrorMessages.getClassErrorMessage(clazz, keySuffix, lastError));
         }
 
         return result;

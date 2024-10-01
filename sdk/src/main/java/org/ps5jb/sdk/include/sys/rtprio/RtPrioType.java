@@ -7,21 +7,19 @@ import org.ps5jb.sdk.res.ErrorMessages;
  */
 public final class RtPrioType implements Comparable {
     /** Real time process. */
-    public static final RtPrioType RTP_PRIO_REALTIME = new RtPrioType((short) 1, "RTP_PRIO_REALTIME");
+    public static final RtPrioType RTP_PRIO_REALTIME = new RtPrioType((short) 2, "RTP_PRIO_REALTIME");
     /** Time sharing process. */
-    public static final RtPrioType RTP_PRIO_NORMAL = new RtPrioType((short) 2, "RTP_PRIO_NORMAL");
+    public static final RtPrioType RTP_PRIO_NORMAL = new RtPrioType((short) 3, "RTP_PRIO_NORMAL");
     /** Idle process. */
-    public static final RtPrioType RTP_PRIO_IDLE = new RtPrioType((short) 3, "RTP_PRIO_IDLE");
+    public static final RtPrioType RTP_PRIO_IDLE = new RtPrioType((short) 4, "RTP_PRIO_IDLE");
 
-    public static final RtPrioType RTP_PRIO_FIFO_BIT = new RtPrioType((short) 4, "RTP_PRIO_FIFO_BIT");
-    public static final RtPrioType RTP_PRIO_FIFO = new RtPrioType((short) 5, "RTP_PRIO_FIFO");
+    public static final RtPrioType RTP_PRIO_FIFO = new RtPrioType((short) (8 | RTP_PRIO_REALTIME.value), "RTP_PRIO_FIFO");
 
     /** All possible RtPrioType values. */
     private static final RtPrioType[] values = new RtPrioType[] {
             RTP_PRIO_REALTIME,
             RTP_PRIO_NORMAL,
             RTP_PRIO_IDLE,
-            RTP_PRIO_FIFO_BIT,
             RTP_PRIO_FIFO
     };
 
