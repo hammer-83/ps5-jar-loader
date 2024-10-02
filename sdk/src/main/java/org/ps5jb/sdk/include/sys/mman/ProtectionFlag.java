@@ -56,9 +56,9 @@ public final class ProtectionFlag implements Comparable {
      * @throws IllegalArgumentException If value does not correspond to any ProtectionFlag.
      */
     public static ProtectionFlag valueOf(int value) {
-        for (ProtectionFlag openFlag : values) {
-            if (value == openFlag.value()) {
-                return openFlag;
+        for (ProtectionFlag protectionFlag : values) {
+            if (value == protectionFlag.value()) {
+                return protectionFlag;
             }
         }
 

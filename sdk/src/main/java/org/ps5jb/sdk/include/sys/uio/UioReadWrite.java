@@ -50,9 +50,9 @@ public final class UioReadWrite implements Comparable {
      * @throws IllegalArgumentException If value does not correspond to any UioReadWrite.
      */
     public static UioReadWrite valueOf(int value) {
-        for (UioReadWrite segFlag : values) {
-            if (value == segFlag.value()) {
-                return segFlag;
+        for (UioReadWrite urw : values) {
+            if (value == urw.value()) {
+                return urw;
             }
         }
 

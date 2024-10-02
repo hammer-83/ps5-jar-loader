@@ -53,7 +53,7 @@ public final class RtPrioType implements Comparable {
      *
      * @param value Number to convert
      * @return RtPrioType constant corresponding to the given value.
-     * @throws IllegalArgumentException If value does not correspond to any CpuWhichType.
+     * @throws IllegalArgumentException If value does not correspond to any RtPrioType.
      */
     public static RtPrioType valueOf(short value) {
         for (RtPrioType rtPrioType : values) {

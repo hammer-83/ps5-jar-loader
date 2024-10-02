@@ -65,9 +65,9 @@ public final class UmtxShmFlag implements Comparable {
      * @throws IllegalArgumentException If value does not correspond to any UmtxShmFlag.
      */
     public static UmtxShmFlag valueOf(long value) {
-        for (UmtxShmFlag openFlag : values) {
-            if (value == openFlag.value()) {
-                return openFlag;
+        for (UmtxShmFlag shmFlag : values) {
+            if (value == shmFlag.value()) {
+                return shmFlag;
             }
         }
 

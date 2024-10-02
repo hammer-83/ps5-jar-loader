@@ -87,9 +87,9 @@ public final class MappingFlag implements Comparable {
      * @throws IllegalArgumentException If value does not correspond to any MappingFlag.
      */
     public static MappingFlag valueOf(int value) {
-        for (MappingFlag openFlag : values) {
-            if (value == openFlag.value()) {
-                return openFlag;
+        for (MappingFlag mappingFlag : values) {
+            if (value == mappingFlag.value()) {
+                return mappingFlag;
             }
         }
 

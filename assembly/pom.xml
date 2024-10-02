@@ -26,6 +26,12 @@
             <groupId>org.ps5jb</groupId>
             <artifactId>xlet</artifactId>
             <version>${xlet.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

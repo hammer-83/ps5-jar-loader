@@ -9,7 +9,7 @@ public class PThreadType {
     private Pointer pthread;
 
     /**
-     * DirEnt constructor.
+     * PThreadType constructor.
      *
      * @param pthread Native address of <code>pthread_t</code> structure.
      */

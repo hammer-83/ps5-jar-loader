@@ -54,6 +54,9 @@ public class LibKernel extends Library {
     private Pointer sched_yield;
     private Pointer sceKernelGetCurrentCpu;
     private Pointer sceKernelGetProsperoSystemSwVersion;
+    private Pointer socket;
+    private Pointer setsockopt;
+    private Pointer getsockopt;
 
     /**
      * Constructor.
@@ -401,6 +404,30 @@ public class LibKernel extends Library {
         }
 
         return call(write, fd, buf.addr(), nbytes);
+    }
+
+    public int socket(int domain, int type, int	protocol) {
+        if (socket == null) {
+            socket = addrOf("socket");
+        }
+
+        return (int) call(socket, domain, type, protocol);
+    }
+
+    public int getsockopt(int s, int level, int optname, Pointer optval, Pointer optlen) {
+        if (getsockopt == null) {
+            getsockopt = addrOf("getsockopt");
+        }
+
+        return (int) call(getsockopt, s, level, optname, optval.addr(), optlen.addr());
+    }
+
+    public int setsockopt(int s, int level, int optname, Pointer optval, long optlen) {
+        if (setsockopt == null) {
+            setsockopt = addrOf("setsockopt");
+        }
+
+        return (int) call(setsockopt, s, level, optname, optval.addr(), optlen);
     }
 
     public int _umtx_op(Pointer obj, int op, long val, Pointer uaddr, Pointer uaddr2) {

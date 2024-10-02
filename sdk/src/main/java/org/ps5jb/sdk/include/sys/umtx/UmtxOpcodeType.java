@@ -50,9 +50,9 @@ public final class UmtxOpcodeType implements Comparable {
      * @throws IllegalArgumentException If value does not correspond to any UmtxOpcodeType.
      */
     public static UmtxOpcodeType valueOf(int value) {
-        for (UmtxOpcodeType priorityType : values) {
-            if (value == priorityType.value()) {
-                return priorityType;
+        for (UmtxOpcodeType opcodeType : values) {
+            if (value == opcodeType.value()) {
+                return opcodeType;
             }
         }
 
