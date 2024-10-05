@@ -2,13 +2,16 @@ package org.ps5jb.sdk.core;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 
 /**
  * Root parent for any class that implements a pointer to a memory.
  */
-public abstract class AbstractPointer {
+public abstract class AbstractPointer implements Serializable {
+    private static final long serialVersionUID = 5085573430112354497L;
+
     /**
      * Wrap the given pointer in a non-null check. Returns the same pointer if it is not NULL.
      *
@@ -382,5 +385,31 @@ public abstract class AbstractPointer {
     @Override
     public int hashCode() {
         return (new Long(this.addr)).hashCode();
+    }
+
+    /**
+     * String representation of the pointer
+     *
+     * @return Hexadecimal address of the pointer
+     */
+    @Override
+    public String toString() {
+        int padLength;
+        if (addr > 0xFFFFFFFFL) {
+            padLength = 16;
+        } else {
+            padLength = 8;
+        }
+
+        StringBuffer buf = new StringBuffer(padLength);
+        buf.append("0x");
+        String hexAddr = Long.toHexString(addr);
+        int padCount = padLength - hexAddr.length();
+        for (int i = 0; i < padCount; ++i) {
+            buf.append("0");
+        }
+        buf.append(hexAddr);
+
+        return buf.toString();
     }
 }

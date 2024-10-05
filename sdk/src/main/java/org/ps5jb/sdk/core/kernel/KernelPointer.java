@@ -1,5 +1,7 @@
 package org.ps5jb.sdk.core.kernel;
 
+import org.ps5jb.loader.KernelAccessor;
+import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.sdk.core.AbstractPointer;
 
 /**
@@ -8,6 +10,11 @@ import org.ps5jb.sdk.core.AbstractPointer;
  * by calling {@link KernelReadWrite#setAccessor(KernelAccessor)}.
  */
 public class KernelPointer extends AbstractPointer {
+    private static final long serialVersionUID = 3445279334363239500L;
+
+    /** Start of kernel address space. See machine/vmparam.h */
+    private static final long KERNEL_ADDR_MASK = 0xFFFF800000000000L;
+
     /**
      * Returns a pointer instance equivalent to the given native memory address.
      *
@@ -16,6 +23,20 @@ public class KernelPointer extends AbstractPointer {
      */
     public static KernelPointer valueOf(long addr) {
         return addr == 0 ? NULL : new KernelPointer(addr);
+    }
+
+    /**
+     * Validates that the given kernel pointer has the correct kernel-space range.
+     *
+     * @param pointer Pointer to validate.
+     * @return Same pointer instance.
+     * @throws IllegalAccessError If the pointer is invalid (including NULL).
+     */
+    public static KernelPointer validRange(KernelPointer pointer) {
+        if ((((pointer.addr() & KERNEL_ADDR_MASK) != KERNEL_ADDR_MASK) || pointer.addr() == -1)) {
+            throw new IllegalAccessError(pointer.toString());
+        }
+        return pointer;
     }
 
     /** Static constant for NULL pointer. */
@@ -31,31 +52,31 @@ public class KernelPointer extends AbstractPointer {
 
     @Override
     public byte read1(long offset) {
-        overflow(this, offset, 1);
+        overflow(validRange(this), offset, 1);
         return KernelReadWrite.getAccessor().read1(this.addr + offset);
     }
 
     @Override
     public short read2(long offset) {
-        overflow(this, offset, 2);
+        overflow(validRange(this), offset, 2);
         return KernelReadWrite.getAccessor().read2(this.addr + offset);
     }
 
     @Override
     public int read4(long offset) {
-        overflow(this, offset, 4);
+        overflow(validRange(this), offset, 4);
         return KernelReadWrite.getAccessor().read4(this.addr + offset);
     }
 
     @Override
     public long read8(long offset) {
-        overflow(this, offset, 8);
+        overflow(validRange(this), offset, 8);
         return KernelReadWrite.getAccessor().read8(this.addr + offset);
     }
 
     @Override
     public void read(long offset, byte[] value, int valueOffset, int size) {
-        overflow(this, offset, size);
+        overflow(validRange(this), offset, size);
 
         // TODO: This can be implemented more efficiently
         final KernelAccessor accessor = KernelReadWrite.getAccessor();
@@ -66,31 +87,31 @@ public class KernelPointer extends AbstractPointer {
 
     @Override
     public void write1(long offset, byte value) {
-        overflow(this, offset, 1);
+        overflow(validRange(this), offset, 1);
         KernelReadWrite.getAccessor().write1(this.addr + offset, value);
     }
 
     @Override
     public void write2(long offset, short value) {
-        overflow(this, offset, 2);
+        overflow(validRange(this), offset, 2);
         KernelReadWrite.getAccessor().write2(this.addr + offset, value);
     }
 
     @Override
     public void write4(long offset, int value) {
-        overflow(this, offset, 4);
+        overflow(validRange(this), offset, 4);
         KernelReadWrite.getAccessor().write4(this.addr + offset, value);
     }
 
     @Override
     public void write8(long offset, long value) {
-        overflow(this, offset, 8);
+        overflow(validRange(this), offset, 8);
         KernelReadWrite.getAccessor().write8(this.addr + offset, value);
     }
 
     @Override
     public void write(long offset, byte[] value, int valueOffset, int count) {
-        overflow(this, offset, count);
+        overflow(validRange(this), offset, count);
 
         // TODO: This can be implemented more efficiently
         final KernelAccessor accessor = KernelReadWrite.getAccessor();
@@ -108,9 +129,6 @@ public class KernelPointer extends AbstractPointer {
      * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
      */
     public void copyTo(KernelPointer dest, long offset, int size) {
-        overflow(this, offset, size);
-        overflow(dest, 0, size);
-
         byte[] data = new byte[size];
         read(offset, data, 0, size);
         dest.write(0, data, 0, size);

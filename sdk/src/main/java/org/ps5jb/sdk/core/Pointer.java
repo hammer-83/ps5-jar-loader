@@ -11,6 +11,8 @@ import jdk.internal.misc.Unsafe;
  * Abstraction over memory pointer operations in user-space.
  */
 public class Pointer extends AbstractPointer {
+    private static final long serialVersionUID = 2230199156786175114L;
+
     /**
      * Helper class to obtain an instance of Unsafe in a thread-safe manner.
      */
@@ -241,9 +243,6 @@ public class Pointer extends AbstractPointer {
      * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
      */
     public void copyTo(Pointer dest, long offset, int size) {
-        overflow(this, offset, size);
-        overflow(dest, 0, size);
-
         byte[] data = new byte[size];
         read(offset, data, 0, size);
         dest.write(0, data, 0, size);

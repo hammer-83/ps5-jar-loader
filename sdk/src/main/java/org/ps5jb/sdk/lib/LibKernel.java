@@ -446,6 +446,10 @@ public class LibKernel extends Library {
         return (int) call(mprotect, addr.addr(), len, prot);
     }
 
+    public int sched_yield() {
+        return sched_yield(0);
+    }
+
     public int sched_yield(long unused) {
         if (sched_yield == null) {
             sched_yield = addrOf("sched_yield");
@@ -491,5 +495,16 @@ public class LibKernel extends Library {
         } finally {
             buf.free();
         }
+    }
+
+    /**
+     * Helper method to return the system software version in the form <code>0x[MAJOR BYTE][MINOR BYTE]</code>.
+     *
+     * @return Firmware version of the console.
+     * @throws org.ps5jb.sdk.core.SdkRuntimeException If an error occurred while retrieving the version.
+     */
+    public int getSystemSoftwareVersion() {
+        byte[] swVer = sceKernelGetProsperoSystemSwVersion();
+        return (swVer[0x1F] << 8) | swVer[0x1E];
     }
 }

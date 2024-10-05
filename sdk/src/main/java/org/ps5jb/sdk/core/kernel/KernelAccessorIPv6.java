@@ -1,5 +1,9 @@
 package org.ps5jb.sdk.core.kernel;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.SdkRuntimeException;
@@ -17,29 +21,35 @@ import org.ps5jb.sdk.lib.LibKernel;
  * Requires an existing kernel accessor on creation.
  */
 public class KernelAccessorIPv6 implements KernelAccessor {
-    private final Pointer master_target_buffer;
-    private final Pointer slave_buffer;
-    private final Pointer pipemap_buffer;
-    private final Pointer krw_qword_store;
+    private static final long serialVersionUID = 8937512308105266960L;
 
-    private final int master_sock;
-    private final int victim_sock;
+    private Pointer master_target_buffer;
+    private Pointer slave_buffer;
+    private Pointer pipemap_buffer;
+    private Pointer krw_qword_store;
 
-    private final LibKernel libKernel;
-    private final Socket socket;
+    private int master_sock;
+    private int victim_sock;
 
-    private final int[] pipe_fd;
-    private final KernelPointer pipe_addr;
+    private transient LibKernel libKernel;
+    private transient Socket socket;
+
+    private int[] pipe_fd;
+    private KernelPointer pipe_addr;
+
+    private KernelPointer kernelBase;
 
     /**
      * Constructor for kernel IPv6 accessor.
      *
      * @param ofilesAddress Address of "fdt_ofiles" structure from the "proc" structure of the current process.
+     * @param kernelBase Address of the base of kernel text segment.
      * @throws SdkException If an error occurs during accessor creation.
      */
-    public KernelAccessorIPv6(KernelPointer ofilesAddress) throws SdkException {
+    public KernelAccessorIPv6(KernelPointer ofilesAddress, KernelPointer kernelBase) throws SdkException {
         this.libKernel = new LibKernel();
         this.socket = new Socket(this.libKernel);
+        this.kernelBase = kernelBase;
 
         final long sock_opt_size = 0x14;
         master_target_buffer = Pointer.calloc(sock_opt_size);
@@ -93,7 +103,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
 
     /**
      * Frees resources in use by this accessor. After calling this method
-     * this instance should not be used.
+     * this instance should not be used and kernel access is no longer available.
      */
     public synchronized void free() {
         if (master_target_buffer != null) {
@@ -258,5 +268,18 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
+    }
+
+    @Override
+    public long getKernelBase() {
+        return kernelBase == null ? 0 : kernelBase.addr();
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        stream.defaultReadObject();
+
+        // Make sure to restore libraries when de-serializing
+        libKernel = new LibKernel();
+        socket = new Socket(this.libKernel);
     }
 }

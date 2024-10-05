@@ -113,6 +113,7 @@ public class RemoteLogger {
                 } finally {
                     pw.close();
                 }
+                sb.append("\n");
                 sb.append(sw);
             } finally {
                 try {

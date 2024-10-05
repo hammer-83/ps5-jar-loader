@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.jar.Manifest;
 
+import org.ps5jb.loader.KernelAccessor;
+import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
 
 /**
@@ -86,14 +88,25 @@ public class JarMain {
 
                         try {
                             Class payloadClass = Class.forName(payloadName);
-
                             Status.println("Executing payload: " + payloadName);
+
+                            // Activate Kernel accessor, if any
+                            if (!KernelReadWrite.restoreAccessor(getClass().getClassLoader())) {
+                                Status.println("Kernel R/W will not be available");
+                            } else {
+                                Status.println("Kernel R/W restored");
+                            }
+
                             Runnable payload = (Runnable) payloadClass.newInstance();
                             payload.run();
                         } catch (ClassNotFoundException e) {
                             Status.println("Unable to determine the payload to execute because the value of the attribute '" + MANIFEST_PAYLOAD_KEY + "' is not recognized: " + payloadName);
                         } catch (ClassCastException e) {
                             Status.println("Unable to execute the payload because it does not implement the " + Runnable.class.getName() + " interface");
+                        } finally {
+                            if (KernelReadWrite.getAccessor() != null && KernelReadWrite.saveAccessor()) {
+                                Status.println("Kernel R/W serialized for a follow-up execution");
+                            }
                         }
                     }
                 }
