@@ -77,4 +77,11 @@ public class UniStd {
             }
         }
     }
+
+    public void usleep(long microseconds) throws SdkException {
+        int ret = libKernel.usleep(microseconds);
+        if (ret == -1) {
+            throw errNo.getLastException(getClass(), "usleep");
+        }
+    }
 }

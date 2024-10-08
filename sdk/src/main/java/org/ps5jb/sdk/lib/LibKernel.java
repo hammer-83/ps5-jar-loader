@@ -57,6 +57,7 @@ public class LibKernel extends Library {
     private Pointer socket;
     private Pointer setsockopt;
     private Pointer getsockopt;
+    private Pointer usleep;
 
     /**
      * Constructor.
@@ -463,6 +464,14 @@ public class LibKernel extends Library {
             sceKernelGetCurrentCpu = addrOf("sceKernelGetCurrentCpu");
         }
         return (int) call(sceKernelGetCurrentCpu);
+    }
+
+    public int usleep(long microseconds) {
+        if (usleep == null) {
+            usleep = addrOf("usleep");
+        }
+
+        return (int) call(usleep, microseconds);
     }
 
     /**

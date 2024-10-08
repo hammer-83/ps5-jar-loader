@@ -82,6 +82,7 @@ public class DumpClasses extends SocketListener {
             while (cl != null && !cl.equals(prevCl)) {
                 prevCl = cl;
 
+                Status.println("Dumping " + cl);
                 dumpClassLoader(cl, zip, dumpedEntries);
                 cl = cl.getParent();
             }
@@ -120,17 +121,22 @@ public class DumpClasses extends SocketListener {
     protected void dumpClassLoader(ClassLoader cl, ZipOutputStream zip, Set dumpedEntries) throws Exception {
         Class prevClass = null;
         Class c = cl.getClass();
-        Status.println("Analysis of the class loader " + cl);
+        String indent = "";
         while (c != null && !c.equals(prevClass)) {
             prevClass = c;
-            Status.println("  Analysis of the class " + c.getName());
 
             // Attempt to dump using built-in method. If does not work, try JDK ucp method.
             // Stop hierarchy traversal when something is dumped.
             if (!tryDumpBuiltinClassLoader(cl, c, zip, dumpedEntries)) {
                 if (!tryDumpJdkUcpClassLoader(cl, c, zip, dumpedEntries)) {
+                    Status.println(indent + "    Unrecognized class loader " + c.getName() + ". Skipping to parent");
                     c = c.getSuperclass();
+                    indent += "  ";
+                } else {
+                    Status.println(indent + "  Dumped class loader " + c.getName());
                 }
+            } else {
+                Status.println(indent + "  Dumped class loader " + c.getName());
             }
         }
     }
@@ -245,6 +251,7 @@ public class DumpClasses extends SocketListener {
                         Method toArrayMethod = getMethod(resourceStream.getClass(), "toArray", new Class[0]);
 
                         Object[] resources = (Object[]) toArrayMethod.invoke(resourceStream, new Object[0]);
+                        Status.println("      Processing " + resources.length + " resources");
                         for (Object res : resources) {
                             String resName = mref.descriptor().name() + "/" + res;
                             if (!dumpedEntries.contains(resName)) {
@@ -296,7 +303,7 @@ public class DumpClasses extends SocketListener {
      */
     protected Method getMethod(Class cl, String methodName, Class[] parameterTypes) throws NoSuchMethodException {
         try {
-            Method result = cl.getMethod(methodName, new Class[0]);
+            Method result = cl.getMethod(methodName, parameterTypes);
             result.setAccessible(true);
 
             return result;
