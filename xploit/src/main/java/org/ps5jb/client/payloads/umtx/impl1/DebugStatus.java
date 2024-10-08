@@ -1,4 +1,4 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
 import org.ps5jb.loader.Status;
 

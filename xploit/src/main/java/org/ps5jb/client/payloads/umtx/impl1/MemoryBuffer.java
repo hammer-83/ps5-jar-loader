@@ -1,13 +1,16 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
 import java.util.Arrays;
 
+import org.ps5jb.client.payloads.umtx.kernel.MemoryDumper;
 import org.ps5jb.sdk.core.AbstractPointer;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 
 public class MemoryBuffer {
     private final AbstractPointer ptr;
+
+    private byte[] snapshot;
 
     public MemoryBuffer(AbstractPointer ptr, long size) {
         if (ptr.size() == null || ptr.size().longValue() != size) {
@@ -29,7 +32,7 @@ public class MemoryBuffer {
         return this.ptr.size();
     }
 
-    public int read8(long offset) {
+    public byte read8(long offset) {
         return this.ptr.read1(offset);
     }
 
@@ -38,31 +41,48 @@ public class MemoryBuffer {
     }
 
     public void dump() {
-        final long count = getSize();
+        MemoryDumper.dump(this.ptr, getSize());
+    }
 
-        for (int j = 0; j < count; j += 0x10) {
-            final Pointer offsetPtr = Pointer.valueOf(j);
-            if ((j + 0x10) <= count) {
-                final long value1 = read64(j);
-                final long value2 = read64(j + 8);
+    public void snapshot() {
+        long size = getSize();
 
-                String value1str = Long.toHexString(value1);
-                while (value1str.length() < 0x10) {
-                    value1str = "0" + value1str;
+        if (snapshot == null) {
+            snapshot = new byte[(int) size];
+        }
+
+        for (int i = 0; i < size; i += 8) {
+            if ((i + 8) <= size) {
+                long val = read64(i);
+                for (int j = 0; j < 8; ++j) {
+                    snapshot[i + j] = (byte) ((val >> (j * 8)) & 0xFF);
                 }
-
-                String value2str = Long.toHexString(value2);
-                while (value2str.length() < 0x10) {
-                    value2str = "0" + value2str;
+            } else {
+                for (int j = 0; (i + j) < size; ++j) {
+                    byte val = read8(i + j);
+                    snapshot[i + j] = val;
                 }
-
-                DebugStatus.info(offsetPtr + ": " + value1str + " " + value2str);
-            }
-            else {
-                // TODO: Implement dumping of last partial line
-                DebugStatus.info(offsetPtr + ": tail omitted");
             }
         }
+    }
+
+    public void clearSnapshot() {
+        snapshot = null;
+    }
+
+    public long readSnapshot64(long offset) {
+        long result = 0;
+        if (snapshot != null) {
+            long size = getSize();
+            for (long i = 0; i < 8; ++i) {
+                if ((offset + i) < size) {
+                    result = result | (((long) (snapshot[(int) (offset + i)] & 0xFF)) << (i * 8));
+                } else {
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     public long find(AbstractPointer pattern, int size) {

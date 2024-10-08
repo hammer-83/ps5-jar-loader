@@ -92,7 +92,7 @@ public class JarMain {
 
                             // Activate Kernel accessor, if any
                             if (!KernelReadWrite.restoreAccessor(getClass().getClassLoader())) {
-                                Status.println("Kernel R/W will not be available");
+                                Status.println("Kernel R/W not available");
                             } else {
                                 Status.println("Kernel R/W restored");
                             }

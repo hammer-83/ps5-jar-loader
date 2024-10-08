@@ -1,10 +1,8 @@
 /**
- * UMTX bug triggering implemented by
- * <a href="https://gist.github.com/flatz/89dfe9ed662076742f770f92e95e12a7">flat_z</a>
- * and adapted to run as a PS5 payload.
+ * Contains two different UMTX race implementations and some helpers to
+ * do post-exploitation.
  *
- * To create a JAR with this payload, add
- * <pre>-Dxploit.payload=org.ps5jb.client.payloads.umtx.UmtxExploit</pre>
- * when building the remote JAR.
+ * See {@link org.ps5jb.client.payloads.umtx.impl1}
+ * and {@link org.ps5jb.client.payloads.umtx.impl2} for details.
  */
 package org.ps5jb.client.payloads.umtx;

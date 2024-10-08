@@ -1,6 +1,5 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
-import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.CpuSet;
 import org.ps5jb.sdk.include.sys.RtPrio;

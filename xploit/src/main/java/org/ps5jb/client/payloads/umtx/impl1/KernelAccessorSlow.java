@@ -1,4 +1,4 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
 import java.io.IOException;
 import java.io.NotActiveException;

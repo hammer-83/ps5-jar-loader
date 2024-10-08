@@ -1,19 +1,23 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.kernel;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.ps5jb.loader.Status;
+import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 
-class KernelAddressClassifier {
+public class KernelAddressClassifier {
     Map counts = new TreeMap();
 
-    static KernelAddressClassifier fromBuffer(MemoryBuffer buffer) {
+    public static KernelAddressClassifier fromBuffer(Pointer buffer) {
+        if (buffer.size() == null) {
+            throw new IllegalArgumentException("Buffer must have a defined size for kernel address scanning");
+        }
+
         KernelAddressClassifier result = new KernelAddressClassifier();
-        for (int i = 0; i < buffer.getSize(); i += 8) {
-            KernelPointer kptr = new KernelPointer(buffer.read64(i));
+        for (long i = 0; (i + 8) <= buffer.size().longValue(); i += 8) {
+            KernelPointer kptr = new KernelPointer(buffer.read8(i));
             try {
                 KernelPointer.validRange(kptr);
 
@@ -26,21 +30,13 @@ class KernelAddressClassifier {
                 }
                 result.counts.put(val, curCount);
             } catch (IllegalAccessError e) {
-                // Ignore
+                // Ignore invalid pointers
             }
         }
         return result;
     }
 
-    void dump() {
-        Iterator iter = counts.entrySet().iterator();
-        while (iter.hasNext()) {
-            Map.Entry count = (Map.Entry) iter.next();
-            DebugStatus.info(Long.toHexString((Long) count.getKey()) + ": " + count.getValue());
-        }
-    }
-
-    Long getMostOccuredHeapAddress(int threshold) {
+    public Long getMostOccuredHeapAddress(int threshold) {
         Long result = null;
         int maxCount = 0;
         Iterator iter = counts.entrySet().iterator();

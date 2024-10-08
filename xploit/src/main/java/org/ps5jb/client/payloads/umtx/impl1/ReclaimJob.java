@@ -1,10 +1,9 @@
-package org.ps5jb.client.payloads.umtx;
+package org.ps5jb.client.payloads.umtx.impl1;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.CpuSet;
@@ -25,6 +24,7 @@ public class ReclaimJob extends CommonJob {
     private final ErrNo errNo;
     private final CpuSet cpuSet;
 
+    private final int index;
     private final int marker;
     private final Pointer markerAddress;
     private final Pointer markerCopyAddress;
@@ -47,6 +47,7 @@ public class ReclaimJob extends CommonJob {
 
         this.errNo = new ErrNo(this.libKernel);
         this.cpuSet = new CpuSet(this.libKernel);
+        this.index = index;
         this.state = state;
 
         this.jobName = "reclaim#" + index;
@@ -70,7 +71,17 @@ public class ReclaimJob extends CommonJob {
         }
 
         if (Config.toggleReclaimCpuAffinityMask) {
-            cpuSet.setCurrentThreadAffinity(this.state.DESTROYER_THREAD_CORES[this.state.destroyerThreadIndex]);
+            if (Config.toggleDestroyerAffinityOnReclaimThread && this.state.destroyerThreadIndex != -1) {
+                cpuSet.setCurrentThreadAffinity(this.state.DESTROYER_THREAD_CORES[this.state.destroyerThreadIndex]);
+                if (this.index == 0) {
+                    DebugStatus.info("Set affinity to " + libKernel.sceKernelGetCurrentCpu() + " from destroyer #" + this.state.destroyerThreadIndex);
+                }
+            } else {
+                cpuSet.setCurrentThreadAffinity(this.state.LOOKUP_THREAD_CORES);
+                if (this.index == 0) {
+                    DebugStatus.info("Set affinity to " + libKernel.sceKernelGetCurrentCpu() + " from lookup");
+                }
+            }
         }
 
         if (Config.toggleSetThreadPriorities && Config.toggleEnableThreadPriorityForReclaimThreads) {
