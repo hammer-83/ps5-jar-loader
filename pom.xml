@@ -30,14 +30,6 @@
 
         <!-- Do not use the same version as parent project for Xlet because it will be modified less frequently. We only want to burn new disc if Xlet changes -->
         <xlet.version>2.0.0</xlet.version>
-
-        <!-- Various application configuration properties -->
-        <loader.port>9025</loader.port>
-        <loader.resolution.width>1920</loader.resolution.width>
-        <loader.resolution.height>1080</loader.resolution.height>
-        <remote.logger.host></remote.logger.host>
-        <remote.logger.port>18194</remote.logger.port>
-        <remote.logger.timeout>5000</remote.logger.timeout>
     </properties>
 
     <modules>

@@ -25,16 +25,18 @@ The project comprises the following components:
 * `xploit` subproject contains the code to be sent for execution on PS5. The code can reference classes from `xlet`, such as the [Status](xlet/src/main/java/org/ps5jb/loader/Status.java) class to output on screen. The project produces a JAR that is able to send itself for execution.
 
 ## Configuration
-The following properties in [pom.xml](pom.xml) can be adjusted before compiling and burning the JAR Loader to disk:
+The following properties in [xlet/pom.xml](xlet/pom.xml) can be adjusted before compiling and burning the JAR Loader to disk:
 * `loader.port` - Port on which JAR loader will listen for data.
 * `loader.resolution.width`, `loader.resolution.height` - Screen resolution to set in various files. Not sure how this affects anything, I did not experiment with this enough.
-* `remote.logger.host` - IP address where to echo the messages shown on screen. If blank, remote logging will not be used. This host can also receive binary data, see [RemoteLogger#sendBytes](xlet/src/main/java/org/ps5jb/loader/RemoteLogger.java).
-* `remote.logger.port` - Port on which remote logger will send the status messages.
-* `remote.logger.timeout` - Number of milliseconds to wait before abandoning attempts to connect to the remote logging host. If host is down after this timeout on the first send attempt, no further tries to do remote logging will be done.
+* `loader.logger.host` - IP address where to echo the messages shown on screen. If blank, remote logging will not be used. This host can also receive binary data, see [RemoteLogger#sendBytes](xlet/src/main/java/org/ps5jb/loader/RemoteLogger.java).
+* `loader.logger.port` - Port on which remote logger will send the status messages.
+* `loader.logger.timeout` - Number of milliseconds to wait before abandoning attempts to connect to the remote logging host. If host is down after this timeout on the first send attempt, no further tries to do remote logging will be done.
 
-Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -Dremote.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
+Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -loader.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
 
-Even if the remote logger is not active by default in the Xlet burned on disc, it is possible to programmatically change the remote logging server directly from the payload in the JAR file by calling [Status#resetLogger](xlet/src/main/java/org/ps5jb/loader/Status.java). 
+Even if the remote logger is not active by default in the Xlet burned on disc, it is possible to change the remote server configuration using one of the two approaches:
+1. Specify `xploit.logger.host` and optionally `xploit.logger.port` properties when compiling the JAR. These can be set in [xploit/pom.xml](xploit/pom.xml) or on command line `mvn clean package -Dxploit.logger.host=192.168.1.110`.
+2. Programmatically in the JAR payload by calling [Status#resetLogger](xlet/src/main/java/org/ps5jb/loader/Status.java).
 
 ## Usage
 1. Make sure environment variable `JAVA_HOME` points to the root of JDK 11. Add `${JAVA_HOME}/bin` directory to `${PATH}`.

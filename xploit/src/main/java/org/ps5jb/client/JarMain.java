@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.jar.Manifest;
 
+import org.ps5jb.client.payloads.umtx.common.DebugStatus;
+import org.ps5jb.loader.Config;
 import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
@@ -21,6 +23,8 @@ import org.ps5jb.loader.Status;
  */
 public class JarMain {
     private static final String MANIFEST_PAYLOAD_KEY = "PS5JB-Client-Payload";
+    private static final String MANIFEST_LOGGER_HOST = "PS5JB-Client-Logger-Host";
+    private static final String MANIFEST_LOGGER_PORT = "PS5JB-Client-Logger-Port";
 
     /**
      * JAR entry point. Has one of the 3 behaviours depending on the arguments:
@@ -86,6 +90,7 @@ public class JarMain {
                             payloadName = getClass().getPackage().getName() + ".payloads." + payloadName;
                         }
 
+                        boolean restoreLogger = false;
                         try {
                             Class payloadClass = Class.forName(payloadName);
                             Status.println("Executing payload: " + payloadName);
@@ -97,6 +102,27 @@ public class JarMain {
                                 Status.println("Kernel R/W restored");
                             }
 
+                            // See if we need to override logging
+                            try {
+                                String overrideLoggerHost = mf.getMainAttributes().getValue(MANIFEST_LOGGER_HOST);
+                                if (overrideLoggerHost.equals("")) {
+                                    overrideLoggerHost = null;
+                                }
+
+                                if (overrideLoggerHost != null) {
+                                    String overrideLoggerPortStr = mf.getMainAttributes().getValue(MANIFEST_LOGGER_PORT);
+                                    if (overrideLoggerPortStr != null && !"".equals(overrideLoggerPortStr)) {
+                                        int overrideLoggerPort = Integer.parseInt(overrideLoggerPortStr);
+
+                                        Status.resetLogger(overrideLoggerHost, overrideLoggerPort, Config.getLoggerTimeout());
+                                        restoreLogger = true;
+                                        DebugStatus.info("Remote logging server set to " + overrideLoggerHost + ":" + overrideLoggerPort);
+                                    }
+                                }
+                            } catch (NumberFormatException e) {
+                                Status.println("Logger port configuration is invalid: " +  " Skipping");
+                            }
+
                             Runnable payload = (Runnable) payloadClass.newInstance();
                             payload.run();
                         } catch (ClassNotFoundException e) {
@@ -106,6 +132,11 @@ public class JarMain {
                         } finally {
                             if (KernelReadWrite.getAccessor() != null && KernelReadWrite.saveAccessor()) {
                                 Status.println("Kernel R/W serialized for a follow-up execution");
+                            }
+
+                            if (restoreLogger) {
+                                DebugStatus.info("Restoring default remote logging configuration");
+                                Status.resetLogger(Config.getLoggerHost(), Config.getLoggerPort(), Config.getLoggerTimeout());
                             }
                         }
                     }

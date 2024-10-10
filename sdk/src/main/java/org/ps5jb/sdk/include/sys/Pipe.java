@@ -1,10 +1,6 @@
 package org.ps5jb.sdk.include.sys;
 
-import org.ps5jb.sdk.core.Pointer;
-import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.machine.Param;
-import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
-import org.ps5jb.sdk.lib.LibKernel;
 
 /**
  * This class represents <code>include/sys/pipe.h</code> from FreeBSD source.

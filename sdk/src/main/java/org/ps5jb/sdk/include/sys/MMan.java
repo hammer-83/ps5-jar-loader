@@ -9,7 +9,6 @@ import org.ps5jb.sdk.include.sys.errno.OperationNotPermittedException;
 import org.ps5jb.sdk.include.sys.fcntl.OpenFlag;
 import org.ps5jb.sdk.include.sys.mman.MappingFlag;
 import org.ps5jb.sdk.include.sys.mman.ProtectionFlag;
-import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
