@@ -5,6 +5,7 @@ import java.io.NotActiveException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.ps5jb.client.payloads.umtx.common.DebugStatus;
 import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkRuntimeException;
@@ -46,8 +47,10 @@ class KernelAccessorSlow implements KernelAccessor {
         // Set command, we do this last because it kickstarts the thread to do stuff
         kPrimThreadData.cmd.set(cmd);
 
-        libKernel.usleep(10000L);
-        //Status.println("[+] kprim send (" + cmd + ", 0x" + Long.toHexString(uaddr) + ", 0x" + Long.toHexString(kaddr) + "), len=" + len + ", read=" + kPrimThreadData.readCounter.get() + ", write=" + kPrimThreadData.writeCounter.get());
+        libKernel.usleep(50000L);
+        if (DebugStatus.isTraceEnabled()) {
+            DebugStatus.trace("[+] kprim send (" + cmd + ", 0x" + Long.toHexString(uaddr) + ", 0x" + Long.toHexString(kaddr) + "), len=" + len + ", read=" + kPrimThreadData.readCounter.get() + ", write=" + kPrimThreadData.writeCounter.get());
+        }
 
         // Command is done, clear the command and put the thread into reset
         kPrimThreadData.resetSignal.set(true);
@@ -68,7 +71,9 @@ class KernelAccessorSlow implements KernelAccessor {
                 int possible_uio_rw = kstack.read4(0x3000 + i + SIZE_IOV + OFFSET_UIO_RW);
 
                 if (possible_uio_resid == len && possible_uio_segflg == 0 && possible_uio_rw == uioRw) {
-                    //Status.println("[+] found iov on stack @ 0x" + Long.toHexString(i));
+                    if (DebugStatus.isDebugEnabled()) {
+                        DebugStatus.debug("[+] found iov on stack @ 0x" + Long.toHexString(i));
+                    }
                     stack_iov_offset = i;
                     break;
                 }
@@ -94,10 +99,14 @@ class KernelAccessorSlow implements KernelAccessor {
             if (writeBytes != UmtxExploitJob.PIPE_SLOW_BATCH_SIZE) {
                 throw new SdkRuntimeException("Unable to fill write pipe with garbage data");
             }
-            //Status.println("Written " + writeBytes + " to pipe fd #" + kPrimThreadData.pipeSlowWriteFd);
+            if (DebugStatus.isTraceEnabled()) {
+                DebugStatus.trace("Written " + writeBytes + " to pipe fd #" + kPrimThreadData.pipeSlowWriteFd);
+            }
             totalGarbageSize += writeBytes;
         }
-        //Status.println("Total garbage bytes " + totalGarbageSize);
+        if (DebugStatus.isTraceEnabled()) {
+            DebugStatus.trace("Total garbage bytes " + totalGarbageSize);
+        }
 
         // Signal other thread to write using size we want, the thread will hang until we read
         sendCommand(UmtxExploitJob.KPRIM_READ, uaddr.addr(), kaddr, len);
@@ -120,14 +129,18 @@ class KernelAccessorSlow implements KernelAccessor {
         if (readGarbageSize != UmtxExploitJob.PIPE_SLOW_SIZE) {
             throw new SdkRuntimeException("Unable to unlock the pipe. Read: " + readGarbageSize + ". Expected: " + totalGarbageSize);
         }
-        //Status.println("Read " + readGarbageSize + " garbage bytes");
+        if (DebugStatus.isTraceEnabled()) {
+            DebugStatus.trace("Read " + readGarbageSize + " garbage bytes");
+        }
 
         // Read kernel data
         long read = libKernel.read(kPrimThreadData.pipeSlowReadFd, uaddr, len);
         if (read != len) {
             throw new SdkRuntimeException("Unexpected number of bytes read: " + read + " instead of " + len);
         }
-        //Status.println("Read " + read + " bytes");
+        if (DebugStatus.isDebugEnabled()) {
+            DebugStatus.debug("Read " + read + " bytes");
+        }
     }
 
     void slowCopyIn(Pointer uaddr, long kaddr, int len) {

@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.ps5jb.client.payloads.umtx.common.DebugStatus;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.CpuSet;

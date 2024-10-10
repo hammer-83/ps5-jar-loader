@@ -1,8 +1,8 @@
 package org.ps5jb.client.payloads.umtx.impl1;
 
 import org.ps5jb.sdk.include.sys.Pipe;
-import org.ps5jb.sdk.include.sys.rtprio.RtPrio;
 import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
+import org.ps5jb.sdk.include.sys.rtprio.SchedulingClass;
 
 public class Config {
     // Configuration.
@@ -40,10 +40,10 @@ public class Config {
     public static final long MAX_PIPE_BUFFER_SIZE = Pipe.PIPE_MINDIRECT / 2;
 
     // Priorities for such threads. `RTP_PRIO_FIFO` should also work.
-    public static RtPrio MAIN_THREAD_PRIORITY = new RtPrio(RtPrioType.RTP_PRIO_REALTIME, (short) 256);
-    public static RtPrio DESTROYER_THREAD_PRIORITY = new RtPrio(RtPrioType.RTP_PRIO_REALTIME, (short) 256); // 256
-    public static RtPrio LOOKUP_THREAD_PRIORITY = new RtPrio(RtPrioType.RTP_PRIO_REALTIME, (short) 767); // 767, 400
-    public static RtPrio RECLAIM_THREAD_PRIORITY = new RtPrio(RtPrioType.RTP_PRIO_REALTIME, (short) 450); // 450
+    public static RtPrioType MAIN_THREAD_PRIORITY = new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, (short) 256);
+    public static RtPrioType DESTROYER_THREAD_PRIORITY = new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, (short) 256); // 256
+    public static RtPrioType LOOKUP_THREAD_PRIORITY = new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, (short) 767); // 767, 400
+    public static RtPrioType RECLAIM_THREAD_PRIORITY = new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, (short) 450); // 450
 
     // Max length of reclaim thread name.
     public static int MAX_RECLAIM_THREAD_NAME_SIZE = 0x10;

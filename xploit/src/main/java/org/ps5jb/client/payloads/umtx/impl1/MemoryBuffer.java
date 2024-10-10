@@ -2,7 +2,7 @@ package org.ps5jb.client.payloads.umtx.impl1;
 
 import java.util.Arrays;
 
-import org.ps5jb.client.payloads.umtx.kernel.MemoryDumper;
+import org.ps5jb.client.payloads.umtx.common.MemoryDumper;
 import org.ps5jb.sdk.core.AbstractPointer;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
