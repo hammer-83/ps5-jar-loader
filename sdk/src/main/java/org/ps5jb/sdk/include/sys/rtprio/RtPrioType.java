@@ -1,102 +1,45 @@
 package org.ps5jb.sdk.include.sys.rtprio;
 
-import org.ps5jb.sdk.res.ErrorMessages;
-
 /**
- * Process realtime-priority specifications to rtprio.
+ * Wrapper for FreeBSD <code>rtprio</code> structure.
  */
-public final class RtPrioType implements Comparable {
-    /** Real time process. */
-    public static final RtPrioType RTP_PRIO_REALTIME = new RtPrioType((short) 2, "RTP_PRIO_REALTIME");
-    /** Time sharing process. */
-    public static final RtPrioType RTP_PRIO_NORMAL = new RtPrioType((short) 3, "RTP_PRIO_NORMAL");
-    /** Idle process. */
-    public static final RtPrioType RTP_PRIO_IDLE = new RtPrioType((short) 4, "RTP_PRIO_IDLE");
+public class RtPrioType {
+    public static final short RTP_PRIO_MIN = 0;
+    public static final short RTP_PRIO_MAX = 31;
 
-    public static final RtPrioType RTP_PRIO_FIFO = new RtPrioType((short) (8 | RTP_PRIO_REALTIME.value), "RTP_PRIO_FIFO");
+    public static final int RTP_LOOKUP = 0;
+    public static final int RTP_SET = 1;
 
-    /** All possible RtPrioType values. */
-    private static final RtPrioType[] values = new RtPrioType[] {
-            RTP_PRIO_REALTIME,
-            RTP_PRIO_NORMAL,
-            RTP_PRIO_IDLE,
-            RTP_PRIO_FIFO
-    };
-
-    private short value;
-
-    private String name;
+    private SchedulingClass type;
+    private short priority;
 
     /**
-     * Default constructor. This class should not be instantiated manually,
-     * use provided constants instead.
+     * RtPrioType constructor.
      *
-     * @param value Numeric value of this instance.
-     * @param name String representation of the constant.
+     * @param type Scheduling class.
+     * @param priority Priority value.
      */
-    private RtPrioType(short value, String name) {
-        this.value = value;
-        this.name = name;
+    public RtPrioType(SchedulingClass type, short priority) {
+        this.type = type;
+        this.priority = priority;
     }
 
     /**
-     * Get all possible values for RtPrioType.
-     *
-     * @return Array of RtPrioType possible values.
+     * @return Scheduling class.
      */
-    public static RtPrioType[] values() {
-        return values;
+    public SchedulingClass getType() {
+        return type;
     }
 
     /**
-     * Convert a numeric value into a RtPrioType constant.
-     *
-     * @param value Number to convert
-     * @return RtPrioType constant corresponding to the given value.
-     * @throws IllegalArgumentException If value does not correspond to any RtPrioType.
+     * @return Priority value.
      */
-    public static RtPrioType valueOf(short value) {
-        for (RtPrioType rtPrioType : values) {
-            if (value == rtPrioType.value()) {
-                return rtPrioType;
-            }
-        }
-
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(RtPrioType.class,"invalidValue", Integer.toString(value)));
-    }
-
-    /**
-     * Numeric value of this instance.
-     *
-     * @return Numeric value of the instance.
-     */
-    public short value() {
-        return this.value;
-    }
-
-    @Override
-    public int compareTo(Object o) {
-        return this.value - ((RtPrioType) o).value;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        boolean result;
-        if (o instanceof RtPrioType) {
-            result = value == ((RtPrioType) o).value;
-        } else {
-            result = false;
-        }
-        return result;
-    }
-
-    @Override
-    public int hashCode() {
-        return value;
+    public short getPriority() {
+        return priority;
     }
 
     @Override
     public String toString() {
-        return name;
+        return getType().toString() + ": " + getPriority();
     }
 }

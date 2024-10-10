@@ -4,7 +4,6 @@ import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.inet.in.ProtocolType;
 import org.ps5jb.sdk.include.netinet6.in6.OptionIPv6;
-import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
 import org.ps5jb.sdk.include.sys.socket.AddressFamilyType;
 import org.ps5jb.sdk.include.sys.socket.SocketType;
 import org.ps5jb.sdk.lib.LibKernel;

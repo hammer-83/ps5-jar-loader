@@ -10,7 +10,7 @@ public class BitSetType {
     private static final int _BITSET_BITS = 8 * 8;
 
     private final Pointer ptr;
-    private final long __bits[];
+    private final long[] __bits;
     private final int __bitset_words;
 
     /**
@@ -50,7 +50,7 @@ public class BitSetType {
      * @return Bitset size in bytes.
      */
     public long getSize() {
-        return this.__bitset_words * 8;
+        return this.__bitset_words * 8L;
     }
 
     /**
@@ -72,7 +72,7 @@ public class BitSetType {
     public void set(int bitIndex) {
         int wordIndex = __bitset_word(bitIndex);
         this.__bits[wordIndex] |= __bitset_mask(bitIndex);
-        this.ptr.write8(8 * wordIndex, this.__bits[wordIndex]);
+        this.ptr.write8(8L * wordIndex, this.__bits[wordIndex]);
     }
 
     /**
@@ -83,7 +83,7 @@ public class BitSetType {
     public void unset(int bitIndex) {
         int wordIndex = __bitset_word(bitIndex);
         this.__bits[wordIndex] &= ~__bitset_mask(bitIndex);
-        this.ptr.write8(8 * wordIndex, this.__bits[wordIndex]);
+        this.ptr.write8(8L * wordIndex, this.__bits[wordIndex]);
     }
 
     /**
@@ -92,7 +92,7 @@ public class BitSetType {
     public void zero() {
         for (int i = 0; i < __bitset_words; ++i) {
             this.__bits[i] = 0L;
-            this.ptr.write8(8 * i, this.__bits[i]);
+            this.ptr.write8(8L * i, this.__bits[i]);
         }
     }
 
@@ -102,11 +102,11 @@ public class BitSetType {
      * @return Number of set bits.
      */
     public int getCount() {
-        int count = 0;
+        long count = 0;
         for (int i = 0; i < this.__bitset_words; ++i) {
             count += __bitcountl(this.__bits[i]);
         }
-        return count;
+        return (int) count;
     }
 
     /**
@@ -123,15 +123,28 @@ public class BitSetType {
      */
     public void refresh() {
         for (int i = 0; i < this.__bitset_words; ++i) {
-            this.__bits[i] = ptr.read8(i * 8);
+            this.__bits[i] = ptr.read8(i * 8L);
         }
     }
 
     @Override
     public String toString() {
         StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < this.__bitset_words; ++i) {
-            sb.append(Long.toHexString(this.__bits[i]));
+        boolean hasNonZero = false;
+        for (int i = this.__bitset_words - 1; i >= 0; --i) {
+            if (this.__bits[i] != 0) {
+                hasNonZero = true;
+            }
+
+            if (this.__bits[i] != 0 || hasNonZero) {
+                String binString = Long.toBinaryString(this.__bits[i]);
+                if (!hasNonZero) {
+                    for (int j = binString.length(); j < 64; ++j) {
+                        sb.append("0");
+                    }
+                }
+                sb.append(binString);
+            }
         }
         return sb.toString();
     }

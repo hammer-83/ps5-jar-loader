@@ -8,7 +8,6 @@ import org.ps5jb.sdk.include.sys.errno.InvalidValueException;
 import org.ps5jb.sdk.include.sys.errno.OperationNotPermittedException;
 import org.ps5jb.sdk.include.sys.ErrNo;
 import org.ps5jb.sdk.include.sys.errno.OutOfMemoryException;
-import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
