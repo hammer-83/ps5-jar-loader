@@ -26,10 +26,11 @@ package org.ps5jb.client.payloads.ftp;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -42,8 +43,10 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.ps5jb.client.payloads.ListDirEnts;
@@ -51,6 +54,7 @@ import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Library;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.FCntl;
+import org.ps5jb.sdk.include.sys.stat.FileStatusMode;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
@@ -135,20 +139,6 @@ public class FtpWorker extends Thread {
         this.controlSocket = client;
         this.dataPort = dataPort;
 
-        File rootFile = new File(System.getProperty("user.dir"));
-        rootFile = rootFile.getCanonicalFile();
-        while (rootFile.getParentFile() != null) {
-            rootFile = rootFile.getParentFile();
-        }
-        this.root = rootFile.getAbsolutePath();
-
-        File curDir = new File("/app0");
-        if (!isFileExists(curDir)) {
-            this.currDirectory = this.root;
-        } else {
-            this.currDirectory = curDir.getAbsolutePath();
-        }
-
         try {
             Method getLibJavaHandleMethod = Library.class.getDeclaredMethod("getLibJavaHandle", new Class[0]);
             getLibJavaHandleMethod.setAccessible(true);
@@ -161,6 +151,50 @@ public class FtpWorker extends Thread {
             this.useNativeCalls = false;
             debugOutput("Using Java file I/O");
         }
+
+        File rootFile = createFile(System.getProperty("user.dir"));
+        rootFile = rootFile.getCanonicalFile();
+        while (rootFile.getParentFile() != null) {
+            rootFile = rootFile.getParentFile();
+        }
+        this.root = rootFile.getAbsolutePath();
+
+        File curDir = createFile("/app0");
+        if (!isFileExists(curDir)) {
+            this.currDirectory = this.root;
+        } else {
+            this.currDirectory = curDir.getAbsolutePath();
+        }
+    }
+
+    protected File createFile(String path) {
+        File result;
+        if (this.useNativeCalls) {
+            result = new org.ps5jb.sdk.io.File(path);
+        } else {
+            result = new File(path);
+        }
+        return result;
+    }
+
+    protected File createFile(File parent, String path) {
+        File result;
+        if (this.useNativeCalls) {
+            result = new org.ps5jb.sdk.io.File(parent, path);
+        } else {
+            result = new File(parent, path);
+        }
+        return result;
+    }
+
+    protected FileInputStream createFileInputStream(File file) throws FileNotFoundException {
+        FileInputStream result;
+        if (this.useNativeCalls) {
+            result = new org.ps5jb.sdk.io.FileInputStream(file);
+        } else {
+            result = new FileInputStream(file);
+        }
+        return result;
     }
 
     public void terminate() {
@@ -235,9 +269,9 @@ public class FtpWorker extends Thread {
      * @return File with absolute path.
      */
     private File toAbsoluteFile(String path) {
-        File pathFile = new File(path == null ? currDirectory : path);
+        File pathFile = createFile(path == null ? currDirectory : path);
         if (!pathFile.isAbsolute() && path != null) {
-            pathFile = new File(new File(currDirectory), path);
+            pathFile = createFile(createFile(currDirectory), path);
         }
         return pathFile.getAbsoluteFile();
     }
@@ -575,19 +609,10 @@ public class FtpWorker extends Thread {
         if (isFileValid(f, true)) {
             if (isDirectory(f)) {
                 List files = new ArrayList();
-                if (this.useNativeCalls) {
-                    ListDirEnts list = new ListDirEnts();
-                    try {
-                        list.getDirEnts(files, f.getAbsolutePath(), libKernel, fcntl, false);
-                    } catch (SdkException e) {
-                        Status.printStackTrace(e.getMessage(), e);
-                    }
-                } else {
-                    String[] children = f.list();
-                    if (children != null) {
-                        for (String child : children) {
-                            files.add(new File(f, child));
-                        }
+                String[] children = f.list();
+                if (children != null) {
+                    for (String child : children) {
+                        files.add(createFile(f, child));
                     }
                 }
 
@@ -629,9 +654,61 @@ public class FtpWorker extends Thread {
             restOfDate = fileDayHourFormat.format(lastModified);
         }
 
+        String owner = "owner";
+        String group = "group";
+        String mode = isDirectory(f) ? "rwxr-xr-x" : "rw-r--r--";
+        FileStatusMode[] modeIter = new FileStatusMode[] {
+                FileStatusMode.S_IRUSR,
+                FileStatusMode.S_IWUSR,
+                FileStatusMode.S_IXUSR,
+                FileStatusMode.S_IRGRP,
+                FileStatusMode.S_IWGRP,
+                FileStatusMode.S_IXGRP,
+                FileStatusMode.S_IROTH,
+                FileStatusMode.S_IWOTH,
+                FileStatusMode.S_IXOTH
+        };
+        if (f instanceof org.ps5jb.sdk.io.File) {
+            org.ps5jb.sdk.io.File sdkFile = (org.ps5jb.sdk.io.File) f;
+            owner = sdkFile.getOwner() == 0 ? "root " : Integer.toString(sdkFile.getOwner());
+            if (owner.length() > 5) {
+                owner = owner.substring(0, 5);
+            } else {
+                while (owner.length() != 5) {
+                    owner = "0" + owner;
+                }
+            }
+
+            group = sdkFile.getGroup() == 0 ? "root " : Integer.toString(sdkFile.getGroup());
+            if (group.length() > 5) {
+                group = group.substring(0, 5);
+            } else {
+                while (group.length() != 5) {
+                    group = "0" + group;
+                }
+            }
+
+            StringBuffer modeBuffer = new StringBuffer();
+            Set sdkFileModes = sdkFile.getModes();
+            for (int i = 0; i < modeIter.length; ++i) {
+                if (sdkFileModes.contains(modeIter[i])) {
+                    if (i % 3 == 0) {
+                        modeBuffer.append("r");
+                    } else if (i % 3 == 1) {
+                        modeBuffer.append("w");
+                    } else {
+                        modeBuffer.append("x");
+                    }
+                } else {
+                    modeBuffer.append("-");
+                }
+            }
+            mode = modeBuffer.toString();
+        }
+
         return lsDirFormat.format(new Object[] {
                 isDirectory(f) ? "d" : "-",
-                isDirectory(f) ? "rwxr-xr-x 1 owner group" : "rw-r--r-- 1 owner group",
+                mode + " 1 " + owner + " " + group,
                 padding,
                 fileSize,
                 month,
@@ -828,17 +905,25 @@ public class FtpWorker extends Thread {
         else {
             // Binary mode
             if (transferMode == transferType.BINARY) {
-                BufferedOutputStream fout = null;
-                BufferedInputStream fin = null;
-
                 sendMsgToClient("150 Opening binary mode data connection for requested file " + f.getName());
 
+                BufferedInputStream fin = null;
+                try {
+                    fin = new BufferedInputStream(createFileInputStream(f));
+                } catch (Exception e) {
+                    Status.printStackTrace("Could not create input stream", e);
+                    sendMsgToClient("550 Could not open requested file");
+                    return;
+                }
+
+                BufferedOutputStream fout = null;
                 try {
                     // create streams
                     fout = new BufferedOutputStream(dataConnection.getOutputStream());
-                    fin = new BufferedInputStream(new FileInputStream(f));
                 } catch (Exception e) {
-                    debugOutput("Could not create file streams");
+                    Status.printStackTrace("Could not create output stream", e);
+                    sendMsgToClient("550 Error writing to data connection");
+                    return;
                 }
 
                 debugOutput("Starting file transmission of " + f.getName());

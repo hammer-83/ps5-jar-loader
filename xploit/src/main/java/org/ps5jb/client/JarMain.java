@@ -1,6 +1,7 @@
 package org.ps5jb.client;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -77,7 +78,14 @@ public class JarMain {
             URL manifestUrl = (URL) manifests.nextElement();
             Status.println("Searching manifest for payload: " + manifestUrl);
             URLConnection con = manifestUrl.openConnection();
-            InputStream manifestStream = con.getInputStream();
+            InputStream manifestStream;
+            try {
+                manifestStream = con.getInputStream();
+            } catch (IOException e) {
+                // Skip this manifest, file is inaccessible
+                Status.printStackTrace("Unable to open the manifest. Skipping.", e);
+                continue;
+            }
             try {
                 Manifest mf = new Manifest(manifestStream);
                 String payloadName = mf.getMainAttributes().getValue(MANIFEST_PAYLOAD_KEY);
@@ -128,7 +136,7 @@ public class JarMain {
                         } catch (ClassNotFoundException e) {
                             Status.println("Unable to determine the payload to execute because the value of the attribute '" + MANIFEST_PAYLOAD_KEY + "' is not recognized: " + payloadName);
                         } catch (ClassCastException e) {
-                            Status.println("Unable to execute the payload because it does not implement the " + Runnable.class.getName() + " interface");
+                            Status.printStackTrace("Unable to execute the payload. Make sure it implements the " + Runnable.class.getName() + " interface", e);
                         } finally {
                             if (KernelReadWrite.getAccessor() != null && KernelReadWrite.saveAccessor()) {
                                 Status.println("Kernel R/W serialized for a follow-up execution");

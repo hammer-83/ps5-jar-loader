@@ -112,7 +112,19 @@ public class JarLoader extends SocketListener {
             } finally {
                 // Delete the file containing the temporary JAR
                 if (!jarFile.delete()) {
-                    Status.println("Failed to delete the temporary JAR");
+                    // Assume temp path changed by JAR. Try the new temp path
+                    boolean displaced = false;
+                    String tempPath = System.getProperty("java.io.tmpdir");
+                    if (jarFile.getAbsolutePath().indexOf(tempPath) != 0) {
+                        jarFile = new File(tempPath, jarFile.getName());
+                        if (jarFile.delete()) {
+                            displaced = true;
+                        }
+                    }
+
+                    if (!displaced) {
+                        Status.println("Failed to delete the temporary JAR");
+                    }
                 }
             }
         } finally {

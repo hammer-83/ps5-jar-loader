@@ -58,6 +58,7 @@ public class LibKernel extends Library {
     private Pointer setsockopt;
     private Pointer getsockopt;
     private Pointer usleep;
+    private Pointer is_in_sandbox;
 
     /**
      * Constructor.
@@ -515,5 +516,13 @@ public class LibKernel extends Library {
     public int getSystemSoftwareVersion() {
         byte[] swVer = sceKernelGetProsperoSystemSwVersion();
         return (swVer[0x1F] << 8) | swVer[0x1E];
+    }
+
+    public boolean is_in_sandbox() {
+        if (is_in_sandbox == null) {
+            is_in_sandbox = addrOf("is_in_sandbox");
+        }
+
+        return call(is_in_sandbox) != 0;
     }
 }

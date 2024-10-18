@@ -1,3 +1,6 @@
 /lib/*.jar
 /lib/*.zip
 target
+
+*.bak
+*.log

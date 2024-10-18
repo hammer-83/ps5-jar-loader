@@ -1,6 +1,5 @@
 package org.ps5jb.client.payloads;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +11,7 @@ import org.ps5jb.sdk.include.sys.FCntl;
 import org.ps5jb.sdk.include.sys.dirent.DirEnt;
 import org.ps5jb.sdk.include.sys.dirent.DirType;
 import org.ps5jb.sdk.include.sys.fcntl.OpenFlag;
+import org.ps5jb.sdk.io.File;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
@@ -44,11 +44,10 @@ public class ListDirEnts implements Runnable {
             try {
                 File root = new File(path);
                 int BUF_SIZE = 16 * 1024;
-                int remainingSize = BUF_SIZE;
                 Pointer db = Pointer.malloc(BUF_SIZE);
                 try {
                     DirEnt dirEnt = null;
-                    remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
+                    int remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
                     while (remainingSize > 0 && remainingSize <= BUF_SIZE) {
                         if (dirEnt == null) {
                             dirEnt = new DirEnt(db);
@@ -71,7 +70,7 @@ public class ListDirEnts implements Runnable {
                         if (dirEnt == null) {
                             remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
                         } else {
-                            remainingSize -= dirEnt.getPointer().addr() - oldAddr;
+                            remainingSize -= (int) (dirEnt.getPointer().addr() - oldAddr);
                         }
                     }
                 } finally {
