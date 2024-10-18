@@ -64,6 +64,7 @@ public class KernelOffsets {
             }
             case 0x0300:
             case 0x0320:
+            case 0x0321:
             {
                 OFFSET_KERNEL_DATA = 0x0BD0000;
 

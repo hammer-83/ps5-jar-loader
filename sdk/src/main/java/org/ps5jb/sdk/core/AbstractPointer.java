@@ -189,11 +189,14 @@ public abstract class AbstractPointer implements Serializable {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             try {
                 long curSize = 0;
-                byte c = read1(offset);
-                while (c != 0 && (maxLength == null || maxLength.intValue() > curSize)) {
+                while ((maxLength == null) || (maxLength.intValue() > curSize)) {
+                    byte c = read1(offset + curSize);
+                    if (c == 0) {
+                        break;
+                    }
+
                     buf.write(c);
-                    ++curSize;
-                    c = read1(offset + curSize);
+                    curSize++;
                 }
             } finally {
                 buf.close();

@@ -18,7 +18,7 @@ public class IoVecType {
      */
     public IoVecType() {
         this.ptr = Pointer.calloc(SIZE);
-        this.ownPtr = false;
+        this.ownPtr = true;
     }
 
     /**
@@ -28,7 +28,7 @@ public class IoVecType {
      */
     public IoVecType(Pointer ptr) {
         this.ptr = ptr;
-        this.ownPtr = true;
+        this.ownPtr = false;
     }
 
     /**
