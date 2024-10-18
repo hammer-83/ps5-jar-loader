@@ -44,7 +44,7 @@ public class DestroyerJob extends CommonJob {
 
             DebugStatus.debug("Waiting for ready flag");
             while (!this.state.readyFlag.get()) {
-                Thread.yield();
+                thread_yield();
             }
 
             // Notify main thread that destroyer thread's loop is ready to start.
@@ -52,7 +52,7 @@ public class DestroyerJob extends CommonJob {
 
             DebugStatus.debug("Waiting for destroy flag");
             while (!this.state.destroyFlag.get()) {
-                Thread.yield();
+                thread_yield();
             }
 
             // Trigger destroying of primary user mutex and check for result.
@@ -100,7 +100,7 @@ public class DestroyerJob extends CommonJob {
 
             DebugStatus.debug("Waiting for check done flag");
             while (!this.state.checkDoneFlag.get()) {
-                Thread.yield();
+                thread_yield();
             }
 
             // Notify main thread that destroyer thread is ready to finish.
@@ -108,7 +108,7 @@ public class DestroyerJob extends CommonJob {
 
             DebugStatus.debug("Waiting for done flag");
             while (!this.state.doneFlag.get()) {
-                Thread.yield();
+                thread_yield();
             }
 
             // Notify main thread that destroyer thread's loop was finished.
@@ -119,7 +119,7 @@ public class DestroyerJob extends CommonJob {
 
         DebugStatus.debug("Waiting for destroy flag");
         while (!this.state.destroyFlag.get()) {
-            Thread.yield();
+            thread_yield();
         }
 
         DebugStatus.debug("Finishing loop");

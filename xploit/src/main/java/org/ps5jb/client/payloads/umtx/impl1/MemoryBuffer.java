@@ -29,7 +29,7 @@ public class MemoryBuffer {
     }
 
     public long getSize() {
-        return this.ptr.size();
+        return this.ptr.size().longValue();
     }
 
     public byte read8(long offset) {
@@ -88,6 +88,7 @@ public class MemoryBuffer {
     public long find(AbstractPointer pattern, int size) {
         byte[] val = pattern.read(size);
 
+        // TODO: this can probably be searching with alignment in mind rather than byte-by-byte?
         byte[] nextVal = new byte[size];
         long curOffset = 0;
         while ((curOffset + size) <= getSize()) {

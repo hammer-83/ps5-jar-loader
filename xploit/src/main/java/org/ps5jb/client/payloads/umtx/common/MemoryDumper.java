@@ -13,7 +13,7 @@ public class MemoryDumper {
             sb.append(":   ");
 
             for (int i = 0; i < 2; ++i) {
-                if ((j + i + 0x8) <= size) {
+                if ((j + i * 8 + 0x8) <= size) {
                     long value = buf.read8(j + i * 8);
                     for (int k = 0; k < 8; ++k) {
                         String hex = Long.toHexString((value >> (k * 8)) & 0xFF);
@@ -28,8 +28,8 @@ public class MemoryDumper {
                         sb.append(hex);
                     }
                 } else {
-                    for (int k = 0; (j + i + k) < size; ++k) {
-                        byte val = buf.read1(j + i + k);
+                    for (int k = 0; (j + i * 8 + k) < size; ++k) {
+                        byte val = buf.read1(j + i * 8 + k);
                         String hex = Integer.toHexString(val & 0xFF);
                         if (k != 0) {
                             sb.append(" ");

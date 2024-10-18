@@ -16,6 +16,7 @@ public class Config {
     public static final boolean toggleDestroyerAffinityOnReclaimThread = true;
     public static final boolean toggleUnmappingOnFailure = true;
     public static final boolean toggleSprayOnDestroyThread = false;
+    public static final boolean toggleMainThreadWait = true;
 
     public static final KernelStackMarkerMethod markerMethod = KernelStackMarkerMethod.BLOCKING_SELECT;
 
@@ -24,8 +25,8 @@ public class Config {
     public static final int MAX_RACING_ITERATIONS = 50000;
     public static int MAX_DUMMY_SHARED_MEMORY_OBJECTS = 0;
     public static final int MAX_DESTROYER_THREADS = 2;
-    public static int MAX_SPRAY_MUTEXES_PER_THREAD = 1;
-    public static int MAX_RECLAIM_THREADS = 20;
+    public static int MAX_SPRAY_MUTEXES_PER_THREAD = 0x28;
+    public static int MAX_RECLAIM_THREADS = 0x100;
     public static final int MAX_RECLAIM_SYSTEM_CALLS = 1; // For `ioctl` method instead of `select`
     public static final int MAX_EXTRA_USER_MUTEXES = 1;
     public static final int MAX_DESCRIPTORS = 0x3FF;

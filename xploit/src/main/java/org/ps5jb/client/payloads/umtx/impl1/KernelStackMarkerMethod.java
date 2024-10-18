@@ -10,10 +10,10 @@ public final class KernelStackMarkerMethod {
     // TODO: Not able to get IOCTL method to work...Maybe need to play with MAX_RECLAIM_SYSTEM_CALLS.
     public static final KernelStackMarkerMethod IOCTL = new KernelStackMarkerMethod(2, 128, 32, 250);
 
-    public static final KernelStackMarkerMethod SCHED_YIELD = new KernelStackMarkerMethod(3, 0,2, 100);
+    public static final KernelStackMarkerMethod SCHED_YIELD = new KernelStackMarkerMethod(3, 0, 2, 100);
 
     private int id;
-    private int markerSize;
+    private long markerSize;
     private int searchLoopInvocations;
     private long kernelStackWaitPeriod;
 
@@ -28,7 +28,7 @@ public final class KernelStackMarkerMethod {
         return id;
     }
 
-    public int getMarkerSize() {
+    public long getMarkerSize() {
         return markerSize;
     }
 

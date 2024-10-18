@@ -35,6 +35,18 @@ public class CommonJob implements Runnable {
     }
 
     protected void work() throws SdkException {
+        thread_yield();
+    }
+
+    protected void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            // Ignore
+        }
+    }
+
+    protected void thread_yield() {
         Thread.yield();
     }
 
