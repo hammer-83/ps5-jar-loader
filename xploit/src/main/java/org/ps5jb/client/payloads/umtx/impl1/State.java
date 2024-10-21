@@ -23,7 +23,6 @@ public class State {
     //-------------------------------------------------------------------------
 
     public Pointer scratchBufferAddress = Pointer.NULL;
-    public Pointer pipeBufferAddress = Pointer.NULL;
     public Pointer ioVecAddress = Pointer.NULL;
     public Pointer uioAddress = Pointer.NULL;
     public Pointer primarySharedMemoryKeyAddress = Pointer.NULL;
@@ -45,6 +44,7 @@ public class State {
     public AtomicBoolean raceDoneFlag;
     public AtomicBoolean readyFlag;
     public AtomicBoolean destroyFlag;
+    public AtomicBoolean sprayFlag;
     public AtomicBoolean checkDoneFlag;
     public AtomicBoolean doneFlag;
 
@@ -52,10 +52,8 @@ public class State {
     public AtomicInteger numCompletedThreads;
     public AtomicInteger numFinishedThreads;
     public AtomicInteger numDestructions;
+    public AtomicInteger numSprays;
 
-    public long pipeBufferCapacity;
-    public int readPipeDescriptor;
-    public int writePipeDescriptor;
     public int initialOriginalDescriptor;
     public int originalDescriptor;
     public int lookupDescriptor;

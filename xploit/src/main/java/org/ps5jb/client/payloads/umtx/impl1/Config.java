@@ -13,32 +13,35 @@ public class Config {
     public static final boolean toggleEnableThreadPriorityForReclaimThreads = false;
     public static final boolean toggleStoppingWorkingThreadsBeforeRemap = true;
     public static final boolean toggleReclaimCpuAffinityMask = true;
-    public static final boolean toggleDestroyerAffinityOnReclaimThread = true;
+    public static final boolean toggleDestroyerAffinityOnReclaimThread = false;
     public static final boolean toggleUnmappingOnFailure = true;
-    public static final boolean toggleSprayOnDestroyThread = false;
+    public static final boolean toggleSprayOnDestroyThread = true;
     public static final boolean toggleMainThreadWait = true;
-
-    public static final KernelStackMarkerMethod markerMethod = KernelStackMarkerMethod.BLOCKING_SELECT;
 
     // Common parameters.
     public static final int MAX_EXPLOITATION_ATTEMPTS = 100000;
     public static final int MAX_RACING_ITERATIONS = 50000;
     public static int MAX_DUMMY_SHARED_MEMORY_OBJECTS = 0;
     public static final int MAX_DESTROYER_THREADS = 2;
-    public static int MAX_SPRAY_MUTEXES_PER_THREAD = 0x28;
-    public static int MAX_RECLAIM_THREADS = 0x100;
-    public static final int MAX_RECLAIM_SYSTEM_CALLS = 1; // For `ioctl` method instead of `select`
-    public static final int MAX_EXTRA_USER_MUTEXES = 1;
+    public static int MAX_SPRAY_MUTEXES_PER_THREAD = 35;
+    public static int MAX_RECLAIM_THREADS = 250;
+    public static final int MAX_SEARCH_LOOP_INVOCATIONS = 2;
+    public static final int MAX_EXTRA_USER_MUTEXES = 0;
     public static final int MAX_DESCRIPTORS = 0x3FF;
 
     // Amounts of milliseconds we need to wait at different steps.
     public static final long INITIAL_WAIT_PERIOD = 50; // 50
+    public static final long KERNEL_STACK_WAIT_PERIOD = 100;
     public static final long TINY_WAIT_PERIOD = 50; // 50
 
     // Special marker to determine victim thread's ID.
     public static final int RECLAIM_THREAD_MARKER_BASE = 0x00414141;
 
     public static final long MAX_PIPE_BUFFER_SIZE = Pipe.PIPE_MINDIRECT / 2;
+
+    // State size for reclaim threads.
+    public static final long MARKER_SIZE = 8;
+    public static final long STATE_SIZE = 2 * MARKER_SIZE;
 
     // Priorities for such threads. `RTP_PRIO_FIFO` should also work.
     public static RtPrioType MAIN_THREAD_PRIORITY = new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, (short) 256);

