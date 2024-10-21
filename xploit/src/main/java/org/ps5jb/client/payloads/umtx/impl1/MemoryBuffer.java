@@ -36,6 +36,10 @@ public class MemoryBuffer {
         return this.ptr.read1(offset);
     }
 
+    public short read16(long offset) {
+        return this.ptr.read2(offset);
+    }
+
     public long read64(long offset) {
         return this.ptr.read8(offset);
     }

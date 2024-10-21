@@ -32,7 +32,7 @@ public class ReclaimJob extends CommonJob {
         this.state = state;
 
         this.jobName = "reclaim#" + index;
-        this.marker = Config.RECLAIM_THREAD_MARKER_BASE | ((0x41 + index + 1) << 24);
+        this.marker = Config.RECLAIM_THREAD_MARKER_BASE | ((0x41 + index + 1) << 16);
         this.markerAddress = this.state.reclaimJobStatesAddress.inc(index * Config.STATE_SIZE);
         this.markerCopyAddress = this.markerAddress.inc(Config.MARKER_SIZE);
         this.isTarget = false;
@@ -65,7 +65,7 @@ public class ReclaimJob extends CommonJob {
             rtprio.setRtPrio(0, Config.RECLAIM_THREAD_PRIORITY);
         }
 
-        // Prepare thread marker which will be used to determine victim thread ID: 41 41 41 [41 + index]
+        // Prepare thread marker which will be used to determine victim thread ID: 13 37 [41 + index + 1]
         markerAddress.write8(((long) marker) << 32);
     }
 

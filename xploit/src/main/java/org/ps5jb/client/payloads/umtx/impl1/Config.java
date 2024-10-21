@@ -35,7 +35,7 @@ public class Config {
     public static final long TINY_WAIT_PERIOD = 50; // 50
 
     // Special marker to determine victim thread's ID.
-    public static final int RECLAIM_THREAD_MARKER_BASE = 0x00414141;
+    public static final int RECLAIM_THREAD_MARKER_BASE = 0x00001337;
 
     public static final long MAX_PIPE_BUFFER_SIZE = Pipe.PIPE_MINDIRECT / 2;
 
