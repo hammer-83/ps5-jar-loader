@@ -42,7 +42,7 @@ public class RemoteLogger {
     /**
      * Terminates the remote logger by closing the socket.
      */
-    public void close() {
+    public synchronized void close() {
         if (loggerSocket != null) {
             loggerSocket.close();
             loggerSocket = null;
@@ -56,24 +56,32 @@ public class RemoteLogger {
      * @param len Number of bytes in the buffer to send (typically, {@code buffer.length}).
      */
     public void sendBytes(byte[] buffer, int len) {
-        if (loggerSocket != null) {
-            try {
-                // Send in small chunks otherwise there may be an exception that packet is too large.
-                // This is a UDP protocol constraint
-                int i = 0;
-                while (i < len) {
-                    int curLen = Math.min(len - i, 1024);
-                    DatagramPacket sendPacket = new DatagramPacket(buffer, i, curLen, InetAddress.getByName(loggerServer), loggerPort);
-                    loggerSocket.send(sendPacket);
-                    i += curLen;
-                }
-            } catch (Throwable e) {
-                Screen.println("Network data could not be sent");
-                Screen.getInstance().printStackTrace(e);
+        Throwable ex = null;
 
-                // Do not attempt network logging after failure (assume host down)
-                close();
+        synchronized (this) {
+            if (loggerSocket != null) {
+                try {
+                    // Send in small chunks otherwise there may be an exception that packet is too large.
+                    // This is a UDP protocol constraint
+                    int i = 0;
+                    while (i < len) {
+                        int curLen = Math.min(len - i, 1024);
+                        DatagramPacket sendPacket = new DatagramPacket(buffer, i, curLen, InetAddress.getByName(loggerServer), loggerPort);
+                        loggerSocket.send(sendPacket);
+                        i += curLen;
+                    }
+                } catch (Throwable e) {
+                    // Do not attempt network logging after failure (assume host down)
+                    close();
+
+                    ex = e;
+                }
             }
+        }
+
+        if (ex != null) {
+            Screen.println("Network data could not be sent", false, false);
+            Screen.getInstance().printStackTrace(ex);
         }
     }
 
@@ -83,14 +91,22 @@ public class RemoteLogger {
      * @param message String to send.
      */
     private void sendString(String message) {
-        if (loggerSocket != null) {
-            try {
-                byte[] buf = message.getBytes("UTF-8");
-                sendBytes(buf, buf.length);
-            } catch (Throwable e) {
-                Screen.println("Network message could not be sent");
-                Screen.getInstance().printStackTrace(e);
+        Throwable ex = null;
+
+        synchronized (this) {
+            if (loggerSocket != null) {
+                try {
+                    byte[] buf = message.getBytes("UTF-8");
+                    sendBytes(buf, buf.length);
+                } catch (Throwable e) {
+                    ex = e;
+                }
             }
+        }
+
+        if (ex != null) {
+            Screen.println("Network message could not be sent", false, false);
+            Screen.getInstance().printStackTrace(ex);
         }
     }
 
@@ -174,7 +190,7 @@ public class RemoteLogger {
                 }
             }
         } catch (Throwable e) {
-            Screen.println("Sending debug message failed");
+            Screen.println("Sending debug message failed", false, false);
             Screen.getInstance().printStackTrace(e);
         }
     }
