@@ -11,13 +11,13 @@ import org.ps5jb.sdk.lib.LibKernel;
 public class CommandProcessor {
     private LibKernel libKernel;
 
-    public static final int KPRIM_NOP = 0;
-    public static final int KPRIM_READ = 1;
-    public static final int KPRIM_WRITE = 2;
-    public static final int KPRIM_EXIT = 3;
+    public static final int CMD_NOP = 0;
+    public static final int CMD_READ = 1;
+    public static final int CMD_WRITE = 2;
+    public static final int CMD_EXIT = 3;
 
     public AtomicBoolean exitSignal = new AtomicBoolean();
-    public AtomicInteger cmd = new AtomicInteger();
+    public AtomicInteger cmd = new AtomicInteger(CMD_NOP);
     public AtomicLong uaddr = new AtomicLong();
     public AtomicLong kaddr = new AtomicLong();
     public AtomicInteger len = new AtomicInteger();
@@ -71,14 +71,14 @@ public class CommandProcessor {
     public void handleCommands() {
         while (!exitSignal.get()) {
             int cmd = this.cmd.get();
-            if (cmd == KPRIM_NOP) {
+            if (cmd == CMD_NOP) {
                 Thread.yield();
                 continue;
             }
             long len = this.len.get();
 
             switch (cmd) {
-                case KPRIM_READ:
+                case CMD_READ:
                     if (DebugStatus.isDebugEnabled()) {
                         DebugStatus.debug("[+] Command processor: blocking to write " + len + " bytes for READ command");
                     }
@@ -89,7 +89,7 @@ public class CommandProcessor {
                     }
                     break;
 
-                case KPRIM_WRITE:
+                case CMD_WRITE:
                     if (DebugStatus.isDebugEnabled()) {
                         DebugStatus.debug("[+] Command processor: blocking to read " + len + " bytes for WRITE command");
                     }
@@ -100,7 +100,7 @@ public class CommandProcessor {
                     }
                     break;
 
-                case KPRIM_EXIT:
+                case CMD_EXIT:
                     // Do nothing
                     DebugStatus.error("Command processor: exiting");
                     exitSignal.set(true);
@@ -110,9 +110,9 @@ public class CommandProcessor {
                     DebugStatus.error("Command processor: unknown command");
             }
 
-            this.cmd.set(KPRIM_NOP);
+            this.cmd.set(CMD_NOP);
 
-            DebugStatus.notice("Command processor: resetting");
+            DebugStatus.debug("Command processor: resetting");
         }
 
         free();

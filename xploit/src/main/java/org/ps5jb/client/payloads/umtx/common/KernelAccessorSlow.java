@@ -34,7 +34,7 @@ public class KernelAccessorSlow implements KernelAccessor {
 
     private void sendCommand(int cmd, long uaddr, long kaddr, int len) {
         // Protection against deadlock
-        if (commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
+        if (commandProcessor.cmd.get() != CommandProcessor.CMD_NOP) {
             throw new IllegalStateException("Reclaim thread not yet reset");
         }
 
@@ -106,7 +106,7 @@ public class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Signal other thread to write using size we want, the thread will hang until we read
-        sendCommand(CommandProcessor.KPRIM_READ, uaddr.addr(), kaddr, len);
+        sendCommand(CommandProcessor.CMD_READ, uaddr.addr(), kaddr, len);
 
         if (!swapIovInKstack(this.commandProcessor.pipeScratchBuf.addr(), kaddr, 1, 1, len)) {
             SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
@@ -140,14 +140,14 @@ public class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Wait on kprim thread to reset
-        while (this.commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
+        while (this.commandProcessor.cmd.get() != CommandProcessor.CMD_NOP) {
             sleep(50L);
         }
     }
 
     synchronized void slowCopyIn(Pointer uaddr, long kaddr, int len) {
         // Signal other thread to read using size we want, the thread will hang until we write
-        sendCommand(CommandProcessor.KPRIM_WRITE, uaddr.addr(), kaddr, len);
+        sendCommand(CommandProcessor.CMD_WRITE, uaddr.addr(), kaddr, len);
 
         if (!swapIovInKstack(this.commandProcessor.pipeScratchBuf.addr(), kaddr, 1, 0, len)) {
             SdkRuntimeException rootEx = new SdkRuntimeException("Unable to swap iov, pattern not found");
@@ -166,7 +166,7 @@ public class KernelAccessorSlow implements KernelAccessor {
         }
 
         // Wait on kprim thread to reset
-        while (this.commandProcessor.cmd.get() != CommandProcessor.KPRIM_NOP) {
+        while (this.commandProcessor.cmd.get() != CommandProcessor.CMD_NOP) {
             sleep(50L);
         }
     }
