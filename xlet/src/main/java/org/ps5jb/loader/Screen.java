@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Encapsulates the capabilities of the screen.
@@ -21,6 +23,10 @@ public class Screen extends Container {
     private final ArrayList messages = new ArrayList();
 
     private static final Screen instance = new Screen();
+
+    private AtomicBoolean isPainting = new AtomicBoolean(false);
+
+    private AtomicBoolean isDirty = new AtomicBoolean(false);
 
     /**
      * Default constructor. Declared as private since this class is singleton.
@@ -67,14 +73,18 @@ public class Screen extends Container {
      * @param repaint Whether to repaint the screen right away or not.
      * @param replaceLast Whether to add a new line or replace the last printed line (useful for progress output).
      */
-    public synchronized void print(String msg, boolean repaint, boolean replaceLast) {
-        if (replaceLast && messages.size() > 0) {
-            messages.remove(messages.size() - 1);
+    public void print(String msg, boolean repaint, boolean replaceLast) {
+        synchronized (this) {
+            if (replaceLast && messages.size() > 0) {
+                messages.remove(messages.size() - 1);
+            }
+            messages.add(msg);
+            if (messages.size() > 48) {
+                messages.remove(0);
+            }
+            isDirty.set(true);
         }
-        messages.add(msg);
-        if (messages.size() > 48) {
-            messages.remove(0);
-        }
+
         if (repaint) {
             repaint();
         }
@@ -85,7 +95,7 @@ public class Screen extends Container {
      *
      * @param e Exception whose stack trace to print.
      */
-    public synchronized void printStackTrace(Throwable e) {
+    public void printStackTrace(Throwable e) {
         StringTokenizer st;
         StringBuffer sb;
 
@@ -106,18 +116,20 @@ public class Screen extends Container {
                 sw.close();
             }
 
-            while (st.hasMoreTokens()) {
-                String line = st.nextToken();
-                sb.setLength(0);
-                for (int i = 0; i < line.length(); ++i) {
-                    char c = line.charAt(i);
-                    if (c == '\t') {
-                        sb.append("   ");
-                    } else {
-                        sb.append(c);
+            synchronized (this) {
+                while (st.hasMoreTokens()) {
+                    String line = st.nextToken();
+                    sb.setLength(0);
+                    for (int i = 0; i < line.length(); ++i) {
+                        char c = line.charAt(i);
+                        if (c == '\t') {
+                            sb.append("   ");
+                        } else {
+                            sb.append(c);
+                        }
                     }
+                    print(sb.toString(), !st.hasMoreTokens(), false);
                 }
-                print(sb.toString(), !st.hasMoreTokens(), false);
             }
         } catch (IOException ioEx) {
             printThrowable(e);
@@ -141,7 +153,16 @@ public class Screen extends Container {
      * @param g {@code} Graphics code on which the screen data is painted.
      */
     @Override
-    public synchronized void paint(Graphics g) {
+    public void paint(Graphics g) {
+        List messagesCopy;
+        synchronized (this) {
+            if (isPainting.get() || !isDirty.get()) return;
+            isPainting.set(true);
+            isDirty.set(false);
+
+            messagesCopy = new ArrayList(messages);
+        }
+
         g.setFont(FONT);
         g.setColor(Color.white);
 
@@ -150,10 +171,12 @@ public class Screen extends Container {
         int x = 80;
         int y = 80;
         int height = g.getFontMetrics().getHeight();
-        for (int i = 0; i < messages.size(); i++) {
-            String msg = (String) messages.get(i);
+        for (int i = 0; i < messagesCopy.size(); i++) {
+            String msg = (String) messagesCopy.get(i);
             g.drawString(msg, x, y);
             y += height;
         }
+
+        isPainting.set(false);
     }
 }

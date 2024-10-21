@@ -5,13 +5,13 @@ package org.ps5jb.loader;
  */
 public class Status {
     /** Instance of the remote logger to double all the status output over the network */
-    private static RemoteLogger LOGGER;
+    private static volatile RemoteLogger LOGGER;
 
     /**
      * True if Xlet classes are detected on classpath.
      * When <code>true</code>, output is done on Xlet screen; otherwise, it goes to stdout.
      */
-    private static Boolean inXlet;
+    private static volatile Boolean inXlet;
 
     /**
      * Default constructor. This class should be used statically, so the constructor is declared as private.

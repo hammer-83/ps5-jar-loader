@@ -77,4 +77,14 @@ IntelliJ Maven project files are located in a private local folder of IntelliJ. 
 * In addition, for all the modules that have the above-mentioned dependencies, click on `+ (Add) -> Library` button and add `bdjstack` library dependency. Make sure it is moved in the top position above SDK 11 entry. This setting used to be commited to version control and could be simply reverted, but in recent updates, it has to be performed every time. 
 
 ## Credits
-There are so many who decided to share the knowledge with the community to make this project possible. Please see the Credits section in the [Webkit PS5 Exploit repo](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit#contributors--special-thanks). None of this would be possible without all these contributors. Additionally, big thanks to [psxdev](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically on BD-J. Finally, the FTP payload is based off work from [pReya](https://github.com/pReya/ftpServer).
+There are so many who decided to share the knowledge with the community to make this project possible.
+- [Andy "theflow" Nguyen](https://github.com/theofficialflow) for discovering and sharing BD-J vulnerabilities without which none of the work in this repo would be possible.
+- Specter for his Webkit implementations of PS5 kernel access which served as a base for Java implementation: [IPV6](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit) and [UMTX](https://github.com/PS5Dev/PS5-UMTX-Jailbreak/).
+- [Flat_z](https://github.com/flatz) for pretty much everything of significance that happened in PlayStation scene since as far back as PS3, including the UMTX exploitation strategy contained in this repo.
+- [Cheburek3000](https://github.com/cheburek3000) for contributing an alternative implementation of UMTX exploitation. 
+- [bigboss](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically in BD-J area.
+- All the other contributors to Specter's Webkit implementations: [ChendoChap](https://github.com/ChendoChap), [Znullptr](https://twitter.com/Znullptr), [sleirsgoevy](https://twitter.com/sleirsgoevy), [zecoxao](https://twitter.com/notnotzecoxao), [SocracticBliss](https://twitter.com/SocraticBliss), SlidyBat, [idlesauce](https://github.com/idlesauce).
+
+Sample BD-J payloads in this repositories are adaptations of the following work:
+- FTP server by [pReya](https://github.com/pReya/ftpServer). 
+- Mini Tennis by [Edu4Java](http://www.edu4java.com/en/game/game0-en.html).
