@@ -12,8 +12,6 @@ import org.ps5jb.sdk.include.machine.VmParam;
  * Calculator of important absolute kernel addresses.
  */
 public class KernelOffsetsCalculator {
-    public static final String SYSTEM_PROPERTY_ALLPROC_ADDRESS = "org.ps5jb.client.payloads.umtx.ALLPROC_ADDRESS";
-
     private static final long OFFSET_THREAD_TD_NAME = 660L;
     private static final long OFFSET_THREAD_TD_PROC = 8L;
     private static final long OFFSET_PROC_P_FD = 0x48L;
