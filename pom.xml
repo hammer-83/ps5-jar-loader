@@ -64,6 +64,12 @@
                 <scope>system</scope>
                 <systemPath>${bdjstack.dir}/gem.jar</systemPath>
             </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>5.11.3</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -144,10 +150,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.0</version>
-                    <configuration>
-                        <!-- Do not run tests on a development machine -->
-                        <skipTests>true</skipTests>
-                    </configuration>
                 </plugin>
 
                 <plugin>

@@ -9,6 +9,7 @@ import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.include.UniStd;
 import org.ps5jb.sdk.include.inet.in.ProtocolType;
+import org.ps5jb.sdk.include.machine.Param;
 import org.ps5jb.sdk.include.netinet6.in6.OptionIPv6;
 import org.ps5jb.sdk.include.sys.Socket;
 import org.ps5jb.sdk.include.sys.socket.AddressFamilyType;
@@ -26,7 +27,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     private Pointer master_target_buffer;
     private Pointer slave_buffer;
     private Pointer pipemap_buffer;
-    private Pointer krw_qword_store;
+    private Pointer krw_buffer;
 
     private int master_sock;
     private int victim_sock;
@@ -55,7 +56,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         master_target_buffer = Pointer.calloc(sock_opt_size);
         slave_buffer = Pointer.calloc(sock_opt_size);
         pipemap_buffer = Pointer.calloc(sock_opt_size);
-        krw_qword_store = Pointer.calloc(0x8);
+        krw_buffer = Pointer.calloc(Param.PAGE_SIZE);
 
         master_sock = socket.createSocket(AddressFamilyType.AF_INET6, SocketType.SOCK_DGRAM, ProtocolType.IPPROTO_UDP);
         victim_sock = socket.createSocket(AddressFamilyType.AF_INET6, SocketType.SOCK_DGRAM, ProtocolType.IPPROTO_UDP);
@@ -115,8 +116,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         if (pipemap_buffer != null) {
             pipemap_buffer.free();
         }
-        if (krw_qword_store != null) {
-            krw_qword_store.free();
+        if (krw_buffer != null) {
+            krw_buffer.free();
         }
         if (pipe_fd[0] != -1) {
             this.libKernel.close(pipe_fd[0]);
@@ -193,8 +194,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public byte read1(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_qword_store, 0x1);
-            return krw_qword_store.read1();
+            copyout(kernelAddress, krw_buffer, 0x1);
+            return krw_buffer.read1();
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -203,8 +204,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public short read2(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_qword_store, 0x2);
-            return krw_qword_store.read2();
+            copyout(kernelAddress, krw_buffer, 0x2);
+            return krw_buffer.read2();
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -213,8 +214,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public int read4(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_qword_store, 0x4);
-            return krw_qword_store.read4();
+            copyout(kernelAddress, krw_buffer, 0x4);
+            return krw_buffer.read4();
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -223,18 +224,52 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public long read8(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_qword_store, 0x8);
-            return krw_qword_store.read8();
+            copyout(kernelAddress, krw_buffer, 0x8);
+            return krw_buffer.read8();
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
+        }
+    }
+
+    /**
+     * Read memory into the target buffer, one page at a time.
+     *
+     * @param kernelAddress Kernel address to read.
+     * @param buffer Buffer where the read value will be stored.
+     * @param offset Offset in the buffer where to start writing the value.
+     * @param length Number of bytes to read.
+     * @throws IndexOutOfBoundsException If <code>buffer</code> size starting at <code>offset</code>
+     *   is less than <code>length</code>.
+     * @throws SdkRuntimeException If reading error occurs.
+     */
+    public void read(long kernelAddress, byte[] buffer, int offset, int length) {
+        if ((buffer.length - offset) < length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        int srcOffset = 0;
+        int targetOffset = offset;
+        while (srcOffset < length) {
+            int readSize = (int) Param.PAGE_SIZE;
+            if ((srcOffset + readSize) > length) {
+                readSize = length - srcOffset;
+            }
+            try {
+                copyout(kernelAddress + srcOffset, krw_buffer, readSize);
+                krw_buffer.read(0, buffer, targetOffset, readSize);
+                srcOffset += readSize;
+                targetOffset += readSize;
+            } catch (SdkException e) {
+                throw new SdkRuntimeException(e);
+            }
         }
     }
 
     @Override
     public void write1(long kernelAddress, byte value) {
         try {
-            krw_qword_store.write1(value);
-            copyin(krw_qword_store, kernelAddress, 0x1);
+            krw_buffer.write1(value);
+            copyin(krw_buffer, kernelAddress, 0x1);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -243,8 +278,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public void write2(long kernelAddress, short value) {
         try {
-            krw_qword_store.write2(value);
-            copyin(krw_qword_store, kernelAddress, 0x2);
+            krw_buffer.write2(value);
+            copyin(krw_buffer, kernelAddress, 0x2);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -253,8 +288,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public void write4(long kernelAddress, int value) {
         try {
-            krw_qword_store.write4(value);
-            copyin(krw_qword_store, kernelAddress, 0x4);
+            krw_buffer.write4(value);
+            copyin(krw_buffer, kernelAddress, 0x4);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -263,10 +298,44 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public void write8(long kernelAddress, long value) {
         try {
-            krw_qword_store.write8(value);
-            copyin(krw_qword_store, kernelAddress, 0x8);
+            krw_buffer.write8(value);
+            copyin(krw_buffer, kernelAddress, 0x8);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
+        }
+    }
+
+    /**
+     * Write to kernel memory from the source buffer, one page at a time.
+     *
+     * @param kernelAddress Kernel address to write to.
+     * @param buffer Buffer from where to read the data.
+     * @param offset Offset in the buffer from which to start reading the data.
+     * @param length Number of bytes to write.
+     * @throws IndexOutOfBoundsException If <code>buffer</code> size starting at <code>offset</code>
+     *   is less than <code>length</code>.
+     * @throws SdkRuntimeException If writing error occurs.
+     */
+    public void write(long kernelAddress, byte[] buffer, int offset, int length) {
+        if ((buffer.length - offset) < length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        int srcOffset = offset;
+        int targetOffset = 0;
+        while (targetOffset < length) {
+            int writeSize = (int) Param.PAGE_SIZE;
+            if ((targetOffset + writeSize) > length) {
+                writeSize = length - targetOffset;
+            }
+            try {
+                krw_buffer.write(0, buffer, srcOffset, writeSize);
+                copyin(krw_buffer, kernelAddress + targetOffset, writeSize);
+                srcOffset += writeSize;
+                targetOffset += writeSize;
+            } catch (SdkException e) {
+                throw new SdkRuntimeException(e);
+            }
         }
     }
 

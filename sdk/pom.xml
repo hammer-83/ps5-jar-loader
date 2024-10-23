@@ -29,15 +29,39 @@
             <version>${xlet.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- When compiling PS5 sdk, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime. -->
-            <!-- The code also does Unsafe manipulation so it's necessary to declare access to it. -->
             <plugin>
+                <!-- When compiling main code of PS5 sdk, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime. -->
+                <!-- The code also does Unsafe manipulation so it's necessary to declare access to it. -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <!-- Unit tests are run on development machine, not on PS5. So the patching of modules is not necessary for unit test compilation. -->
+                    <!-- Note that IntelliJ is not able to distinguish the two when compiling the module. -->
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>--limit-modules</arg>
+                                <arg>java.base,java.desktop,java.rmi</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
                     <compilerArgs>
                         <arg>--patch-module</arg>

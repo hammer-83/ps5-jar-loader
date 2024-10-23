@@ -15,6 +15,9 @@ public class KernelPointer extends AbstractPointer {
     /** Start of kernel address space. See machine/vmparam.h */
     private static final long KERNEL_ADDR_MASK = 0xFFFF800000000000L;
 
+    /** Flag which makes sure that range of kernel space is validated prior to accessing the memory. */
+    private boolean rangeValidated = false;
+
     /**
      * Returns a pointer instance equivalent to the given native memory address.
      *
@@ -50,74 +53,132 @@ public class KernelPointer extends AbstractPointer {
         super(addr, size);
     }
 
+    /**
+     * Make sure the current pointer has a valid kernel space range.
+     */
+    protected void checkRange() {
+        if (!rangeValidated) {
+            validRange(this);
+            rangeValidated = true;
+        }
+    }
+
     @Override
     public byte read1(long offset) {
-        overflow(validRange(this), offset, 1);
-        return KernelReadWrite.getAccessor().read1(this.addr + offset);
+        checkRange();
+        return super.read1(offset);
     }
 
     @Override
     public short read2(long offset) {
-        overflow(validRange(this), offset, 2);
-        return KernelReadWrite.getAccessor().read2(this.addr + offset);
+        checkRange();
+        return super.read2(offset);
     }
 
     @Override
     public int read4(long offset) {
-        overflow(validRange(this), offset, 4);
-        return KernelReadWrite.getAccessor().read4(this.addr + offset);
+        checkRange();
+        return super.read4(offset);
     }
 
     @Override
     public long read8(long offset) {
-        overflow(validRange(this), offset, 8);
-        return KernelReadWrite.getAccessor().read8(this.addr + offset);
+        checkRange();
+        return super.read8(offset);
     }
 
     @Override
     public void read(long offset, byte[] value, int valueOffset, int size) {
-        overflow(validRange(this), offset, size);
+        checkRange();
 
-        // TODO: This can be implemented more efficiently
-        final KernelAccessor accessor = KernelReadWrite.getAccessor();
-        for (int i = 0; i < size; ++i) {
-            value[valueOffset + i] = accessor.read1(this.addr + offset + i);
+        KernelAccessor ka = KernelReadWrite.getAccessor();
+        if (ka instanceof KernelAccessorIPv6) {
+            // When using IPv6 based accessor, use a more efficient read method
+            // rather that writing 8-bytes at a time.
+            KernelAccessorIPv6 kaIpv6 = (KernelAccessorIPv6) ka;
+            kaIpv6.read(this.addr + offset, value, valueOffset, size);
+        } else {
+            super.read(offset, value, valueOffset, size);
         }
     }
 
     @Override
     public void write1(long offset, byte value) {
-        overflow(validRange(this), offset, 1);
-        KernelReadWrite.getAccessor().write1(this.addr + offset, value);
+        checkRange();
+        super.write1(offset, value);
     }
 
     @Override
     public void write2(long offset, short value) {
-        overflow(validRange(this), offset, 2);
-        KernelReadWrite.getAccessor().write2(this.addr + offset, value);
+        checkRange();
+        super.write2(offset, value);
     }
 
     @Override
     public void write4(long offset, int value) {
-        overflow(validRange(this), offset, 4);
-        KernelReadWrite.getAccessor().write4(this.addr + offset, value);
+        checkRange();
+        super.write4(offset, value);
     }
 
     @Override
     public void write8(long offset, long value) {
-        overflow(validRange(this), offset, 8);
-        KernelReadWrite.getAccessor().write8(this.addr + offset, value);
+        checkRange();
+        super.write8(offset, value);
     }
 
     @Override
     public void write(long offset, byte[] value, int valueOffset, int count) {
-        overflow(validRange(this), offset, count);
+        checkRange();
 
-        // TODO: This can be implemented more efficiently
-        final KernelAccessor accessor = KernelReadWrite.getAccessor();
-        for (int i = 0; i < count - valueOffset; ++i) {
-            accessor.write1(this.addr + offset + i, value[valueOffset + i]);
+        KernelAccessor ka = KernelReadWrite.getAccessor();
+        if (ka instanceof KernelAccessorIPv6) {
+            // When using IPv6 based accessor, use a more efficient write method
+            // rather that writing 8-bytes at a time.
+            KernelAccessorIPv6 kaIpv6 = (KernelAccessorIPv6) ka;
+            kaIpv6.write(this.addr + offset, value, valueOffset, count);
+        } else {
+            super.write(offset, value, valueOffset, count);
         }
+    }
+
+    @Override
+    protected byte read1impl(long offset) {
+        return KernelReadWrite.getAccessor().read1(this.addr + offset);
+    }
+
+    @Override
+    protected short read2impl(long offset) {
+        return KernelReadWrite.getAccessor().read2(this.addr + offset);
+    }
+
+    @Override
+    protected int read4impl(long offset) {
+        return KernelReadWrite.getAccessor().read4(this.addr + offset);
+    }
+
+    @Override
+    protected long read8impl(long offset) {
+        return KernelReadWrite.getAccessor().read8(this.addr + offset);
+    }
+
+    @Override
+    protected void write1impl(long offset, byte value) {
+        KernelReadWrite.getAccessor().write1(this.addr + offset, value);
+    }
+
+    @Override
+    protected void write2impl(long offset, short value) {
+        KernelReadWrite.getAccessor().write2(this.addr + offset, value);
+    }
+
+    @Override
+    protected void write4impl(long offset, int value) {
+        KernelReadWrite.getAccessor().write4(this.addr + offset, value);
+    }
+
+    @Override
+    protected void write8impl(long offset, long value) {
+        KernelReadWrite.getAccessor().write8(this.addr + offset, value);
     }
 
     /**

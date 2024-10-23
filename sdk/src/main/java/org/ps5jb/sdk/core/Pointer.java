@@ -167,71 +167,43 @@ public class Pointer extends AbstractPointer {
     }
 
     @Override
-    public byte read1(long offset) {
-        overflow(this, offset, 1);
+    protected byte read1impl(long offset) {
         return getUnsafe().getByte(this.addr + offset);
     }
 
     @Override
-    public short read2(long offset) {
-        overflow(this, offset, 2);
+    protected short read2impl(long offset) {
         return getUnsafe().getShort(this.addr + offset);
     }
 
     @Override
-    public int read4(long offset) {
-        overflow(this, offset, 4);
+    protected int read4impl(long offset) {
         return getUnsafe().getInt(this.addr + offset);
     }
 
     @Override
-    public long read8(long offset) {
-        overflow(this, offset, 8);
+    protected long read8impl(long offset) {
         return getUnsafe().getLong(this.addr + offset);
     }
 
     @Override
-    public void read(long offset, byte[] value, int valueOffset, int size) {
-        overflow(this, offset, size);
-
-        // TODO: This can be implemented more efficiently
-        for (int i = 0; i < size; ++i) {
-            value[valueOffset + i] = getUnsafe().getByte(this.addr + offset + i);
-        }
-    }
-
-    @Override
-    public void write1(long offset, byte value) {
-        overflow(this, offset, 1);
+    protected void write1impl(long offset, byte value) {
         getUnsafe().putByte(this.addr + offset, value);
     }
 
     @Override
-    public void write2(long offset, short value) {
-        overflow(this, offset, 2);
+    protected void write2impl(long offset, short value) {
         getUnsafe().putShort(this.addr + offset, value);
     }
 
     @Override
-    public void write4(long offset, int value) {
-        overflow(this, offset, 4);
+    protected void write4impl(long offset, int value) {
         getUnsafe().putInt(this.addr + offset, value);
     }
 
     @Override
-    public void write8(long offset, long value) {
-        overflow(this, offset, 8);
+    protected void write8impl(long offset, long value) {
         getUnsafe().putLong(this.addr + offset, value);
-    }
-
-    @Override
-    public void write(long offset, byte[] value, int valueOffset, int count) {
-        overflow(this, offset, count);
-
-        // TODO: This can be implemented more efficiently
-        for (int i = 0; i < count - valueOffset; ++i) {
-            getUnsafe().putByte(this.addr + offset + i, value[valueOffset + i]);
-        }
     }
 
     /**
