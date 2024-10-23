@@ -139,7 +139,7 @@ public class JarMain {
                             Status.printStackTrace("Unable to execute the payload. Make sure it implements the " + Runnable.class.getName() + " interface", e);
                         } finally {
                             if (KernelReadWrite.getAccessor() != null && KernelReadWrite.saveAccessor()) {
-                                Status.println("Kernel R/W serialized for a follow-up execution");
+                                Status.println("Kernel R/W is active and is saved for future payloads");
                             }
 
                             if (restoreLogger) {

@@ -80,7 +80,10 @@ public abstract class AbstractPointer implements Serializable {
      * @param offset Offset relative to {@link #addr}.
      * @return Value read from the memory.
      */
-    public abstract byte read1(long offset);
+    public byte read1(long offset) {
+        overflow(this, offset, 1);
+        return read1impl(offset);
+    }
 
     /**
      * Read 1 byte from the address pointed to by this pointer instance.
@@ -92,12 +95,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of reading 1 byte from this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @return Value read from the memory.
+     */
+    protected abstract byte read1impl(long offset);
+
+    /**
      * Read 2 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @return Value read from the memory.
      */
-    public abstract short read2(long offset);
+    public short read2(long offset) {
+        overflow(this, offset, 2);
+        return read2impl(offset);
+    }
 
     /**
      * Read 2 bytes from the address pointed to by this pointer instance.
@@ -109,12 +123,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of reading 2 bytes from this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @return Value read from the memory.
+     */
+    protected abstract short read2impl(long offset);
+
+    /**
      * Read 4 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @return Value read from the memory.
      */
-    public abstract int read4(long offset);
+    public int read4(long offset) {
+        overflow(this, offset, 4);
+        return read4impl(offset);
+    }
 
     /**
      * Read 4 bytes from the address pointed to by this pointer instance.
@@ -126,12 +151,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of reading 4 bytes from this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @return Value read from the memory.
+     */
+    protected abstract int read4impl(long offset);
+
+    /**
      * Read 8 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @return Value read from the memory.
      */
-    public abstract long read8(long offset);
+    public long read8(long offset) {
+        overflow(this, offset, 8);
+        return read8impl(offset);
+    }
 
     /**
      * Read 8 bytes from the address pointed to by this pointer instance.
@@ -141,6 +177,14 @@ public abstract class AbstractPointer implements Serializable {
     public long read8() {
         return read8(0);
     }
+
+    /**
+     * Internal implementation of reading 8 bytes from this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @return Value read from the memory.
+     */
+    protected abstract long read8impl(long offset);
 
     /**
      * Read the given number of bytes from the address pointed to by this pointer instance.
@@ -165,9 +209,29 @@ public abstract class AbstractPointer implements Serializable {
      *   of the specified size.
      */
     public void read(long offset, byte[] value, int valueOffset, int size) {
-        // TODO: This can be implemented more efficiently
-        for (int i = 0; i < size; ++i) {
-            value[valueOffset + i] = read1(offset + i);
+        overflow(this, offset, size);
+
+        long buffer;
+        int bufferLen;
+
+        for (int i = 0; i < size; i += bufferLen) {
+            if ((i + 8) <= size) {
+                buffer = read8impl(offset + i);
+                bufferLen = 8;
+            } else if ((i + 4) <= size) {
+                buffer = read4impl(offset + i);
+                bufferLen = 4;
+            } else if ((i + 2) <= size) {
+                buffer = read2impl(offset + i);
+                bufferLen = 2;
+            } else {
+                buffer = read1impl(offset + i);
+                bufferLen = 1;
+            }
+
+            for (int j = 0; j < bufferLen; ++j) {
+                value[valueOffset + i + j] = (byte) ((buffer >> (j * 8)) & 0xFF);
+            }
         }
     }
 
@@ -178,6 +242,8 @@ public abstract class AbstractPointer implements Serializable {
      * @param offset Offset relative to {@link #addr}.
      * @param maxLength Maximum number of bytes to read. If <code>null</code>,
      *   the memory will be read until the null character is encountered.
+     *   If this pointer has {@link #size() size}, then the read
+     *   will not go beyond the pointer boundary.
      * @param charset Charset to use to convert the native string into a Java
      *   string.
      * @return Value of the memory as a Java string.
@@ -188,20 +254,42 @@ public abstract class AbstractPointer implements Serializable {
         try {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             try {
-                long curSize = 0;
+                int curSize = 0;
+                byte[] buffer;
+                if (maxLength == null) {
+                    buffer = new byte[1];
+                } else {
+                    buffer = new byte[8];
+                }
+
                 while ((maxLength == null) || (maxLength.intValue() > curSize)) {
-                    byte c = read1(offset + curSize);
-                    if (c == 0) {
-                        break;
+                    int readLen;
+                    if (maxLength == null) {
+                        readLen = 1;
+                    } else if (this.size != null && ((offset + curSize + 8) >= this.size.longValue())) {
+                        readLen = (int) (this.size.longValue() - offset - curSize);
+                    } else {
+                        readLen = Math.min(8, maxLength.intValue() - curSize);
+                    }
+                    read(offset + curSize, buffer, 0, readLen);
+
+                    boolean eos = false;
+                    for (int i = 0; i < readLen; ++i) {
+                        if (buffer[i] == 0) {
+                            eos = true;
+                            break;
+                        }
+                        buf.write(buffer[i]);
+                        curSize++;
                     }
 
-                    buf.write(c);
-                    curSize++;
+                    if (eos) break;
                 }
+
+                return buf.toString(charset);
             } finally {
                 buf.close();
             }
-            return buf.toString(charset);
         } catch (IOException e) {
             throw new SdkRuntimeException(e);
         }
@@ -226,7 +314,10 @@ public abstract class AbstractPointer implements Serializable {
      * @param offset Offset relative to {@link #addr}.
      * @param value Value to write.
      */
-    public abstract void write1(long offset, byte value);
+    public void write1(long offset, byte value) {
+        overflow(this, offset, 1);
+        write1impl(offset, value);
+    }
 
     /**
      * Write 1 byte to the address pointed to by this pointer instance.
@@ -238,12 +329,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of writing 1 byte to this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @param value Value to write.
+     */
+    protected abstract void write1impl(long offset, byte value);
+
+    /**
      * Write 2 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @param value Value to write.
      */
-    public abstract void write2(long offset, short value);
+    public void write2(long offset, short value) {
+        overflow(this, offset, 2);
+        write2impl(offset, value);
+    }
 
     /**
      * Write 2 bytes to the address pointed to by this pointer instance.
@@ -255,12 +357,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of writing 2 bytes to this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @param value Value to write.
+     */
+    protected abstract void write2impl(long offset, short value);
+
+    /**
      * Write 4 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @param value Value to write.
      */
-    public abstract void write4(long offset, int value);
+    public void write4(long offset, int value) {
+        overflow(this, offset, 4);
+        write4impl(offset, value);
+    }
 
     /**
      * Write 4 bytes to the address pointed to by this pointer instance.
@@ -272,12 +385,23 @@ public abstract class AbstractPointer implements Serializable {
     }
 
     /**
+     * Internal implementation of writing 4 bytes to this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @param value Value to write.
+     */
+    protected abstract void write4impl(long offset, int value);
+
+    /**
      * Write 8 bytes at the specified offset from the pointer.
      *
      * @param offset Offset relative to {@link #addr}.
      * @param value Value to write.
      */
-    public abstract void write8(long offset, long value);
+    public void write8(long offset, long value) {
+        overflow(this, offset, 8);
+        write8impl(offset, value);
+    }
 
     /**
      * Write 8 bytes to the address pointed to by this pointer instance.
@@ -287,6 +411,14 @@ public abstract class AbstractPointer implements Serializable {
     public void write8(long value) {
         write8(0, value);
     }
+
+    /**
+     * Internal implementation of writing 8 bytes to this pointer.
+     *
+     * @param offset Offset relative to {@link #addr}.
+     * @param value Value to write.
+     */
+    protected abstract void write8impl(long offset, long value);
 
     /**
      * Write the given number of bytes to the address pointed to by this pointer instance.
@@ -309,9 +441,36 @@ public abstract class AbstractPointer implements Serializable {
      *   <code>valueOffset</code> and <code>count</code>.
      */
     public void write(long offset, byte[] value, int valueOffset, int count) {
-        // TODO: This can be implemented more efficiently
-        for (int i = 0; i < count - valueOffset; ++i) {
-            write1(this.addr + offset + i, value[valueOffset + i]);
+        overflow(this, offset, count);
+
+        long buffer;
+        int bufferLen;
+
+        for (int i = 0; i < count; i += bufferLen) {
+            if ((i + 8) <= count) {
+                bufferLen = 8;
+            } else if ((i + 4) <= count) {
+                bufferLen = 4;
+            } else if ((i + 2) <= count) {
+                bufferLen = 2;
+            } else {
+                bufferLen = 1;
+            }
+
+            buffer = 0;
+            for (int j = 0; j < bufferLen; ++j) {
+                buffer |= (((long) (value[valueOffset + i + j] & 0xFF)) << (j * 8));
+            }
+
+            if (bufferLen == 8) {
+                write8impl(offset + i, buffer);
+            } else if (bufferLen == 4) {
+                write4impl(offset + i, (int) (buffer & 0xFFFFFFFFL));
+            } else if (bufferLen == 2) {
+                write2impl(offset + i, (short) (buffer & 0xFFFFL));
+            } else {
+                write1impl(offset + i, (byte) (buffer & 0xFFL));
+            }
         }
     }
 
