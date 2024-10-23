@@ -4,12 +4,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.sdk.core.Pointer;
-import org.ps5jb.sdk.include.sys.Pipe;
 import org.ps5jb.sdk.lib.LibKernel;
 
 public class CommandProcessor {
-    private LibKernel libKernel;
+    private final LibKernel libKernel;
 
     public static final int CMD_NOP = 0;
     public static final int CMD_READ = 1;
@@ -18,57 +18,19 @@ public class CommandProcessor {
 
     public AtomicBoolean exitSignal = new AtomicBoolean();
     public AtomicInteger cmd = new AtomicInteger(CMD_NOP);
-    public AtomicLong uaddr = new AtomicLong();
-    public AtomicLong kaddr = new AtomicLong();
     public AtomicInteger len = new AtomicInteger();
     public AtomicLong readCounter = new AtomicLong();
     public AtomicLong writeCounter = new AtomicLong();
 
-    public int pipeReadFd = -1;
-    public int pipeWriteFd = -1;
-    public Pointer pipeScratchBuf;
-    public Pointer readValue;
-    public Pointer writeValue;
-
     public CommandProcessor() {
         libKernel = new LibKernel();
-
-        Pointer pipeFds = Pointer.calloc(8);
-        try {
-            int returnCode = libKernel.pipe(pipeFds);
-            if (returnCode < 0) {
-                DebugStatus.error("[-] Failed to create pipe, errno: " + libKernel.__error().read4());
-                throw new RuntimeException("Initialization failed");
-            }
-            this.pipeReadFd = pipeFds.read4();
-            this.pipeWriteFd = pipeFds.read4(4);
-            this.pipeScratchBuf = Pointer.calloc(Pipe.BIG_PIPE_SIZE);
-
-            this.readValue = Pointer.calloc(0x8L);
-            this.writeValue = Pointer.calloc(0x8L);
-        } finally {
-            pipeFds.free();
-        }
-    }
-
-    public void free() {
-        if (pipeScratchBuf != null) {
-            pipeScratchBuf.free();;
-            pipeScratchBuf = null;
-        }
-
-        if (pipeReadFd != -1) {
-            libKernel.close(pipeReadFd);
-        }
-
-        if (pipeWriteFd != -1) {
-            libKernel.close(pipeWriteFd);
-        }
-
-        libKernel.closeLibrary();
     }
 
     public void handleCommands() {
+        int pipeReadFd = -1;
+        Pointer pipeScratchBuf = Pointer.NULL;
+        int pipeWriteFd = -1;
+
         while (!exitSignal.get()) {
             int cmd = this.cmd.get();
             if (cmd == CMD_NOP) {
@@ -76,33 +38,39 @@ public class CommandProcessor {
                 continue;
             }
             long len = this.len.get();
+            if (Pointer.NULL.equals(pipeScratchBuf)) {
+                KernelAccessorSlow ka = (KernelAccessorSlow) KernelReadWrite.getAccessor();
+                pipeReadFd = ka.pipeReadFd;
+                pipeWriteFd = ka.pipeWriteFd;
+                pipeScratchBuf = ka.pipeScratchBuf;
+            }
 
             switch (cmd) {
                 case CMD_READ:
                     if (DebugStatus.isDebugEnabled()) {
-                        DebugStatus.debug("[+] Command processor: blocking to write " + len + " bytes for READ command");
+                        DebugStatus.debug("Command processor: blocking to write " + len + " bytes for READ command");
                     }
+                    long read = this.libKernel.write(pipeWriteFd, pipeScratchBuf, len);
                     this.readCounter.incrementAndGet();
-                    long read = this.libKernel.write(this.pipeWriteFd, this.pipeScratchBuf, len);
                     if (DebugStatus.isDebugEnabled()) {
-                        DebugStatus.debug("[+] Command processor: written " + read + " bytes");
+                        DebugStatus.debug("Command processor: written " + read + " bytes");
                     }
                     break;
 
                 case CMD_WRITE:
                     if (DebugStatus.isDebugEnabled()) {
-                        DebugStatus.debug("[+] Command processor: blocking to read " + len + " bytes for WRITE command");
+                        DebugStatus.debug("Command processor: blocking to read " + len + " bytes for WRITE command");
                     }
+                    long write = this.libKernel.read(pipeReadFd, pipeScratchBuf, len);
                     this.writeCounter.incrementAndGet();
-                    long write = this.libKernel.read(this.pipeReadFd, this.pipeScratchBuf, len);
                     if (DebugStatus.isDebugEnabled()) {
-                        DebugStatus.debug("[+] Command processor: read " + write + " bytes");
+                        DebugStatus.debug("Command processor: read " + write + " bytes");
                     }
                     break;
 
                 case CMD_EXIT:
                     // Do nothing
-                    DebugStatus.error("Command processor: exiting");
+                    DebugStatus.info("Command processor: exiting");
                     exitSignal.set(true);
                     break;
 
@@ -115,7 +83,7 @@ public class CommandProcessor {
             DebugStatus.debug("Command processor: resetting");
         }
 
-        free();
+        libKernel.closeLibrary();
 
         DebugStatus.info("Command processor: finished and cannot be reused");
     }

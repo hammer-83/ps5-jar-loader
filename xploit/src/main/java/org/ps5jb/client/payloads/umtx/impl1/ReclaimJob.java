@@ -5,7 +5,6 @@ import org.ps5jb.client.payloads.umtx.common.DebugStatus;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.CpuSet;
-import org.ps5jb.sdk.include.sys.IocCom;
 import org.ps5jb.sdk.include.sys.RtPrio;
 import org.ps5jb.sdk.include.sys.cpuset.CpuSetType;
 
@@ -22,7 +21,7 @@ public class ReclaimJob extends CommonJob {
 
     private boolean isTarget;
 
-    private CommandProcessor commandProcessor;
+    private volatile CommandProcessor commandProcessor;
 
     public ReclaimJob(int index, State state) {
         super();
@@ -78,7 +77,6 @@ public class ReclaimJob extends CommonJob {
         DebugStatus.trace("Starting loop");
 
         // Wait loop that runs until kernel stack is obtained.
-        IocCom ioccom = new IocCom(this.libKernel);
         while (!this.state.destroyFlag.get()) {
             DebugStatus.trace("Doing blocking call");
 
@@ -126,7 +124,7 @@ public class ReclaimJob extends CommonJob {
         }
 
         if (commandProcessor != null) {
-            commandProcessor.exitSignal.set(true);
+            commandProcessor.cmd.set(CommandProcessor.CMD_EXIT);
             commandProcessor = null;
         }
     }

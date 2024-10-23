@@ -46,13 +46,13 @@ class CheckMemoryPipe {
         long actualWriteSize = this.libKernel.write(checkMemoryPipe[1], ptr, checkSize);
         boolean result = actualWriteSize == checkSize;
         if (!result) {
-            DebugStatus.error("Memory check write of " + checkSize + " failed with error code: " + this.errNo.getLastError() + ". Written: " + actualWriteSize);
+            DebugStatus.error("Memory read check of size " + checkSize + " bytes failed for address " + ptr + "; Error code: " + this.errNo.getLastError() + "; Return value: " + actualWriteSize);
         }
 
         if (actualWriteSize > 0) {
             long actualReadSize = this.libKernel.read(checkMemoryPipe[0], checkMemoryBuf, checkSize);
             if (actualReadSize != actualWriteSize) {
-                DebugStatus.error("Memory check read of " + checkSize + " failed with error code: " + this.errNo.getLastError() + ". Read: " + actualReadSize);
+                DebugStatus.error("Pipe read failed during memory check of address " + ptr + "; Error code: " + this.errNo.getLastError() + "; Return value: " + actualReadSize);
             }
         }
 

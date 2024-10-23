@@ -137,6 +137,7 @@ public class KernelStabilizer {
     /**
      * Fixup references to possibly corrupt descriptors
      *
+     * @param openFilesAddress Address of open file descriptors array in the current process.
      * @param usedDescriptors Collections of descriptors to fix
      * @return Number of modified descriptors
      */

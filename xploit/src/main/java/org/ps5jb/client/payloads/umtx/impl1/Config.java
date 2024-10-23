@@ -12,11 +12,11 @@ public class Config {
     public static final boolean toggleSetThreadPriorities = false;
     public static final boolean toggleEnableThreadPriorityForReclaimThreads = false;
     public static final boolean toggleStoppingWorkingThreadsBeforeRemap = true;
-    public static final boolean toggleReclaimCpuAffinityMask = true;
+    public static final boolean toggleReclaimCpuAffinityMask = false;
     public static final boolean toggleDestroyerAffinityOnReclaimThread = false;
     public static final boolean toggleUnmappingOnFailure = true;
     public static final boolean toggleSprayOnDestroyThread = true;
-    public static final boolean toggleMainThreadWait = true;
+    public static final boolean toggleMainThreadWait = false;
 
     // Common parameters.
     public static final int MAX_EXPLOITATION_ATTEMPTS = 100000;

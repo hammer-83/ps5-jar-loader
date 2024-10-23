@@ -6,11 +6,14 @@ import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
+import org.ps5jb.sdk.include.machine.VmParam;
 
 /**
  * Calculator of important absolute kernel addresses.
  */
 public class KernelOffsetsCalculator {
+    public static final String SYSTEM_PROPERTY_ALLPROC_ADDRESS = "org.ps5jb.client.payloads.umtx.ALLPROC_ADDRESS";
+
     private static final long OFFSET_THREAD_TD_NAME = 660L;
     private static final long OFFSET_THREAD_TD_PROC = 8L;
     private static final long OFFSET_PROC_P_FD = 0x48L;
@@ -95,18 +98,18 @@ public class KernelOffsetsCalculator {
      * @return Address of allproc pointer in kernel data section.
      */
     private KernelPointer calculateAllProcAddress(KernelPointer processAddress) {
-        KernelPointer allproc;
-        KernelPointer prevProc = processAddress;
+        KernelPointer allproc = processAddress;
 
-        do {
-            allproc = prevProc;
+        final long KDATA_MASK = VmParam.VM_MIN_KERNEL_ADDRESS;
+
+        while (!KernelPointer.NULL.equals(allproc) && ((allproc.addr() & KDATA_MASK) != KDATA_MASK)) {
             try {
-                prevProc = KernelPointer.valueOf(prevProc.read8(0x8)); // proc->p_list->le_prev
+                allproc = KernelPointer.valueOf(allproc.read8(0x8)); // proc->p_list->le_prev
             } catch (IllegalAccessError e) {
                 // Ignore
                 allproc = KernelPointer.NULL;
             }
-        } while (!KernelPointer.NULL.equals(prevProc));
+        }
 
         return allproc;
     }

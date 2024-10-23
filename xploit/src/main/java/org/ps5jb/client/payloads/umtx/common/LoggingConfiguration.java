@@ -89,6 +89,10 @@ public class LoggingConfiguration extends HContainer
                 case HRcEvent.VK_COLORED_KEY_3:
                     canceled = true;
                     break;
+                case KeyEvent.VK_0:
+                    debugLevel = DebugStatus.Level.ERROR;
+                    setStaticText("level", debugLevel.toString());
+                    break;
                 case KeyEvent.VK_1:
                     debugLevel = DebugStatus.Level.INFO;
                     setStaticText("level", debugLevel.toString());
@@ -325,7 +329,7 @@ public class LoggingConfiguration extends HContainer
         text1valCtrl.setName("level");
         loggingComponent.add(text1valCtrl);
 
-        String text2 = "Press Triangle, then 1 [INFO] or 2 [NOTICE] or 3 [DEBUG] or 4 [TRACE]";
+        String text2 = "Press Triangle, then 0 [ERROR] or 1 [INFO] or 2 [NOTICE] or 3 [DEBUG] or 4 [TRACE]";
         HStaticText text2ctrl = new HStaticText(text2, text1ctrl.getX(), text1ctrl.getY() + text1ctrl.getHeight() + verticalLabelSpace, hfm.stringWidth(text2), labelHeight);
         text2ctrl.setForeground(Color.darkGray);
         text2ctrl.setBordersEnabled(false);

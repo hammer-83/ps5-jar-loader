@@ -44,7 +44,7 @@ public class MemoryDumper {
                 }
             }
 
-            Status.println(sb.toString());
+            DebugStatus.info(sb.toString());
             sb.setLength(0);
         }
     }
