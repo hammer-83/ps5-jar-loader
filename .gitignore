@@ -1,4 +1,5 @@
 /lib/*.jar
+!/lib/pbp*.jar
 /lib/*.zip
 target
 

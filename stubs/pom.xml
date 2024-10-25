@@ -42,9 +42,6 @@
                                 <condition property="bdj.exists">
                                     <and>
                                         <available file="${bdjstack.dir}/bdj.jar" />
-                                        <available file="${bdjstack.dir}/pbp-base.jar" />
-                                        <available file="${bdjstack.dir}/pbp-desktop.jar" />
-                                        <available file="${bdjstack.dir}/pbp-rmi.jar" />
                                         <available file="${bdjstack.dir}/pbp-javadoc.zip" />
                                         <available file="${bdjstack.dir}/javatv.jar" />
                                         <available file="${bdjstack.dir}/javatv-javadoc.zip" />
@@ -65,11 +62,14 @@
                                     The above is not strictly the same as on PS5, which actually uses:
                                     - Connected Device Configuration 1.1 [JSR 218]
                                     - Foundation Profile 1.1 [JSR 219]
-                                    - Personal Basis Profile [JSR 217]
+                                      - JCE
+                                      - JSSE
+                                      - JAAS
+                                    - Personal Basis Profile 1.1.2 [JSR 217]
 
-                                    But licensed stubs for newer specifications are harder to come by, so we make do with these.
-
-                                    Also, we will not use stubs for GEM and Java TV from this archive but instead download a more recent version.
+                                    Security packages JCE, JSSE and JAAS are already included in JDK 11; GEM and Java TV will be downloaded from a more recent source.
+                                    Personal Basis Profile 1.1.2 is provided as binary in this repo, compiled from the old sources of PhoneME Advanced project.
+                                    So the only interesting classes from HD Cookbook archive that are kept is BD-J API.
                                 -->
                                 <get src="https://github.com/zathras/java.net/raw/master/hdcookbook/lib/stubs/interactive/classes.zip"
                                      dest="${bdjstack.dir}"
@@ -77,8 +77,8 @@
                                      usetimestamp="true"
                                      skipexisting="true"
                                      unless:set="bdj.exists" />
-                                <!-- Download Javadoc for JSR129 (Personal Basis Profile 1.0). -->
-                                <get src="http://download.oracle.com/otn-pub/jcp/pbp-1.0b-mr-oth-JSpec/pbp-1_0b-mr-spec-jdoc.zip"
+                                <!-- Download Javadoc for JSR217 (Personal Basis Profile 1.1.2). -->
+                                <get src="http://download.oracle.com/otn-pub/jcp/pbp-1.1.2-mrel-JSpec/pbp-1_1_2-mrel-spec-jdoc.zip"
                                      dest="${bdjstack.dir}/pbp-javadoc.zip"
                                      quiet="true"
                                      usetimestamp="true"
@@ -105,40 +105,14 @@
                                      usetimestamp="true"
                                      skipexisting="true"
                                      unless:set="bdj.exists" />
-                                <!-- The archives above will be separated into different JARs. This is done to be able to use "patch-module" switch to replace default JDK classes in various modules with the classes from JSR129. -->
+                                <!-- Create directories which will hold classes going into individual JARs -->
                                 <mkdir dir="${bdjstack.dir}/classes/bdj" unless:set="bdj.exists" />
                                 <mkdir dir="${bdjstack.dir}/classes/gem" unless:set="bdj.exists" />
-                                <mkdir dir="${bdjstack.dir}/classes/pbp-base" unless:set="bdj.exists" />
-                                <mkdir dir="${bdjstack.dir}/classes/pbp-desktop" unless:set="bdj.exists" />
-                                <mkdir dir="${bdjstack.dir}/classes/pbp-rmi" unless:set="bdj.exists" />
                                 <mkdir dir="${bdjstack.dir}/classes/javatv" unless:set="bdj.exists" />
                                 <!-- Unzip all BD-J API classes into its own directory -->
                                 <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/bdj" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
                                     <patternset>
                                         <include name="org/bluray/**" />
-                                    </patternset>
-                                </unzip>
-                                <!-- Unzip certain JSR 129 packages into its own directory. These will be patched into java.base module. -->
-                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/pbp-base" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
-                                    <patternset>
-                                        <include name="java/**" />
-                                        <include name="javax/microedition/**" />
-                                        <exclude name="java/awt/**" />
-                                        <exclude name="java/beans/**" />
-                                        <exclude name="java/rmi/**" />
-                                    </patternset>
-                                </unzip>
-                                <!-- Unzip certain JSR 129 packages into its own directory. These will be patched into java.desktop module. -->
-                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/pbp-desktop" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
-                                    <patternset>
-                                        <include name="java/awt/**" />
-                                        <include name="java/beans/**" />
-                                    </patternset>
-                                </unzip>
-                                <!-- Unzip certain JSR 129 packages into its own directory. These will be patched into java.rmi module. -->
-                                <unzip src="${bdjstack.dir}/classes.zip" dest="${bdjstack.dir}/classes/pbp-rmi" overwrite="false" stripAbsolutePathSpec="true" unless:set="bdj.exists">
-                                    <patternset>
-                                        <include name="java/rmi/**" />
                                     </patternset>
                                 </unzip>
                                 <!-- Unzip JSR 927 into its own directory -->
@@ -169,9 +143,6 @@
                                 <delete file="${bdjstack.dir}/classes/gem/classes/classes.zip" unless:set="bdj.exists" />
                                 <!-- Now create the JARs and delete the downloaded archives -->
                                 <jar destfile="${bdjstack.dir}/bdj.jar" basedir="${bdjstack.dir}/classes/bdj" defaultexcludes="false" unless:set="bdj.exists" />
-                                <jar destfile="${bdjstack.dir}/pbp-base.jar" basedir="${bdjstack.dir}/classes/pbp-base" defaultexcludes="false" unless:set="bdj.exists" />
-                                <jar destfile="${bdjstack.dir}/pbp-desktop.jar" basedir="${bdjstack.dir}/classes/pbp-desktop" defaultexcludes="false" unless:set="bdj.exists" />
-                                <jar destfile="${bdjstack.dir}/pbp-rmi.jar" basedir="${bdjstack.dir}/classes/pbp-rmi" defaultexcludes="false" unless:set="bdj.exists" />
                                 <jar destfile="${bdjstack.dir}/javatv.jar" basedir="${bdjstack.dir}/classes/javatv" defaultexcludes="false" unless:set="bdj.exists" />
                                 <jar destfile="${bdjstack.dir}/gem.jar" basedir="${bdjstack.dir}/classes/gem/classes" defaultexcludes="false" unless:set="bdj.exists" />
                                 <!-- Create zip for GEM API Javadoc -->
