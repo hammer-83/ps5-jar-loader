@@ -14,8 +14,13 @@ public class KernelOffsets {
     public final long OFFSET_KERNEL_DATA;
 
     // Kernel data-relative offsets
+    public final long OFFSET_KERNEL_DATA_BASE_DYNAMIC;
+    public final long OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC;
     public final long OFFSET_KERNEL_DATA_BASE_ALLPROC;
-    public final long OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS;
+    public final long OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS;
+    public final long OFFSET_KERNEL_DATA_BASE_TARGET_ID;
+    public final long OFFSET_KERNEL_DATA_BASE_QA_FLAGS;
+    public final long OFFSET_KERNEL_DATA_BASE_UTOKEN_FLAGS;
     public final long OFFSET_KERNEL_DATA_BASE_ROOTVNODE;
 
     /**
@@ -40,10 +45,10 @@ public class KernelOffsets {
             {
                 OFFSET_KERNEL_DATA = 0x01B40000;
 
-                // Note: at least on 1.02 the offset is confirmed to differ from Specter's.
-                // Maybe not all ALLPROC addresses are valid?
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x0658BB58;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x026D1BF8;
-                OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS = 0x06241074;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06241074;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06565540;
                 break;
             }
@@ -57,8 +62,10 @@ public class KernelOffsets {
             {
                 OFFSET_KERNEL_DATA = 0x01B80000;
 
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06739B88;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02701C28;
-                OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS = 0x063E1274;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x063E1274;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x067134C0;
                 break;
             }
@@ -68,8 +75,10 @@ public class KernelOffsets {
             {
                 OFFSET_KERNEL_DATA = 0x0BD0000;
 
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067D1B90;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0276DC58;
-                OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS = 0x06466474;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06466474;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x067AB4C0;
                 break;
             }
@@ -81,8 +90,10 @@ public class KernelOffsets {
             {
                 OFFSET_KERNEL_DATA = 0x0C00000;
 
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x0670DB90;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x027EDCB8;
-                OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS = 0x06506474;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06506474;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x066E74C0;
                 break;
             }
@@ -93,9 +104,40 @@ public class KernelOffsets {
             {
                 OFFSET_KERNEL_DATA = 0x0C50000;
 
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06869C00;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0290DD00;
-                OFFSET_KERNEL_DATA_BASE_SECURITYFLAGS = 0x066366EC;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066366EC;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06843510;
+                break;
+            }
+            case 0x0600:  // Unconfirmed
+            case 0x0602:
+            case 0x0650:
+            {
+                OFFSET_KERNEL_DATA = 0x0A40000;  // Unconfirmed
+
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067B5C10;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02859D20;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x065868EC;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x0678F510;
+                break;
+            }
+            case 0x0700:
+            case 0x0701:  // Unconfirmed
+            case 0x0720:
+            case 0x0740:  // Unconfirmed
+            case 0x0760:  // Unconfirmed
+            case 0x0761:
+            {
+                OFFSET_KERNEL_DATA = 0x0A30000;  // Unconfirmed
+
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x030DDC40;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02849D50;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x00AB8064;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x030B7510;
                 break;
             }
             default:
@@ -108,5 +150,9 @@ public class KernelOffsets {
                 );
                 throw new SdkSoftwareVersionUnsupportedException(strSwVersion);
         }
+
+        OFFSET_KERNEL_DATA_BASE_TARGET_ID = OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS + 0x09;
+        OFFSET_KERNEL_DATA_BASE_QA_FLAGS = OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS + 0x24;
+        OFFSET_KERNEL_DATA_BASE_UTOKEN_FLAGS = OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS + 0x8C;
     }
 }
