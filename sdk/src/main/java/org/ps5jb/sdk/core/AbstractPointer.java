@@ -556,6 +556,16 @@ public abstract class AbstractPointer implements Serializable {
      */
     @Override
     public String toString() {
+        return toString(this.addr);
+    }
+
+    /**
+     * Represent a pointer address as a hex string.
+     *
+     * @param addr Pointer address.
+     * @return Hexadecimal representation of the address.
+     */
+    public static String toString(long addr) {
         int padLength;
         if (addr > 0xFFFFFFFFL) {
             padLength = 16;

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 
 import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
@@ -13,18 +14,22 @@ import org.havi.ui.event.HRcEvent;
 import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
+import org.ps5jb.sdk.core.AbstractPointer;
+import org.ps5jb.sdk.core.SdkException;
+import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.Param;
 import org.ps5jb.sdk.include.machine.VmParam;
+import org.ps5jb.sdk.include.sys.errno.MemoryFaultException;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
  * <p>
- *   Sends the contents of the kernel data segment over network connection.
- *   Since the end of the data segment is not known, this payload will read
- *   until the console crashes.
+ *   Sends the contents of the kernel over network connection.
+ *   For firmware with unknown offsets, it's not possible to know when to stop reading.
+ *   Therefore, the dump will happen until console crashes.
  * </p>
  * <p>
  *   To use, execute a payload that obtains kernel r/w.
@@ -33,12 +38,18 @@ import org.ps5jb.sdk.lib.LibKernel;
  *   <code>nc [PS5 IP] 5656 &gt; data.bin</code>
  * </p>
  * <p>
- * Upon connection, the kernel data will be dumped and sent back to `nc`.
+ * Upon connection, the kernel will be dumped and sent back to `nc`.
  * Depending on OS, `nc` may not terminate by itself. When PS5 crashes,
  * simply terminate it by force.
  * </p>
+ * <p>
+ * Kernel text segment is unreadable by default. It can be made readable
+ * by using Byepervisor payload prior to executing the dump. If it is detected
+ * that text segment is readable, it will be included in the dump. Otherwise,
+ * only data segment will be sent.
+ * </p>
  */
-public class KernelDataDump extends SocketListener implements UserEventListener {
+public class KernelDump extends SocketListener implements UserEventListener {
     /**
      * This system property should be set by a different payload
      * to a known pointer inside kernel data segment, if the fixed offsets
@@ -47,9 +58,11 @@ public class KernelDataDump extends SocketListener implements UserEventListener 
     public static final String SYSTEM_PROPERTY_KERNEL_DATA_POINTER = "org.ps5jb.client.KERNEL_DATA_POINTER";
 
     private LibKernel libKernel;
+    private KernelPointer kbaseAddress = KernelPointer.NULL;
     private KernelPointer kdataAddress = KernelPointer.NULL;
+    private KernelOffsets offsets;
 
-    public KernelDataDump() throws IOException {
+    public KernelDump() throws IOException {
         // Use same port as webkit implementation from Specter
         super("Kernel Data Dumper", 5656);
     }
@@ -61,11 +74,19 @@ public class KernelDataDump extends SocketListener implements UserEventListener 
             Status.println("Unable to dump without kernel read/write capabilities");
             return;
         }
+        kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
 
         // Determine kernel data start, either from known offsets or by scanning.
         // For scanning to work, the code depends on SYSTEM_PROPERTY_KERNEL_DATA_POINTER to be set.
         libKernel = new LibKernel();
         try {
+            int softwareVersion = libKernel.getSystemSoftwareVersion();
+            try {
+                offsets = new KernelOffsets(softwareVersion);
+            } catch (SdkSoftwareVersionUnsupportedException e) {
+                // Ignore
+            }
+
             kdataAddress = getKnownKDataAddress();
             if (KernelPointer.NULL.equals(kdataAddress)) {
                 KernelPointer kdataPtr = getKdataPtr();
@@ -86,6 +107,9 @@ public class KernelDataDump extends SocketListener implements UserEventListener 
             }
 
             Status.println("Kernel data address: " + kdataAddress);
+            if (!KernelPointer.NULL.equals(kbaseAddress)) {
+                Status.println("Kernel text address: " + kbaseAddress);
+            }
 
             // Listen for controller input
             EventManager.getInstance().addUserEventListener(this, new OverallRepository());
@@ -102,46 +126,66 @@ public class KernelDataDump extends SocketListener implements UserEventListener 
 
     @Override
     protected void acceptClient(Socket clientSocket) throws Exception {
-        Status.println("Dumping kernel data until crash to: " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+        // Check if kernel text is also readable
+        boolean isKtextReadable = offsets != null && kdataAddress.read4(offsets.OFFSET_KERNEL_DATA_BASE_DATA_CAVE) == 0x00001337;
 
         OutputStream out = clientSocket.getOutputStream();
         try {
-            byte[] buffer = new byte[(int) Param.PAGE_SIZE];
-            KernelPointer kdataPage = kdataAddress;
-            long pageCount = 0;
-            // The limit below is there mostly to prevent IDE lint warnings. But if somehow data is more than this number of pages, then dump will be incomplete.
-            long maxPageCount = 0x3000;
-            while (pageCount < maxPageCount && !terminated) {
-                kdataPage.read(0, buffer, 0, buffer.length);
-                out.write(buffer);
+            byte[] buffer = new byte[(int) Param.PHYS_PAGE_SIZE];
+            long pageRatio = Param.PAGE_SIZE / buffer.length;
+            long printInterval = pageRatio * 0x100;
 
-                kdataPage = kdataPage.inc(Param.PAGE_SIZE);
+            KernelPointer kernelSpace;
+            String clientAddress = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+            if (isKtextReadable) {
+                kernelSpace = new KernelPointer(kbaseAddress.addr(), new Long(offsets.OFFSET_KERNEL_DATA + offsets.SIZE_KERNEL_DATA));
+                Status.println("Dumping kernel text and data to " + clientAddress + ". Start: " + kernelSpace + "; size: 0x" + Long.toHexString(kernelSpace.size().longValue()));
+            } else if (kdataAddress.size() != null) {
+                kernelSpace = kdataAddress;
+                Status.println("Dumping kernel data to " + clientAddress + ". Start: " + kernelSpace + "; size: 0x" + Long.toHexString(kernelSpace.size().longValue()));
+            } else {
+                // 0x3000 pages is an arbitrary limit which will likely crash the console
+                kernelSpace = new KernelPointer(kdataAddress.addr(), new Long(0x3000 + Param.PAGE_SIZE));
+                Status.println("Dumping kernel data until crash to " + clientAddress + ". Start: " + kernelSpace);
+            }
+
+            long pageCount = 0;
+            while ((pageCount * buffer.length) < kernelSpace.size().longValue()) {
+                Arrays.fill(buffer, (byte) 0);
+
+                int readSize = (int) Math.min(buffer.length, kernelSpace.size().longValue() - pageCount * buffer.length);
+                try {
+                    kernelSpace.read(pageCount * buffer.length, buffer, 0, readSize);
+                } catch (SdkRuntimeException e) {
+                    if (e.getCause() instanceof MemoryFaultException) {
+                        if (pageCount == 0) {
+                            Status.println("Kernel is not readable. Aborting.");
+                            break;
+                        }
+                        Status.println("Address " + AbstractPointer.toString(kernelSpace.addr() + pageCount * buffer.length) + " not accessible. Skipped.");
+                    } else {
+                        throw e;
+                    }
+                }
+                out.write(buffer, 0, readSize);
+
                 ++pageCount;
 
-                if (pageCount % 0x100 == 0) {
-                    Status.println("Dumped 0x" + Long.toHexString(pageCount) + " pages");
+                if (pageCount % printInterval == 0) {
+                    Status.println("Dumped 0x" + Long.toHexString(pageCount / pageRatio) + " pages");
                 }
             }
         } finally {
             out.close();
         }
 
-        // This will never be reached because console will crash with a page fault
         terminate();
     }
 
     private KernelPointer getKnownKDataAddress() {
-        int softwareVersion = libKernel.getSystemSoftwareVersion();
-
         KernelPointer kdataAddress = KernelPointer.NULL;
-        KernelPointer kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
-        if (!KernelPointer.NULL.equals(kbaseAddress)) {
-            try {
-                KernelOffsets kernelOffsets = new KernelOffsets(softwareVersion);
-                kdataAddress = kbaseAddress.inc(kernelOffsets.OFFSET_KERNEL_DATA);
-            } catch (SdkSoftwareVersionUnsupportedException e) {
-                // Ignore
-            }
+        if (!KernelPointer.NULL.equals(kbaseAddress) && offsets != null) {
+            kdataAddress = new KernelPointer(kbaseAddress.addr() + offsets.OFFSET_KERNEL_DATA, new Long(offsets.SIZE_KERNEL_DATA));
         }
 
         return kdataAddress;

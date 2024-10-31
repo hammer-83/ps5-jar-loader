@@ -7,7 +7,7 @@ import org.ps5jb.sdk.include.machine.VmParam;
 public class VmParamTestCase {
     @Test
     public void testVmMinKernelAddress() {
-        Assertions.assertEquals(0xfffffe0000000000L, VmParam.VM_MIN_KERNEL_ADDRESS);
+        Assertions.assertEquals(0xFFFFFF8000000000L, VmParam.VM_MIN_KERNEL_ADDRESS);
     }
     @Test
     public void testVmKernBase() {

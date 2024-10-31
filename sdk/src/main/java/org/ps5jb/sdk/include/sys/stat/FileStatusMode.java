@@ -115,7 +115,7 @@ public final class FileStatusMode implements Comparable {
     }
 
     /**
-     * Convert a numeric value into a FileStatusMode constant.
+     * Convert a numeric value into an array of FileStatusMode constants.
      *
      * @param value Number to convert
      * @return Array of FileStatusMode constants ORed in the numeric value.
