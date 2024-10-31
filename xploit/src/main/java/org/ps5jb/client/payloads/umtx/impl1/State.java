@@ -68,9 +68,6 @@ public class State {
 
     public MemoryBuffer stackDataBuffer;
 
-    public IoVecType ioVec;
-    public UioType uio;
-
     public boolean exploited;
 
     public KernelPointer threadAddress = KernelPointer.NULL;

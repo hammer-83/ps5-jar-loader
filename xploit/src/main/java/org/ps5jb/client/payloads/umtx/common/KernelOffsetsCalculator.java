@@ -7,6 +7,7 @@ import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.VmParam;
+import org.ps5jb.sdk.include.sys.proc.Process;
 
 /**
  * Calculator of important absolute kernel addresses.
@@ -14,7 +15,6 @@ import org.ps5jb.sdk.include.machine.VmParam;
 public class KernelOffsetsCalculator {
     private static final long OFFSET_THREAD_TD_NAME = 660L;
     private static final long OFFSET_THREAD_TD_PROC = 8L;
-    private static final long OFFSET_PROC_P_FD = 0x48L;
     private static final long OFFSET_FDESCENTTBL_FDT_OFILES = 0x08L;
 
     public static final int MAX_RECLAIM_THREAD_NAME = 0x10;
@@ -69,7 +69,7 @@ public class KernelOffsetsCalculator {
                 threadAddress = threadAddressPtr;
                 processAddress = KernelPointer.valueOf(threadAddress.read8(OFFSET_THREAD_TD_PROC));
 
-                final KernelPointer p_fd = KernelPointer.valueOf(processAddress.read8(OFFSET_PROC_P_FD));
+                final KernelPointer p_fd = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_FD));
                 processOpenFilesAddress = KernelPointer.valueOf(p_fd.read8() + OFFSET_FDESCENTTBL_FDT_OFILES);
 
                 allProcAddress = calculateAllProcAddress(processAddress);

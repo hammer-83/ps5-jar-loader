@@ -1,15 +1,13 @@
 package org.ps5jb.client.payloads.umtx.common;
 
-import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.AbstractPointer;
 import org.ps5jb.sdk.core.Pointer;
 
 public class MemoryDumper {
-    public static void dump(AbstractPointer buf, long size) {
+    public static void dump(AbstractPointer buf, long size, boolean relative) {
         StringBuffer sb = new StringBuffer(110);
         for (int j = 0; j < size; j += 0x10) {
-            final Pointer offsetPtr = Pointer.valueOf(j);
-            sb.append(offsetPtr);
+            sb.append(AbstractPointer.toString(relative ? j : buf.addr() + j));
             sb.append(":   ");
 
             for (int i = 0; i < 2; ++i) {

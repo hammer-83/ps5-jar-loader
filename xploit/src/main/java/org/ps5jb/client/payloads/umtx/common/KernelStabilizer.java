@@ -7,6 +7,7 @@ import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.errno.NotFoundException;
+import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
@@ -21,7 +22,6 @@ public class KernelStabilizer {
     private static final long OFFSET_FILE_F_COUNT = 40L;
     private static final long OFFSET_THREAD_KSTACK_OBJ = 1128L;
     private static final long OFFSET_THREAD_KSTACK = 1136L;
-    private static final long OFFSET_PROC_P_VMSPACE = 512L;
     private static final long OFFSET_VMSPACE_VM_MAP = 0L;
     private static final long OFFSET_VM_MAP_ENTRY_START = 32L;
     private static final long OFFSET_VM_MAP_ENTRY_OBJECT = 80L;
@@ -68,7 +68,7 @@ public class KernelStabilizer {
         if (mappedKernelStackAddresses != null) {
             final int stackUserAddressCount = mappedKernelStackAddresses.size();
 
-            KernelPointer vmSpaceAddress = KernelPointer.valueOf(processAddress.read8(OFFSET_PROC_P_VMSPACE));
+            KernelPointer vmSpaceAddress = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_VM_SPACE));
             KernelPointer vmMapAddress = KernelPointer.valueOf(vmSpaceAddress.read8(OFFSET_VMSPACE_VM_MAP));
 
             while (!KernelPointer.NULL.equals(vmMapAddress) && (numFixes < stackUserAddressCount)) {
