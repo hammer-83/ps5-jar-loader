@@ -16,12 +16,19 @@ public class KernelOffsets {
     // Kernel data-relative offsets
     public final long OFFSET_KERNEL_DATA_BASE_DYNAMIC;
     public final long OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC;
+
     public final long OFFSET_KERNEL_DATA_BASE_ALLPROC;
     public final long OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS;
     public final long OFFSET_KERNEL_DATA_BASE_TARGET_ID;
     public final long OFFSET_KERNEL_DATA_BASE_QA_FLAGS;
     public final long OFFSET_KERNEL_DATA_BASE_UTOKEN_FLAGS;
     public final long OFFSET_KERNEL_DATA_BASE_ROOTVNODE;
+
+    public final long OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE;
+    public final long OFFSET_KERNEL_DATA_BASE_DATA_CAVE;
+
+    // Non offsets
+    public final long SIZE_KERNEL_DATA;
 
     /**
      * Constructor. The firmware version can be obtained
@@ -36,6 +43,19 @@ public class KernelOffsets {
             case 0x0100:
             case 0x0101:
             case 0x0102:
+            {
+                OFFSET_KERNEL_DATA = 0x01B40000;
+                SIZE_KERNEL_DATA = 0x08631930;
+
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x0658BB58;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x026D1BF8;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06241074;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06565540;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x02F9F2B8;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x05F20000;
+                break;
+            }
             case 0x0105:
             case 0x0110:
             case 0x0111:
@@ -44,12 +64,15 @@ public class KernelOffsets {
             case 0x0114:
             {
                 OFFSET_KERNEL_DATA = 0x01B40000;
+                SIZE_KERNEL_DATA = 0x08631930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x0658BB58;
-                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x026D1BF8;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x026D1C18;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06241074;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06565540;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x02F9F328;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x05F20000;
                 break;
             }
             case 0x0200:
@@ -61,12 +84,15 @@ public class KernelOffsets {
             case 0x0270:
             {
                 OFFSET_KERNEL_DATA = 0x01B80000;
+                SIZE_KERNEL_DATA = 0x087E1930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06739B88;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02701C28;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x063E1274;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x067134C0;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x031338C8;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x060C0000;  // Use same as Specter's Byepervisor repo for interop
                 break;
             }
             case 0x0300:
@@ -74,12 +100,15 @@ public class KernelOffsets {
             case 0x0321:
             {
                 OFFSET_KERNEL_DATA = 0x0BD0000;
+                SIZE_KERNEL_DATA = 0x08871930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067D1B90;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0276DC58;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06466474;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x067AB4C0;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x031BE218;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06140000;  // Unconfirmed
                 break;
             }
             case 0x0400:
@@ -89,12 +118,15 @@ public class KernelOffsets {
             case 0x0451:
             {
                 OFFSET_KERNEL_DATA = 0x0C00000;
+                SIZE_KERNEL_DATA = 0x087B1930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x0670DB90;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x027EDCB8;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x06506474;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x066E74C0;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03257A78;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06C01000;  // Unconfirmed
                 break;
             }
             case 0x0500:
@@ -103,12 +135,15 @@ public class KernelOffsets {
             case 0x0550:
             {
                 OFFSET_KERNEL_DATA = 0x0C50000;
+                SIZE_KERNEL_DATA = 0x08911930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06869C00;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0290DD00;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066366EC;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06843510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03384A88;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06310000;  // Unconfirmed
                 break;
             }
             case 0x0600:  // Unconfirmed
@@ -116,12 +151,15 @@ public class KernelOffsets {
             case 0x0650:
             {
                 OFFSET_KERNEL_DATA = 0x0A40000;  // Unconfirmed
+                SIZE_KERNEL_DATA = 0x08851930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067B5C10;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02859D20;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x065868EC;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x0678F510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x032D4358;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06260000;  // Unconfirmed
                 break;
             }
             case 0x0700:
@@ -132,12 +170,15 @@ public class KernelOffsets {
             case 0x0761:
             {
                 OFFSET_KERNEL_DATA = 0x0A30000;  // Unconfirmed
+                SIZE_KERNEL_DATA = 0x05181930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
                 OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x030DDC40;
                 OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02849D50;
                 OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x00AB8064;
                 OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x030B7510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x02E1C848;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x05091000;  // Unconfirmed
                 break;
             }
             default:

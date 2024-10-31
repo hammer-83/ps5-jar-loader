@@ -1,6 +1,7 @@
 package org.ps5jb.sdk.include.sys.uio;
 
-import org.ps5jb.sdk.core.Pointer;
+import org.ps5jb.sdk.core.AbstractPointer;
+import org.ps5jb.sdk.core.kernel.KernelPointer;
 
 /**
  * Wrapper for FreeBSD Kernel <code>uio</code> structure.
@@ -15,25 +16,15 @@ public class UioType {
     public static final long OFFSET_READ_WRITE = 36L;
     public static final long OFFSET_OWNER = 40L;
 
-    private final Pointer ptr;
-    private final boolean ownPtr;
-
-    /**
-     * UioType default constructor.
-     */
-    public UioType() {
-        this.ptr = Pointer.calloc(SIZE);
-        this.ownPtr = true;
-    }
+    private final AbstractPointer ptr;
 
     /**
      * UioType constructor from existing pointer.
      *
      * @param ptr Existing pointer to native memory containing UioType data.
      */
-    public UioType(Pointer ptr) {
+    public UioType(AbstractPointer ptr) {
         this.ptr = ptr;
-        this.ownPtr = false;
     }
 
     /**
@@ -42,8 +33,8 @@ public class UioType {
      * @return Returns the value of <code>uio_iov</code> field of <code>uio</code> structure,
      *   which is a pointer to a list of {@link org.ps5jb.sdk.include.sys.iovec.IoVecType} structures.
      */
-    public Pointer getIov() {
-        return Pointer.valueOf(this.ptr.read8(OFFSET_IOV));
+    public KernelPointer getIov() {
+        return KernelPointer.valueOf(this.ptr.read8(OFFSET_IOV));
     }
 
     /**
@@ -105,33 +96,8 @@ public class UioType {
      *
      * @return Returns the value of <code>uio_td</code> field of <code>uio</code> structure.
      */
-    public Pointer getOwner() {
-        return Pointer.valueOf(this.ptr.read8(OFFSET_OWNER));
-    }
-
-    /**
-     * Make sure to free the UioType buffer during garbage collection.
-     *
-     * @throws Throwable If finalization failed.
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            free();
-        } finally {
-            super.finalize();
-        }
-    }
-
-    /**
-     * Frees the native memory needed for the UioType, if it was allocated by the constructor.
-     * After <code>free()</code> is called on such UioType,
-     * using this Java wrapper instance will no longer be possible.
-     */
-    public void free() {
-        if (this.ownPtr && this.ptr != null && this.ptr.addr() != 0) {
-            this.ptr.free();
-        }
+    public KernelPointer getOwner() {
+        return KernelPointer.valueOf(this.ptr.read8(OFFSET_OWNER));
     }
 
     /**
@@ -139,7 +105,7 @@ public class UioType {
      *
      * @return UioType memory pointer.
      */
-    public Pointer getPointer() {
+    public AbstractPointer getPointer() {
         return this.ptr;
     }
 }

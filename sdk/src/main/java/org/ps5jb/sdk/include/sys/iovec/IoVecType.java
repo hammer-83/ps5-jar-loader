@@ -1,5 +1,6 @@
 package org.ps5jb.sdk.include.sys.iovec;
 
+import org.ps5jb.sdk.core.AbstractPointer;
 import org.ps5jb.sdk.core.Pointer;
 
 /**
@@ -10,7 +11,7 @@ public class IoVecType {
     public static final long OFFSET_BASE = 0;
     public static final long OFFSET_LENGTH = 8;
 
-    private final Pointer ptr;
+    private final AbstractPointer ptr;
     private final boolean ownPtr;
 
     /**
@@ -26,7 +27,7 @@ public class IoVecType {
      *
      * @param ptr Existing pointer to native memory containing IoVecType data.
      */
-    public IoVecType(Pointer ptr) {
+    public IoVecType(AbstractPointer ptr) {
         this.ptr = ptr;
         this.ownPtr = false;
     }
@@ -36,7 +37,7 @@ public class IoVecType {
      *
      * @return Returns the value of <code>iov_base</code> field of <code>iovec</code> structure.
      */
-    public Pointer getBase() {
+    public AbstractPointer getBase() {
         return Pointer.valueOf(this.ptr.read8(OFFSET_BASE));
     }
 
@@ -45,7 +46,7 @@ public class IoVecType {
      *
      * @param val New base address value.
      */
-    public void setBase(Pointer val) {
+    public void setBase(AbstractPointer val) {
         this.ptr.write8(OFFSET_BASE, val.addr());
     }
 
@@ -87,8 +88,8 @@ public class IoVecType {
      * using this Java wrapper instance will no longer be possible.
      */
     public void free() {
-        if (this.ownPtr && this.ptr != null && this.ptr.addr() != 0) {
-            this.ptr.free();
+        if (this.ownPtr && this.ptr instanceof Pointer && this.ptr.addr() != 0) {
+            ((Pointer) this.ptr).free();
         }
     }
 
@@ -97,7 +98,7 @@ public class IoVecType {
      *
      * @return IoVecType memory pointer.
      */
-    public Pointer getPointer() {
+    public AbstractPointer getPointer() {
         return this.ptr;
     }
 }

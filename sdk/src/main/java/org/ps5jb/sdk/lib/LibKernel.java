@@ -59,6 +59,10 @@ public class LibKernel extends Library {
     private Pointer getsockopt;
     private Pointer usleep;
     private Pointer is_in_sandbox;
+    private Pointer sceKernelNotifySystemSuspendStart;
+    private Pointer sceKernelSetEventFlag;
+    private Pointer sceKernelOpenEventFlag;
+    private Pointer sceKernelCloseEventFlag;
 
     /**
      * Constructor.
@@ -524,5 +528,42 @@ public class LibKernel extends Library {
         }
 
         return call(is_in_sandbox) != 0;
+    }
+
+    public void sceKernelNotifySystemSuspendStart() {
+        if (sceKernelNotifySystemSuspendStart == null) {
+            sceKernelNotifySystemSuspendStart = addrOf("sceKernelNotifySystemSuspendStart");
+        }
+
+        call(sceKernelNotifySystemSuspendStart);
+    }
+
+    public int sceKernelSetEventFlag(long event, int flag) {
+        if (sceKernelSetEventFlag == null) {
+            sceKernelSetEventFlag = addrOf("sceKernelSetEventFlag");
+        }
+
+        return (int) call(sceKernelSetEventFlag, event, flag);
+    }
+
+    public int sceKernelOpenEventFlag(Pointer eventFlag, String flagName) {
+        if (sceKernelOpenEventFlag == null) {
+            sceKernelOpenEventFlag = addrOf("sceKernelOpenEventFlag");
+        }
+
+        Pointer flagNameParam = Pointer.fromString(flagName);
+        try {
+            return (int) call(sceKernelOpenEventFlag, eventFlag.addr(), flagNameParam.addr());
+        } finally {
+            flagNameParam.free();
+        }
+    }
+
+    public int sceKernelCloseEventFlag(Pointer eventFlag) {
+        if (sceKernelCloseEventFlag == null) {
+            sceKernelCloseEventFlag = addrOf("sceKernelCloseEventFlag");
+        }
+
+        return (int) call(sceKernelCloseEventFlag, eventFlag.addr());
     }
 }

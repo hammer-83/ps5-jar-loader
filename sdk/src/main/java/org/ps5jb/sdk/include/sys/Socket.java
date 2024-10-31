@@ -36,7 +36,7 @@ public class Socket {
     public void setSocketOptionsIPv6(int socket, OptionIPv6 optionName, Pointer optionValue) throws SdkException {
         int ret = libKernel.setsockopt(socket, ProtocolType.IPPROTO_IPV6.value(), optionName.value(), optionValue, optionValue.size());
         if (ret == -1) {
-            throw errNo.getLastException(getClass(), "setRtPrio");
+            throw errNo.getLastException(getClass(), "setSocketOptionsIPv6");
         }
     }
 
@@ -47,7 +47,7 @@ public class Socket {
 
             int ret = libKernel.getsockopt(socket, ProtocolType.IPPROTO_IPV6.value(), optionName.value(), optionValue, optlen);
             if (ret == -1) {
-                throw errNo.getLastException(getClass(), "setRtPrio");
+                throw errNo.getLastException(getClass(), "getSocketOptionsIPv6");
             }
 
             int newLen = optlen.read4();

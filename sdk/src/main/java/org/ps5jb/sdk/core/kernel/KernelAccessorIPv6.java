@@ -11,10 +11,12 @@ import org.ps5jb.sdk.include.UniStd;
 import org.ps5jb.sdk.include.inet.in.ProtocolType;
 import org.ps5jb.sdk.include.machine.Param;
 import org.ps5jb.sdk.include.netinet6.in6.OptionIPv6;
+import org.ps5jb.sdk.include.sys.ErrNo;
 import org.ps5jb.sdk.include.sys.Socket;
 import org.ps5jb.sdk.include.sys.socket.AddressFamilyType;
 import org.ps5jb.sdk.include.sys.socket.SocketType;
 import org.ps5jb.sdk.lib.LibKernel;
+import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
  * Kernel read/write accessor which uses IPv6 sockets.
@@ -33,6 +35,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     private int victim_sock;
 
     private transient LibKernel libKernel;
+    private transient ErrNo errNo;
     private transient Socket socket;
 
     private int[] pipe_fd;
@@ -49,6 +52,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
      */
     public KernelAccessorIPv6(KernelPointer ofilesAddress, KernelPointer kernelBase) throws SdkException {
         this.libKernel = new LibKernel();
+        this.errNo = new ErrNo(libKernel);
         this.socket = new Socket(this.libKernel);
         this.kernelBase = kernelBase;
 
@@ -151,7 +155,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         return slave_buffer.read8();
     }
 
-    private synchronized long copyout(long src, Pointer dest, long length) throws SdkException {
+    private synchronized void copyout(long src, Pointer dest, long length) throws SdkException {
         final long value0 = 0x4000000040000000L;
         final long value1 = 0x4000000000000000L;
 
@@ -165,10 +169,16 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         pipemap_buffer.write4(0x10, 0);
         ipv6_kwrite(pipe_addr.inc(0x10), pipemap_buffer);
 
-        return this.libKernel.read(pipe_fd[0], dest, length);
+        long readCount = this.libKernel.read(pipe_fd[0], dest, length);
+        if (readCount != length) {
+            if (readCount == -1) {
+                throw errNo.getLastException(getClass(), "copyout");
+            }
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyout.count", new Long(readCount), new Long(length), new Long(src)));
+        }
     }
 
-    private synchronized long copyin(Pointer src, long dest, long length) throws SdkException {
+    private synchronized void copyin(Pointer src, long dest, long length) throws SdkException {
         final long value = 0x4000000000000000L;
 
         pipemap_buffer.write8(0);
@@ -181,7 +191,13 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         pipemap_buffer.write4(0x10, 0);
         ipv6_kwrite(pipe_addr.inc(0x10), pipemap_buffer);
 
-        return this.libKernel.write(pipe_fd[1], src, length);
+        long writeCount = this.libKernel.write(pipe_fd[1], src, length);
+        if (writeCount != length) {
+            if (writeCount == -1) {
+                throw errNo.getLastException(getClass(), "copyin");
+            }
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyin.count", new Long(writeCount), new Long(length), new Long(dest)));
+        }
     }
 
     private void inc_socket_refcount(int target_fd, KernelPointer ofilesAddress) {
@@ -349,6 +365,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
 
         // Make sure to restore libraries when de-serializing
         libKernel = new LibKernel();
+        errNo = new ErrNo(libKernel);
         socket = new Socket(this.libKernel);
     }
 }
