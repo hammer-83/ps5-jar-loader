@@ -79,11 +79,12 @@ IntelliJ Maven project files are located in a private local folder of IntelliJ. 
 ## Credits
 There are so many who decided to share the knowledge with the community to make this project possible.
 - [Andy "theflow" Nguyen](https://github.com/theofficialflow) for discovering and sharing BD-J vulnerabilities without which none of the work in this repo would be possible.
-- Specter for his Webkit implementations of PS5 kernel access which served as a base for Java implementation: [IPV6](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit) and [UMTX](https://github.com/PS5Dev/PS5-UMTX-Jailbreak/).
+- Specter for his Webkit implementations of PS5 kernel access which served as a base for Java implementation: [IPV6](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit), [UMTX](https://github.com/PS5Dev/PS5-UMTX-Jailbreak/) and [Byepervisor](https://github.com/PS5Dev/Byepervisor).
 - [Flat_z](https://github.com/flatz) for pretty much everything of significance that happened in PlayStation scene since as far back as PS3, including the UMTX exploitation strategy contained in this repo.
 - [Cheburek3000](https://github.com/cheburek3000) for contributing an alternative implementation of UMTX exploitation. 
 - [bigboss](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically in BD-J area.
-- All the other contributors to Specter's Webkit implementations: [ChendoChap](https://github.com/ChendoChap), [Znullptr](https://twitter.com/Znullptr), [sleirsgoevy](https://twitter.com/sleirsgoevy), [zecoxao](https://twitter.com/notnotzecoxao), [SocracticBliss](https://twitter.com/SocraticBliss), SlidyBat, [idlesauce](https://github.com/idlesauce).
+- All the other contributors to Specter's Webkit implementations: [ChendoChap](https://github.com/ChendoChap), [Znullptr](https://twitter.com/Znullptr), [sleirsgoevy](https://twitter.com/sleirsgoevy), [zecoxao](https://twitter.com/notnotzecoxao), [SocracticBliss](https://twitter.com/SocraticBliss), SlidyBat, [idlesauce](https://github.com/idlesauce), [fail0verflow](https://fail0verflow.com/blog/) [kiwidog](https://kiwidog.me/), [EchoStretch](https://github.com/EchoStretch), [LM](https://github.com/LightningMods).
+- Testers of various firmware revisions: jamdoogen, CryoNumb, Twan322, MSZ_MGS, KingMaxLeo, RdSklld, Ishaan, Kirua, PLK, benja44_, MisaAmane, Unai G, Leo.
 
 Sample BD-J payloads in this repositories are adaptations of the following work:
 - FTP server by [pReya](https://github.com/pReya/ftpServer). 
