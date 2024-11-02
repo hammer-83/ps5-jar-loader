@@ -18,10 +18,6 @@ import org.ps5jb.sdk.lib.LibKernel;
  * Implementation of Byepervisor from Specter for PS5 firmware 1.xx and 2.xx.
  */
 public class Byepervisor implements Runnable {
-    private static final long OFFSET_PMAP_STORE_PML4PML4I = -0x1C;
-    private static final long OFFSET_PMAP_STORE_DMPML4I = 0x288;
-    private static final long OFFSET_PMAP_STORE_DMPDPI = 0x28C;
-
     private LibKernel libKernel;
     private KernelPointer kbaseAddress;
     private KernelOffsets offsets;
@@ -37,6 +33,7 @@ public class Byepervisor implements Runnable {
         libKernel = new LibKernel();
         try {
             // Byepervisor is only available before fw 3.xx
+
             int fw = libKernel.getSystemSoftwareVersion();
             if (fw >= 0x0300) {
                 Status.println("Unable to execute Byepervisor on firmware version: " +
@@ -96,7 +93,7 @@ public class Byepervisor implements Runnable {
 
             // Refresh dmap offsets
             KernelPointer pmap = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA + offsets.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE);
-            PMap.refresh(pmap.inc(OFFSET_PMAP_STORE_DMPML4I), pmap.inc(OFFSET_PMAP_STORE_DMPDPI), pmap.inc(OFFSET_PMAP_STORE_PML4PML4I));
+            PMap.refresh(pmap.inc(offsets.OFFSET_PMAP_STORE_DMPML4I), pmap.inc(offsets.OFFSET_PMAP_STORE_DMPDPI), pmap.inc(offsets.OFFSET_PMAP_STORE_PML4PML4I));
 
             // Enable RW on kernel text pages and disable XO
             Status.println("Enabling kernel text read/write...");
