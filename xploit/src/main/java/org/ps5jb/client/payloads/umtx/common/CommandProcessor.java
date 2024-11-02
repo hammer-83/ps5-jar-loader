@@ -70,7 +70,7 @@ public class CommandProcessor {
 
                 case CMD_EXIT:
                     // Do nothing
-                    DebugStatus.info("Command processor: exiting");
+                    DebugStatus.debug("Command processor: exiting");
                     exitSignal.set(true);
                     break;
 
@@ -85,6 +85,6 @@ public class CommandProcessor {
 
         libKernel.closeLibrary();
 
-        DebugStatus.info("Command processor: finished and cannot be reused");
+        DebugStatus.debug("Command processor: finished and cannot be reused");
     }
 }
