@@ -11,10 +11,10 @@ public class VmParam {
     public static final long KERN_BASE = PMap.KVADDR(PMap.KPML4I, PMap.KPDPI, 0, 0);
 
     public static final long PHYS_TO_DMAP(long x) {
-        return x | DMAP_MIN_ADDRESS;
+        return DMAP_MIN_ADDRESS + x;
     }
 
     public static final long DMAP_TO_PHYS(long x) {
-        return x & ~DMAP_MIN_ADDRESS;
+        return x - DMAP_MIN_ADDRESS;
     }
 }

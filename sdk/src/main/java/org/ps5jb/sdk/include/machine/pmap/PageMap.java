@@ -9,6 +9,7 @@ import org.ps5jb.sdk.include.sys.mutex.MutexType;
 public class PageMap {
     public static final long OFFSET_PM_MTX = 0;
     public static final long OFFSET_PM_PML4 = OFFSET_PM_MTX + MutexType.SIZE;
+    public static final long OFFSET_PM_CR3 = OFFSET_PM_PML4 + 8;
     public static final long OFFSET_PM_TYPE = 72;
     public static final long OFFSET_PM_FLAGS = 120;
 
@@ -43,6 +44,15 @@ public class PageMap {
      */
     public long getPml4() {
         return this.ptr.read8(OFFSET_PM_PML4);
+    }
+
+    /**
+     * Physical address of level 4 page table.
+     *
+     * @return Returns the value of <code>pm_cr3</code> field of <code>pmap</code> structure.
+     */
+    public long getCr3() {
+        return this.ptr.read8(OFFSET_PM_CR3);
     }
 
     /**
