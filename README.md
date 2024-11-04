@@ -49,13 +49,13 @@ Even if the remote logger is not active by default in the Xlet burned on disc, i
 1. Make sure environment variable `JAVA_HOME` points to the root of JDK 11. Add `${JAVA_HOME}/bin` directory to `${PATH}`.
 2. Also make sure that `MAVEN_HOME` points to the root of Apache Maven installation. Add `${MAVEN_HOME}/bin` directory to `${PATH}`.
 3. To create the payload follow these steps:
-   a. Make a copy of one of the sample payloads by copying the whole directory and placing it in [xploit](xploit) directory.
-   b. In `pom.xml` of the new payload, set `artifactId` of parent to "xploit", set `groupId` of the module to "org.ps5jb.xploit" and set `artifactId` of the module to the name of your payload.
-   c. Create a class implementing "Runnable" interface in the "org.ps5jb.client.payloads" package of the new module. The code inside "run" method will be the entry point of the payload.
-   d. Back in `pom.xml`, set the property `xploit.payload` to the name of the class above. If the class was created in a subpackage, then fully qualified name of the class is required. Otherwise, simly specify the name of the class without the package.
+   * Make a copy of one of the sample payloads by copying the whole directory and placing it in [xploit](xploit) directory.
+   * In `pom.xml` of the new payload, set `artifactId` of parent to "xploit", set `groupId` of the module to "org.ps5jb.xploit" and set `artifactId` of the module to the name of your payload.
+   * Create a class implementing "Runnable" interface in the "org.ps5jb.client.payloads" package of the new module. The code inside "run" method will be the entry point of the payload.
+   * Back in `pom.xml`, set the property `xploit.payload` to the name of the class above. If the class was created in a subpackage, then fully qualified name of the class is required. Otherwise, simly specify the name of the class without the package.
 4. Execute `mvn clean package` from the root of the project. It should produce the following artifacts:
-   a. Directory `assembly/target/assembly-[version]` contains all the files that should be burned to a BD-R disc.
-   b. File `xploit/[payload]/target/[payload]-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
+   * Directory `assembly/target/assembly-[version]` contains all the files that should be burned to a BD-R disc.
+   * File `xploit/[payload]/target/[payload]-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
 5. Burn the BD-R (better yet BD-RE) with the contents from the directory mentioned in the step 4a. Note that re-burning the JAR loader disc is only necessary when the source of [xlet](xlet) or [assembly](assembly) modules is changed.
 6. Insert the disc into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
 7. A message on screen should inform about loader waiting for JAR.
