@@ -13,11 +13,9 @@
 
     <groupId>org.ps5jb</groupId>
     <artifactId>xploit</artifactId>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
     <description>
-        This module contains the code that gets sent to the listener Xlet.
-        It contains both the part that gets executed as well as the utility that performs the sending.
-        Executing the JAR using "-jar" switch sends it to the target PS5 and executes the desired code.
+        Parent module for all exploit JARs. Includes the infrastructure required to build them.
     </description>
 
     <properties>
@@ -30,6 +28,15 @@
         <xploit.logger.host></xploit.logger.host>
         <xploit.logger.port>18194</xploit.logger.port>
     </properties>
+
+    <modules>
+        <module>jar</module>
+        <module>samples</module>
+        <module>ftpserver</module>
+        <module>umtx</module>
+        <module>byepervisor</module>
+        <module>kerneldump</module>
+    </modules>
 
     <dependencies>
         <dependency>
@@ -68,117 +75,134 @@
     </dependencies>
 
     <build>
-        <plugins>
-            <!-- When compiling, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime. -->
-            <!-- The code also does Unsafe and Classloader manipulation so it's necessary to declare access to them. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <compilerArgs>
-                        <arg>--patch-module</arg>
-                        <arg>java.base=${bdjstack.dir}/pbp-base.jar</arg>
-                        <arg>--patch-module</arg>
-                        <arg>java.desktop=${bdjstack.dir}/pbp-desktop.jar</arg>
-                        <arg>--patch-module</arg>
-                        <arg>java.rmi=${bdjstack.dir}/pbp-rmi.jar</arg>
-                        <arg>--limit-modules</arg>
-                        <arg>java.base,java.desktop,java.rmi</arg>
-                        <arg>--add-exports</arg>
-                        <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
-                    </compilerArgs>
-                </configuration>
-            </plugin>
-            <!-- Generate the JAR with the main class in the manifest. Main class is needed by the JAR loader -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default-jar</id>
-                        <configuration>
-                            <archive>
-                                <manifest>
-                                    <mainClass>org.ps5jb.client.JarMain</mainClass>
-                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                                </manifest>
-                                <manifestEntries>
-                                    <Class-Path>stubs-${project.version}.jar xlet-${xlet.version}.jar gem-api-${project.version}.jar javatv-api-${project.version}.jar bdj-api-${project.version}.jar</Class-Path>
-                                    <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
-                                    <PS5JB-Client-Logger-Host>${xploit.logger.host}</PS5JB-Client-Logger-Host>
-                                    <PS5JB-Client-Logger-Port>${xploit.logger.port}</PS5JB-Client-Logger-Port>
-                                </manifestEntries>
-                            </archive>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Copy dependent JARs so that it's possible to execute it on a local development machine -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}</outputDirectory>
-                            <includeScope>compile</includeScope>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Embed all the dependent classes directly inside the final JAR -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default-shade</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <filters>
-                        <filter>
-                            <artifact>org.ps5jb:sdk</artifact>
-                            <excludes>
-                                <exclude>META-INF/MANIFEST.MF</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
+        <pluginManagement>
+            <plugins>
+                <!-- When compiling, make sure to patch base JDK modules with BD-J classes in order to not use newer API, not available on PS5 runtime. -->
+                <!-- The code also does Unsafe and Classloader manipulation so it's necessary to declare access to them. -->
+                <!-- Finally, Maven compile plugin has a bug where it prints a warning about the patched JARs not being found. These can be ignored. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <compilerArgs>
+                            <arg>--patch-module</arg>
+                            <arg>java.base=${bdjstack.dir}/pbp-base.jar</arg>
+                            <arg>--patch-module</arg>
+                            <arg>java.desktop=${bdjstack.dir}/pbp-desktop.jar</arg>
+                            <arg>--patch-module</arg>
+                            <arg>java.rmi=${bdjstack.dir}/pbp-rmi.jar</arg>
+                            <arg>--limit-modules</arg>
+                            <arg>java.base,java.desktop,java.rmi</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <!-- Generate the JAR with the main class in the manifest. Main class is needed by the JAR loader -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-jar</id>
+                            <configuration>
+                                <archive>
+                                    <manifest>
+                                        <mainClass>org.ps5jb.client.JarMain</mainClass>
+                                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                        <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                                    </manifest>
+                                    <manifestEntries>
+                                        <Class-Path>stubs-${project.version}.jar xlet-${xlet.version}.jar gem-api-${project.version}.jar javatv-api-${project.version}.jar bdj-api-${project.version}.jar</Class-Path>
+                                        <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
+                                        <PS5JB-Client-Logger-Host>${xploit.logger.host}</PS5JB-Client-Logger-Host>
+                                        <PS5JB-Client-Logger-Port>${xploit.logger.port}</PS5JB-Client-Logger-Port>
+                                    </manifestEntries>
+                                </archive>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- Copy dependent JARs so that it's possible to execute it on a local development machine -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>copy-dependencies</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>copy-dependencies</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${project.build.directory}</outputDirectory>
+                                <includeScope>compile</includeScope>
+                                <excludeArtifactIds>sdk</excludeArtifactIds>
+                                <excludeTypes>pom</excludeTypes>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- Embed all the dependent classes directly inside the final JAR -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-shade</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>shade</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>org.ps5jb:sdk</artifact>
+                                <excludes>
+                                    <exclude>META-INF/MANIFEST.MF</exclude>
+                                </excludes>
+                            </filter>
+                            <filter>
+                                <artifact>org.ps5jb.xploit:jar</artifact>
+                                <excludes>
+                                    <exclude>META-INF/MANIFEST.MF</exclude>
+                                </excludes>
+                            </filter>
+                            <filter>
+                                <artifact>org.ps5jb.xploit.umtx:common</artifact>
+                                <excludes>
+                                    <exclude>META-INF/MANIFEST.MF</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
 
-                    <outputFile>${project.build.directory}/${project.build.finalName}.jar</outputFile>
-                </configuration>
-            </plugin>
-            <!-- Generate Javadoc for this project -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default-javadoc</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>javadoc-no-fork</goal>
-                        </goals>
-                        <configuration>
-                            <additionalJOptions>
-                                <additionalJOption>--add-exports</additionalJOption>
-                                <additionalJOption>java.base/jdk.internal.loader=ALL-UNNAMED</additionalJOption>
-                            </additionalJOptions>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+                        <outputFile>${project.build.directory}/${project.build.finalName}.jar</outputFile>
+                    </configuration>
+                </plugin>
+                <!-- Generate Javadoc for this project -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>default-javadoc</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>javadoc-no-fork</goal>
+                            </goals>
+                            <configuration>
+                                <additionalJOptions>
+                                    <additionalJOption>--add-exports</additionalJOption>
+                                    <additionalJOption>java.base/jdk.internal.loader=ALL-UNNAMED</additionalJOption>
+                                </additionalJOptions>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 </project>

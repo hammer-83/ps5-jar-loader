@@ -22,7 +22,14 @@ The project comprises the following components:
 * `stubs` subproject contains the build script to download BD-J class files from HD Cookbook and organize them for use with local JDK 11. It's also a place where PS5-specific stub files should be declared so that they can be used in the Xlet and the remote JAR.
 * `sdk` subproject contains helper classes that simplify native invocation in the executed code. The classes in this module are embedded in the final JAR that will be sent to PS5 for execution.
 * `xlet` subproject contains the code of the Xlet that starts when BD-R disc is launched on PS5. It simply starts the JAR loader (by default on port 9025).
-* `xploit` subproject contains the code to be sent for execution on PS5. The code can reference classes from `xlet`, such as the [Status](xlet/src/main/java/org/ps5jb/loader/Status.java) class to output on screen. The project produces a JAR that is able to send itself for execution.
+* `xploit` subproject contains various payloads to be sent for execution on PS5. Each payload is a submodule of `xploit` module and produces its own JAR file. The code in the JAR can reference classes from `xlet`, such as the [Status](xlet/src/main/java/org/ps5jb/loader/Status.java) class to output on screen.
+    * `jar` - Utility classes for interacting with the JAR Loader. It is not a payload per-se but is packaged in every payload JAR to handle the hand-off from the JAR loader to payload's `run` method.
+    * `umtx/umtx1` - Implementation of UMTX exploit to obtain kernel read/write capabilities. Note that starting with firmware 6.00, kernel data segment is protected from writes.
+    * `umtx/umtx2` - Alternative implementation of UMTX exploit.
+    * `byepervisor` - Implementation of Byepervisor exploit, which enables bypassing of PS5 hypervisor to obtain kernel code read/write capabilities on firmware below 3.00.
+    * `kerneldump` - In combination with UMTX and/or Byepervisor, this payload sends the dump of kernel over network.
+    * `ftpserver` - Limited FTP server.
+    * `samples` - Various trivial samples to demonstrate various capabilities of BD-J platform.
 
 ## Configuration
 The following properties in [xlet/pom.xml](xlet/pom.xml) can be adjusted before compiling and burning the JAR Loader to disk:
@@ -41,11 +48,14 @@ Even if the remote logger is not active by default in the Xlet burned on disc, i
 ## Usage
 1. Make sure environment variable `JAVA_HOME` points to the root of JDK 11. Add `${JAVA_HOME}/bin` directory to `${PATH}`.
 2. Also make sure that `MAVEN_HOME` points to the root of Apache Maven installation. Add `${MAVEN_HOME}/bin` directory to `${PATH}`.
-3. Create a payload to execute on PS5 by adding the implementation to the `xploit` submodule. There is no need to modify any existing files (though you are welcome if you want). Simply add your payload class in [org.ps5jb.client.payloads](xploit/src/main/java/org/ps5jb/client/payloads) package and specify its name as a parameter when compiling the project (see the next step). A few sample payloads are provided in this package already.
-4. Execute `mvn clean package -Dxploit.payload=[payload classname]` from the root of the project. It should produce the following artifacts:
+3. To create the payload follow these steps:
+    a. Make a copy of one of the sample payloads by copying the whole directory and placing it in [xploit](xploit) directory.
+    b. In `pom.xml` of the new payload, set `artifactId` of parent to "xploit", set `groupId` of the module to "org.ps5jb.xploit" and set `artifactId` of the module to the name of your payload.
+    c. Create a class implementing "Runnable" interface in the "org.ps5jb.client.payloads" package of the new module. The code inside "run" method will be the entry point of the payload.
+    d. Back in `pom.xml`, set the property `xploit.payload` to the name of the class above. If the class was created in a subpackage, then fully qualified name of the class is required. Otherwise, simly specify the name of the class without the package.
+4. Execute `mvn clean package` from the root of the project. It should produce the following artifacts:
     a. Directory `assembly/target/assembly-[version]` contains all the files that should be burned to a BD-R disc.
-    b. File `xploit/target/xploit-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
-    To avoid having to specify the payload every time with a `-D` switch (in step 9 as well), you can also change the property `xploit.payload` in [pom.xml](xploit/pom.xml) of the [xploit](xploit) project.
+    b. File `xploit/[payload]/target/[payload]-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
 5. Burn the BD-R (better yet BD-RE) with the contents from the directory mentioned in the step 4a. Note that re-burning the JAR loader disc is only necessary when the source of [xlet](xlet) or [assembly](assembly) modules is changed.
 6. Insert the disc into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
 7. A message on screen should inform about loader waiting for JAR.
@@ -60,10 +70,10 @@ Even if the remote logger is not active by default in the Xlet burned on disc, i
 1. To use with IntelliJ, point `File -> Open` dialog to the root of the project. Maven import will occur. Then follow manual steps in [IntelliJ Project Structure](#intellij-project-structure) to adjust the dependencies so that IntelliJ sees BD-J classes ahead of JDK classes.
 2. If any of POMs are modified, it's necessary to do `Maven -> Reload Project` in IntelliJ to sync the project files.
 3. To generate Javadocs, use `mvn verify` rather than `mvn package`. The Javadocs are enabled for [sdk](sdk), [xlet](xlet) and [xploit](xploit) modules and are generated in the `target/site/apidocs` directory of each module.
-4. The JAR in the `xploit` module accesses some internal JDK classes by reflection. This will result in warnings which can be safely ignored. To mute the warnings, add the following switch after `java` executable when sending the JAR: `--add-opens java.base/jdk.internal.loader=ALL-UNNAMED`.
-5. If the `xploit` JAR does not have PS5 specific dependencies, it can be tested locally. The important part is to have `xlet`, `stubs` and `xploit` JARs all in the same folder. If the payload refers to GEM, BD-J or Java TV API, the corresponding JAR files generated in [lib](lib) directory should also be present in the same folder. Maven build automatically creates this arrangement in `xploit/target` directory so the command to run the payload on development machine is very similar to the one that sends the JAR to PS5:
+4. To run unit tests, use `mvn test`. Though note that not many unit tests are currently present since a lot of functionality is PS5 dependent.
+5. If the `xploit` JAR does not have PS5 specific dependencies, it can be tested locally. The important part is to have `xlet`, `stubs` and `xploit` JARs all in the same folder. If the payload refers to GEM, BD-J or Java TV API, the corresponding JAR files generated in [lib](lib) directory should also be present in the same folder. Maven build automatically creates this arrangement in `target` directory of each payload so the command to run the payload on development machine is very similar to the one that sends the JAR to PS5:
     ```shell
-    java -jar xploit/target/xploit-[version].jar
+    java -jar xploit/[payload]/target/[payload]-[version].jar
     ```
     When running locally, the `Status` class prints to standard output/error, rather than on `Screen`.
 6. There are currently two separate version numbers in use by the project:
