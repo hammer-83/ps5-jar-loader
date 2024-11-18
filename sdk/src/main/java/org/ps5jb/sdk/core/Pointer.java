@@ -209,12 +209,12 @@ public class Pointer extends AbstractPointer {
     /**
      * Copies values in native memory associated with this pointer to a pointer specified by <code>dest</code>.
      *
-     * @param dest Pointer to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
+     * @param dest Memory to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
      * @param offset Offset in this memory to read the data from.
      * @param size Size of data to copy.
      * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
      */
-    public void copyTo(Pointer dest, long offset, int size) {
+    public void copyTo(AbstractPointer dest, long offset, int size) {
         byte[] data = new byte[size];
         read(offset, data, 0, size);
         dest.write(0, data, 0, size);

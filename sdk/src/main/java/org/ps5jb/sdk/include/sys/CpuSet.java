@@ -53,4 +53,14 @@ public class CpuSet {
     public void setCurrentThreadAffinity(CpuSetType affinity) throws SdkException {
         setAffinity(CpuLevelType.CPU_LEVEL_WHICH, CpuWhichType.CPU_WHICH_TID, -1, affinity);
     }
+
+    public void setCurrentThreadCore(int core) throws SdkException {
+        CpuSetType affinity = new CpuSetType();
+        try {
+            affinity.set(core);
+            setCurrentThreadAffinity(affinity);
+        } finally {
+            affinity.free();
+        }
+    }
 }

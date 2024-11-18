@@ -172,9 +172,9 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         long readCount = this.libKernel.read(pipe_fd[0], dest, length);
         if (readCount != length) {
             if (readCount == -1) {
-                throw errNo.getLastException(getClass(), "copyout");
+                throw errNo.getLastException(getClass(), "copyout", new Long(length), "0x" + Long.toHexString(src));
             }
-            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyout.count", new Long(readCount), new Long(length), new Long(src)));
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyout.count", new Long(readCount), new Long(length), "0x" + Long.toHexString(src)));
         }
     }
 
@@ -194,9 +194,9 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         long writeCount = this.libKernel.write(pipe_fd[1], src, length);
         if (writeCount != length) {
             if (writeCount == -1) {
-                throw errNo.getLastException(getClass(), "copyin");
+                throw errNo.getLastException(getClass(), "copyin", new Long(length), "0x" + Long.toHexString(dest));
             }
-            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyin.count", new Long(writeCount), new Long(length), new Long(dest)));
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyin.count", new Long(writeCount), new Long(length), "0x" + Long.toHexString(dest)));
         }
     }
 

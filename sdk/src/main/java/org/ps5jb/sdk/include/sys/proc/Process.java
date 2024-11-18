@@ -3,10 +3,9 @@ package org.ps5jb.sdk.include.sys.proc;
 import java.nio.charset.Charset;
 
 import org.ps5jb.sdk.core.kernel.KernelPointer;
-import org.ps5jb.sdk.include.machine.pmap.PageMapFlag;
-import org.ps5jb.sdk.include.machine.pmap.PageMapType;
 import org.ps5jb.sdk.include.sys.Param;
 import org.ps5jb.sdk.include.sys.mutex.MutexType;
+import org.ps5jb.sdk.include.vm.map.VmSpace;
 
 /**
  * Incomplete wrapper for FreeBSD <code>proc</code> structure.
@@ -25,6 +24,7 @@ public class Process {
 
     private final KernelPointer ptr;
     private MutexType slock;
+    private VmSpace vmSpace;
 
     /**
      * Process constructor from existing pointer.
@@ -104,8 +104,11 @@ public class Process {
      *
      * @return Returns the value of <code>p_vmspace</code> field of <code>proc</code> structure.
      */
-    public KernelPointer getVmSpace() {
-        return KernelPointer.valueOf(ptr.read8(OFFSET_P_VM_SPACE));
+    public VmSpace getVmSpace() {
+        if (vmSpace == null) {
+            vmSpace = new VmSpace(KernelPointer.valueOf(ptr.read8(OFFSET_P_VM_SPACE)));
+        }
+        return vmSpace;
     }
 
     /**

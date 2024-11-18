@@ -36,7 +36,19 @@ public final class MappingFlag implements Comparable {
     /** Map in the low 2GB of address space (kernel-mode only flag). */
     public static final MappingFlag MAP_32BIT = new MappingFlag(0x80000, "MAP_32BIT");
 
-    /** All possible MappingFlag values. */
+    public static final int MAP_ALIGNMENT_SHIFT = 24;
+
+    /**
+     * Request specific alignment (n == log2 of the desired alignment).
+     *
+     * @param n Log2 of the desired alignment.
+     * @return MappingFlag corresponding to the desired alignment.
+     */
+    public static MappingFlag MAP_ALIGNED(int n) {
+        return new MappingFlag(n << MAP_ALIGNMENT_SHIFT, "MAP_ALIGNED(" + n + ")");
+    }
+
+    /** All possible MappingFlag values, other than ones produced by {@link #MAP_ALIGNED(int)}. */
     private static final MappingFlag[] values = new MappingFlag[] {
             MAP_FILE,
             MAP_SHARED,
@@ -71,7 +83,7 @@ public final class MappingFlag implements Comparable {
     }
 
     /**
-     * Get all possible values for MappingFlags.
+     * Get all possible values for MappingFlags, excluding {@link #MAP_ALIGNED(int)}.
      *
      * @return Array of MappingFlag possible values.
      */
@@ -80,16 +92,23 @@ public final class MappingFlag implements Comparable {
     }
 
     /**
-     * Convert a numeric value into a MappingFlag constant.
+     * Convert a numeric value into a MappingFlag instance.
      *
      * @param value Number to convert
-     * @return MappingFlag constant corresponding to the given value.
+     * @return MappingFlag instance corresponding to the given value.
      * @throws IllegalArgumentException If value does not correspond to any MappingFlag.
      */
     public static MappingFlag valueOf(int value) {
         for (MappingFlag mappingFlag : values) {
             if (value == mappingFlag.value()) {
                 return mappingFlag;
+            }
+        }
+
+        for (int i = 1; i < 0xFF; ++i) {
+            int mask = i << MAP_ALIGNMENT_SHIFT;
+            if ((value | mask) == mask) {
+                return MAP_ALIGNED(i);
             }
         }
 

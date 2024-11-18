@@ -1,5 +1,6 @@
 package org.ps5jb.client.payloads;
 
+import org.ps5jb.client.utils.process.ProcessUtils;
 import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
@@ -8,8 +9,8 @@ import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.PMap;
 import org.ps5jb.sdk.include.machine.Param;
-import org.ps5jb.sdk.include.machine.pmap.PageMap;
-import org.ps5jb.sdk.include.machine.pmap.PageMapEntryMask;
+import org.ps5jb.sdk.include.machine.pmap.PhysicalMap;
+import org.ps5jb.sdk.include.machine.pmap.PhysicalMapEntryMask;
 import org.ps5jb.sdk.include.sys.errno.MemoryFaultException;
 import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.lib.LibKernel;
@@ -52,7 +53,8 @@ public class Byepervisor implements Runnable {
             offsets = new KernelOffsets(fw);
 
             // Find current process
-            Process curProc = getCurrentProc();
+            ProcessUtils procUtils = new ProcessUtils(libKernel, kbaseAddress, offsets);
+            Process curProc = procUtils.getCurrentProcess();
             if (curProc == null) {
                 Status.println("Current process could not be found. Aborting.");
                 return;
@@ -82,10 +84,10 @@ public class Byepervisor implements Runnable {
             }
 
             // Become root
-            int[] origIds = setUserGroup(curProc, new int[] { 0, 0, 0, 1, 0 });
+            int[] origIds = procUtils.setUserGroup(curProc, new int[] { 0, 0, 0, 1, 0 });
 
             // Relax process privileges
-            long[] origPrivs = setPrivs(curProc, new long[] {
+            long[] origPrivs = procUtils.setPrivs(curProc, new long[] {
                     0x4800000000000007L,
                     0xFFFFFFFFFFFFFFFFL, 0xFFFFFFFFFFFFFFFFL,
                     0x80
@@ -100,8 +102,8 @@ public class Byepervisor implements Runnable {
             enableKernelTextWrite();
 
             // Restore original privs and user (not really necessary since process will be killed on sleep anyway)
-            setUserGroup(curProc, origIds);
-            setPrivs(curProc, origPrivs);
+            procUtils.setUserGroup(curProc, origIds);
+            procUtils.setPrivs(curProc, origPrivs);
 
             // Flag that RW is enabled after rest + resume
             checkRwFlag(true);
@@ -121,64 +123,9 @@ public class Byepervisor implements Runnable {
         }
     }
 
-    private Process getCurrentProc() {
-        int curPid = libKernel.getpid();
-
-        KernelPointer kdataAddress = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA);
-        KernelPointer allproc = kdataAddress.inc(offsets.OFFSET_KERNEL_DATA_BASE_ALLPROC);
-        Process curProc = new Process(KernelPointer.valueOf(allproc.read8()));
-        while (curProc != null) {
-            int pid = libKernel.getpid();
-            if (pid == curPid) {
-                break;
-            }
-            curProc = curProc.getNextProcess();
-        }
-
-        return curProc;
-    }
-
-    private int[] setUserGroup(Process proc, int[] ids) {
-        KernelPointer ucredAddr = proc.getUCred();
-
-        int result[] = new int[5];
-        result[0] = ucredAddr.read4(0x04);
-        result[1] = ucredAddr.read4(0x08);
-        result[2] = ucredAddr.read4(0x0C);
-        result[3] = ucredAddr.read4(0x10);
-        result[4] = ucredAddr.read4(0x14);
-
-        // Patch uid and gid
-        ucredAddr.write4(0x04, ids[0]);   // cr_uid
-        ucredAddr.write4(0x08, ids[1]);   // cr_ruid
-        ucredAddr.write4(0x0C, ids[2]);   // cr_svuid
-        ucredAddr.write4(0x10, ids[3]);   // cr_ngroups
-        ucredAddr.write4(0x14, ids[4]);   // cr_rgid
-
-        return result;
-    }
-
-    private long[] setPrivs(Process proc, long[] privs) {
-        KernelPointer ucredAddr = proc.getUCred();
-
-        long result[] = new long[4];
-        result[0] = ucredAddr.read8(0x58);
-        result[1] = ucredAddr.read8(0x60);
-        result[2] = ucredAddr.read8(0x68);
-        result[3] = ucredAddr.read1(0x83);
-
-        // Escalate sony privs
-        ucredAddr.write8(0x58, privs[0]);         // cr_sceAuthId
-        ucredAddr.write8(0x60, privs[1]);         // cr_sceCaps[0]
-        ucredAddr.write8(0x68, privs[2]);         // cr_sceCaps[1]
-        ucredAddr.write1(0x83, (byte) privs[3]);  // cr_sceAttr[0]
-
-        return result;
-    }
-
     private void enableKernelTextWrite() {
         KernelPointer kdataAddress = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA);
-        PageMap pageMap = new PageMap(kdataAddress.inc(offsets.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE));
+        PhysicalMap pageMap = new PhysicalMap(kdataAddress.inc(offsets.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE));
 
         long pageCount = 0;
         long totalPageCount = (kdataAddress.addr() - kbaseAddress.addr()) / Param.PHYS_PAGE_SIZE;
@@ -202,8 +149,8 @@ public class Byepervisor implements Runnable {
             try {
                 long value = dmapPtr.read8();
 
-                long newValue = clearPageMapEntry(value, PageMapEntryMask.SCE_PG_XO);
-                newValue = setPageMapEntry(newValue, PageMapEntryMask.X86_PG_RW);
+                long newValue = clearPageTableEntry(value, PhysicalMapEntryMask.SCE_PG_XO);
+                newValue = setPageTableEntry(newValue, PhysicalMapEntryMask.X86_PG_RW);
                 if (value != newValue) {
                     dmapPtr.write8(newValue);
                 }
@@ -216,11 +163,11 @@ public class Byepervisor implements Runnable {
         }
     }
 
-    private long clearPageMapEntry(long value, PageMapEntryMask mask) {
+    private long clearPageTableEntry(long value, PhysicalMapEntryMask mask) {
         return value & ~mask.value();
     }
 
-    private long setPageMapEntry(long value, PageMapEntryMask mask) {
+    private long setPageTableEntry(long value, PhysicalMapEntryMask mask) {
         return value | mask.value();
     }
 

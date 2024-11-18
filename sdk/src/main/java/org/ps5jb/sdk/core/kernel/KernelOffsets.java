@@ -191,7 +191,7 @@ public class KernelOffsets {
                 OFFSET_PMAP_STORE_DMPDPI = 0x2A0;
                 break;
             }
-            case 0x0600:  // Unconfirmed
+            case 0x0600:
             case 0x0602:
             case 0x0650:
             {
@@ -212,10 +212,10 @@ public class KernelOffsets {
                 break;
             }
             case 0x0700:
-            case 0x0701:  // Unconfirmed
+            case 0x0701:
             case 0x0720:
             case 0x0740:
-            case 0x0760:  // Unconfirmed
+            case 0x0760:
             case 0x0761:
             {
                 OFFSET_KERNEL_DATA = 0x0A30000;  // Unconfirmed
