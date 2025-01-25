@@ -6,6 +6,8 @@ import javax.tv.xlet.XletContext;
 
 import org.havi.ui.HScene;
 import org.havi.ui.HSceneFactory;
+import org.ps5jb.loader.jar.JarLoader;
+import org.ps5jb.loader.jar.menu.MenuLoader;
 
 /**
  * BD-J main entry point class.
@@ -60,8 +62,8 @@ public class LoaderXlet implements Xlet {
 
         try {
             if (System.getSecurityManager() == null) {
-                jarLoader = new JarLoader(Config.getLoaderPort());
-                jarLoaderThread = new Thread(jarLoader, "JarLoader");
+                jarLoader = new MenuLoader();
+                jarLoaderThread = new Thread(jarLoader, "MenuLoader");
                 jarLoaderThread.start();
             }
         } catch (Throwable e) {
