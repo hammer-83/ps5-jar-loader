@@ -4,7 +4,6 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.TreeSet;
-import java.util.logging.Logger;
 
 import org.ps5jb.loader.Config;
 import org.ps5jb.loader.Status;

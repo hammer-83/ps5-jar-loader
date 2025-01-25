@@ -11,6 +11,7 @@
     <option name="MAIN_CLASS_NAME" value="" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="package" />
+    <option name="VM_PARAMETERS" value="-ea -XX:-UseCompressedOops" />
     <method v="2">
       <option name="Make" enabled="true" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="Maven Build" run_configuration_type="MavenRunConfiguration" />

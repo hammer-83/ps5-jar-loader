@@ -37,7 +37,11 @@ public class PMap {
 
     public static final long KPDPI = Param.NPDPEPG - 2;
 
+    public static long addr_PTmap = KVADDR(PML4PML4I, 0, 0, 0);
     public static long addr_PDmap = KVADDR(PML4PML4I, PML4PML4I, 0, 0);
+    public static long addr_PDPmap = KVADDR(PML4PML4I, PML4PML4I, PML4PML4I, 0);
+    public static long addr_PML4map = KVADDR(PML4PML4I, PML4PML4I, PML4PML4I, PML4PML4I);
+    public static long addr_PML4pml4e = addr_PML4map + (PML4PML4I * 8);
 
     /**
      * Kernel randomizes some parameters at the start. The initial values are simply FreeBSD defaults.
@@ -46,13 +50,17 @@ public class PMap {
      *
      * @param dmpmk4iAddress Address of {@link #DMPML4I} value.
      * @param dmpdpiAddress Address of {@link #DMPDPI} value.
-     * @param pml4pl4iAddress Address of {@link #PML4PML4I} value.
+     * @param pml4pml4iAddress Address of {@link #PML4PML4I} value.
      */
-    public static void refresh(KernelPointer dmpmk4iAddress, KernelPointer dmpdpiAddress, KernelPointer pml4pl4iAddress) {
+    public static void refresh(KernelPointer dmpmk4iAddress, KernelPointer dmpdpiAddress, KernelPointer pml4pml4iAddress) {
         DMPML4I = dmpmk4iAddress.read4();
         DMPDPI = dmpdpiAddress.read4();
-        PML4PML4I = pml4pl4iAddress.read4();
+        PML4PML4I = pml4pml4iAddress.read4();
+        addr_PTmap = KVADDR(PML4PML4I, 0, 0, 0);
         addr_PDmap = KVADDR(PML4PML4I, PML4PML4I, 0, 0);
+        addr_PDPmap = KVADDR(PML4PML4I, PML4PML4I, PML4PML4I, 0);
+        addr_PML4map = KVADDR(PML4PML4I, PML4PML4I, PML4PML4I, PML4PML4I);
+        addr_PML4pml4e = addr_PML4map + (PML4PML4I * 8);
         VmParam.DMAP_MIN_ADDRESS = KVADDR(DMPML4I, DMPDPI, 0, 0);
         VmParam.DMAP_MAX_ADDRESS = KVADDR(DMPML4I + NDMPML4E, 0, 0, 0);
     }
@@ -65,7 +73,7 @@ public class PMap {
                (p11 << Param.PHYS_PAGE_SHIFT);
     }
 
-    public static PhysicalMapEntryMask pmap_valid_bit(PhysicalMap pmap) {
+    private static PhysicalMapEntryMask pmap_valid_bit(PhysicalMap pmap) {
         PhysicalMapEntryMask mask;
         if (pmap.getType().equals(PhysicalMapType.PT_X86) || pmap.getType().equals(PhysicalMapType.PT_RVI)) {
             mask = PhysicalMapEntryMask.X86_PG_V;
@@ -73,6 +81,10 @@ public class PMap {
             throw new SdkRuntimeException(ErrorMessages.getClassErrorMessage(PMap.class, "pmapBitValid", pmap.getType()));
         }
         return mask;
+    }
+
+    public static long pmap_valid_mask(PhysicalMap pmap) {
+        return pmap_valid_bit(pmap).value() | PhysicalMapEntryMask.SCE_PG_53.value() | PhysicalMapEntryMask.SCE_PG_55.value();
     }
 
     private static long pmap_pte_index(long va) {
@@ -102,9 +114,9 @@ public class PMap {
     }
 
     private static KernelPointer pmap_pdpe(PhysicalMap pmap, long va) {
-        PhysicalMapEntryMask PG_V = pmap_valid_bit(pmap);
+        long PG_V = pmap_valid_mask(pmap);
         KernelPointer pml4e = pmap_pml4e(pmap, va);
-        if ((pml4e.read8() & PG_V.value()) == 0) {
+        if ((pml4e.read8() & PG_V) == 0) {
             return KernelPointer.NULL;
         }
         return pmap_pml4e_to_pdpe(pml4e, va);
@@ -117,9 +129,9 @@ public class PMap {
     }
 
     public static KernelPointer pmap_pde(PhysicalMap pmap, long va) {
-        PhysicalMapEntryMask PG_V = pmap_valid_bit(pmap);
+        long PG_V = pmap_valid_mask(pmap);
         KernelPointer pdpe = pmap_pdpe(pmap, va);
-        if (KernelPointer.NULL.equals(pdpe) || (pdpe.read8() & PG_V.value()) == 0) {
+        if (KernelPointer.NULL.equals(pdpe) || (pdpe.read8() & PG_V) == 0) {
             return KernelPointer.NULL;
         }
         return pmap_pdpe_to_pde(pdpe, va);
@@ -132,9 +144,9 @@ public class PMap {
     }
 
     public static KernelPointer pmap_pte(PhysicalMap pmap, long va) {
-        PhysicalMapEntryMask PG_V = pmap_valid_bit(pmap);
+        long PG_V = pmap_valid_mask(pmap);
         KernelPointer pde = pmap_pde(pmap, va);
-        if (KernelPointer.NULL.equals(pde) || (pde.read8() & PG_V.value()) == 0) {
+        if (KernelPointer.NULL.equals(pde) || (pde.read8() & PG_V) == 0) {
             return KernelPointer.NULL;
         }
         return pmap_pde_to_pte(pde, va);
@@ -143,6 +155,11 @@ public class PMap {
     private static KernelPointer vtopde(long va) {
         long mask = (1L << (Param.NPDEPGSHIFT + Param.NPDPEPGSHIFT + Param.NPML4EPGSHIFT)) - 1;
         return new KernelPointer(addr_PDmap + ((va >> Param.PDRSHIFT) & mask) * 8, new Long(8));
+    }
+
+    private static KernelPointer vtopte(long va) {
+        long mask = ((1L << (Param.NPTEPGSHIFT + Param.NPDEPGSHIFT + Param.NPDPEPGSHIFT + Param.NPML4EPGSHIFT)) - 1);
+        return new KernelPointer(addr_PTmap + ((va >> Param.PHYS_PAGE_SHIFT) & mask) * 8, new Long(8));
     }
 
     public static long pmap_kextract(long va) {

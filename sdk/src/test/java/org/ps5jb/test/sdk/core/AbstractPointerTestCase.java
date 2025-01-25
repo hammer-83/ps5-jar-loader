@@ -24,7 +24,7 @@ public class AbstractPointerTestCase {
             ptr.read1(-5);
             Assertions.fail("Should have thrown IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException ex) {
-            Assertions.assertEquals(ex.getMessage(), "-5");
+            Assertions.assertEquals("-5", ex.getMessage());
         }
     }
 
@@ -34,7 +34,7 @@ public class AbstractPointerTestCase {
             ptr.read1(0x1001);
             Assertions.fail("Should have thrown IndexOutOfBoundsException");
         } catch (IndexOutOfBoundsException ex) {
-            Assertions.assertEquals(ex.getMessage(), "4098");
+            Assertions.assertEquals("4098", ex.getMessage());
         }
     }
 
@@ -51,7 +51,7 @@ public class AbstractPointerTestCase {
             AbstractPointer.nonNull(new TestPointer(0), msg);
             Assertions.fail("Should have thrown NullPointerException");
         } catch (NullPointerException ex) {
-            Assertions.assertEquals(ex.getMessage(), msg);
+            Assertions.assertEquals(msg, ex.getMessage());
         }
     }
 
@@ -61,7 +61,7 @@ public class AbstractPointerTestCase {
         try {
             AbstractPointer.nonNull(null, msg);
         } catch (NullPointerException ex) {
-            Assertions.assertEquals(ex.getMessage(), msg);
+            Assertions.assertEquals(msg, ex.getMessage());
         }
     }
 
@@ -246,8 +246,38 @@ public class AbstractPointerTestCase {
     }
 
     @Test
+    public void testCopyToSuccess() {
+        TestPointer newPtr = new TestPointer(0x200000, new Long(0x1000L));
+        ptr.copyTo(newPtr, 5, 5);
+        byte[] res = newPtr.read(10);
+        Assertions.assertArrayEquals(new byte[] {
+                0x06, 0x07, 0x08, 0x09, 0x0A, 0x06, 0x07, 0x08, 0x09, 0x0A
+        }, res);
+    }
+
+    @Test
+    public void testCopyOverflowSource() {
+        try {
+            TestPointer newPtr = new TestPointer(0x200000, new Long(0x1000L));
+            ptr.copyTo(newPtr, 0, 0x10000);
+        } catch (IndexOutOfBoundsException ex) {
+            Assertions.assertEquals("65536", ex.getMessage());
+        }
+    }
+
+    @Test
+    public void testCopyOverflowDest() {
+        try {
+            TestPointer newPtr = new TestPointer(0x200000, new Long(0x4L));
+            ptr.copyTo(newPtr, 0, 0x10);
+        } catch (IndexOutOfBoundsException ex) {
+            Assertions.assertEquals("16", ex.getMessage());
+        }
+    }
+
+    @Test
     public void testNotEqualsDifferentType() {
-        Assertions.assertNotEquals(ptr, "0x400000");
+        Assertions.assertNotEquals("0x400000", ptr);
     }
 
     @Test

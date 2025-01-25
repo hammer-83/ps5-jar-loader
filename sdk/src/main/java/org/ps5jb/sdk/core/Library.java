@@ -84,16 +84,6 @@ public class Library {
     }
 
     /**
-     * Returns the handle value of libjava native library used for hooking native calls.
-     * Not exposed publicly but can be obtained via reflection.
-     *
-     * @return Libjava native library handle.
-     */
-    static int getLibJavaHandle() {
-        return CallContext.libjava_handle;
-    }
-
-    /**
      * Attempt to close the library during garbage collection if it was not done manually.
      *
      * @throws Throwable Re-throws any exception.

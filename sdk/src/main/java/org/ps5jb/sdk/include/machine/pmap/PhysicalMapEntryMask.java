@@ -27,11 +27,18 @@ public class PhysicalMapEntryMask {
     public static final PhysicalMapEntryMask X86_PG_PS = new PhysicalMapEntryMask(0x080, "X86_PG_PS");
     /** G Global */
     public static final PhysicalMapEntryMask X86_PG_G = new PhysicalMapEntryMask(0x100, "X86_PG_G");
+    /** Proprietary flag used to check page validity */
+    public static final PhysicalMapEntryMask SCE_PG_53 = new PhysicalMapEntryMask(1L << 53, "SCE_PG_53");
+    /** Proprietary flag used to check page validity */
+    public static final PhysicalMapEntryMask SCE_PG_55 = new PhysicalMapEntryMask(1L << 55, "SCE_PG_55");
     /** XO Execute-only */
     public static final PhysicalMapEntryMask SCE_PG_XO = new PhysicalMapEntryMask(1L << 58, "SCE_PG_XO");
     /** NX No-execute */
-    public static final PhysicalMapEntryMask X86_PG_NX = new PhysicalMapEntryMask(1L << 64, "X86_PG_NX");
+    public static final PhysicalMapEntryMask X86_PG_NX = new PhysicalMapEntryMask(1L << 63, "X86_PG_NX");
 
+    /** "Wired" pseudoflag */
+    public static final PhysicalMapEntryMask PG_W = new PhysicalMapEntryMask(0x800, "PG_W");
+    public static final PhysicalMapEntryMask PG_MANAGED = new PhysicalMapEntryMask(0x400, "PG_MANAGED");
     public static final PhysicalMapEntryMask PG_PHYS_FRAME = new PhysicalMapEntryMask(0x000ffffffffff000L, "PG_PHYS_FRAME");
     public static final PhysicalMapEntryMask PG_FRAME = new PhysicalMapEntryMask(0x000fffffffffc000L, "PG_FRAME");
     public static final PhysicalMapEntryMask PG_PS_FRAME = new PhysicalMapEntryMask(0x000fffffffe00000L, "PG_PS_FRAME");
@@ -47,6 +54,8 @@ public class PhysicalMapEntryMask {
             X86_PG_M,
             X86_PG_PS,
             X86_PG_G,
+            SCE_PG_53,
+            SCE_PG_55,
             SCE_PG_XO,
             X86_PG_NX
     };

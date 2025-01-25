@@ -63,7 +63,7 @@ Even if the remote logger is not active by default in the Xlet burned on disc, i
 7. A message on screen should inform about loader waiting for JAR or the menu will be displayed if payloads are found on disc.
 8. For remote execution, send the JAR using the command:
    ```shell
-   java -jar xploit/target/xploit-[version].jar <ps5 ip address>`
+   java -jar xploit/[payload]/target/[payload]-[version].jar <ps5 ip address>`
    ```
    PS5 should inform on screen about the status of the upload and the execution.
 9. Once remote execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute step 8 to retry as many times as necessary.

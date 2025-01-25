@@ -188,7 +188,7 @@ public class KernelPageMirrors {
     }
 
     /**
-     * Unmaps and clears all active user space mirrors. Can be used
+     * Unmaps and clears all active user space mirrors.
      */
     public void reset() {
         PhysicalMap pmap = curProc.getVmSpace().getPhysicalMap();

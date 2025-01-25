@@ -10,7 +10,7 @@ import java.nio.charset.Charset;
  * Root parent for any class that implements a pointer to a memory.
  */
 public abstract class AbstractPointer implements Serializable {
-    private static final long serialVersionUID = 5085573430112354497L;
+    private static final long serialVersionUID = 5085573430112354495L;
 
     /**
      * Wrap the given pointer in a non-null check. Returns the same pointer if it is not NULL.
@@ -20,7 +20,7 @@ public abstract class AbstractPointer implements Serializable {
      * @return Same <code>pointer</code> value if it is not NULL.
      * @throws NullPointerException If the input pointer is NULL or points to the address 0.
      */
-    public static AbstractPointer nonNull(AbstractPointer pointer, String errorMessage) {
+    public static <T extends AbstractPointer> T nonNull(T pointer, String errorMessage) {
         if (pointer == null || pointer.addr() == 0) {
             throw new NullPointerException(errorMessage);
         }
@@ -189,39 +189,39 @@ public abstract class AbstractPointer implements Serializable {
     /**
      * Read the given number of bytes from the address pointed to by this pointer instance.
      *
-     * @param size Number of bytes to read.
+     * @param count Number of bytes to read.
      * @return Value read from the memory as an array of bytes.
      */
-    public byte[] read(int size) {
-        byte[] result = new byte[size];
-        read(0, result, 0, size);
+    public byte[] read(int count) {
+        byte[] result = new byte[count];
+        read(0, result, 0, count);
         return result;
     }
 
     /**
      * Read the given number of bytes at the specified offset from the pointer.
      *
-     * @param offset Offset relative to {@link #addr}.
+     * @param offset Offset in bytes relative to {@link #addr}.
      * @param value Buffer to read the value into.
-     * @param valueOffset Offset in the buffer where to place the read value.
-     * @param size Number of bytes to read.
+     * @param valueIndex Starting index in the buffer where to place the read value.
+     * @param count Number of bytes to read.
      * @throws IndexOutOfBoundsException If the buffer is not large enough to hold the value
      *   of the specified size.
      */
-    public void read(long offset, byte[] value, int valueOffset, int size) {
-        overflow(this, offset, size);
+    public void read(long offset, byte[] value, int valueIndex, int count) {
+        overflow(this, offset, count);
 
         long buffer;
         int bufferLen;
 
-        for (int i = 0; i < size; i += bufferLen) {
-            if ((i + 8) <= size) {
+        for (int i = 0; i < count; i += bufferLen) {
+            if ((i + 8) <= count) {
                 buffer = read8impl(offset + i);
                 bufferLen = 8;
-            } else if ((i + 4) <= size) {
+            } else if ((i + 4) <= count) {
                 buffer = read4impl(offset + i);
                 bufferLen = 4;
-            } else if ((i + 2) <= size) {
+            } else if ((i + 2) <= count) {
                 buffer = read2impl(offset + i);
                 bufferLen = 2;
             } else {
@@ -230,7 +230,7 @@ public abstract class AbstractPointer implements Serializable {
             }
 
             for (int j = 0; j < bufferLen; ++j) {
-                value[valueOffset + i + j] = (byte) ((buffer >> (j * 8)) & 0xFF);
+                value[valueIndex + i + j] = (byte) ((buffer >> (j * 8)) & 0xFF);
             }
         }
     }
@@ -434,13 +434,13 @@ public abstract class AbstractPointer implements Serializable {
      *
      * @param offset Offset relative to {@link #addr}.
      * @param value Buffer to write.
-     * @param valueOffset Offset in the buffer from which to start writing.
+     * @param valueIndex Index in the buffer from which to start writing.
      * @param count Number of bytes to write.
      * @throws IndexOutOfBoundsException If the buffer or the native memory
      *   are not large enough for the given values of <code>offset</code>,
-     *   <code>valueOffset</code> and <code>count</code>.
+     *   <code>valueIndex</code> and <code>count</code>.
      */
-    public void write(long offset, byte[] value, int valueOffset, int count) {
+    public void write(long offset, byte[] value, int valueIndex, int count) {
         overflow(this, offset, count);
 
         long buffer;
@@ -459,7 +459,7 @@ public abstract class AbstractPointer implements Serializable {
 
             buffer = 0;
             for (int j = 0; j < bufferLen; ++j) {
-                buffer |= (((long) (value[valueOffset + i + j] & 0xFF)) << (j * 8));
+                buffer |= (((long) (value[valueIndex + i + j] & 0xFF)) << (j * 8));
             }
 
             if (bufferLen == 8) {
@@ -500,6 +500,20 @@ public abstract class AbstractPointer implements Serializable {
 
     public void writeString(String string) {
         writeString(0, string, Charset.defaultCharset().name());
+    }
+
+    /**
+     * Copies values in native memory associated with this pointer to a pointer specified by <code>dest</code>.
+     *
+     * @param dest Memory to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
+     * @param offset Offset in this memory to read the data from.
+     * @param size Size of data to copy.
+     * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
+     */
+    public void copyTo(AbstractPointer dest, long offset, int size) {
+        byte[] data = new byte[size];
+        read(offset, data, 0, size);
+        dest.write(0, data, 0, size);
     }
 
     /**

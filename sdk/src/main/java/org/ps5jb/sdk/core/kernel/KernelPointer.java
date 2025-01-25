@@ -10,7 +10,7 @@ import org.ps5jb.sdk.core.AbstractPointer;
  * by calling {@link KernelReadWrite#setAccessor(KernelAccessor)}.
  */
 public class KernelPointer extends AbstractPointer {
-    private static final long serialVersionUID = 3445279334363239500L;
+    private static final long serialVersionUID = 3445279334363239505L;
 
     /** Start of kernel address space. See machine/vmparam.h */
     private static final long KERNEL_ADDR_MASK = 0xFFFF800000000000L;
@@ -88,7 +88,7 @@ public class KernelPointer extends AbstractPointer {
     }
 
     @Override
-    public void read(long offset, byte[] value, int valueOffset, int size) {
+    public void read(long offset, byte[] value, int valueIndex, int count) {
         checkRange();
 
         KernelAccessor ka = KernelReadWrite.getAccessor();
@@ -96,9 +96,9 @@ public class KernelPointer extends AbstractPointer {
             // When using IPv6 based accessor, use a more efficient read method
             // rather that writing 8-bytes at a time.
             KernelAccessorIPv6 kaIpv6 = (KernelAccessorIPv6) ka;
-            kaIpv6.read(this.addr + offset, value, valueOffset, size);
+            kaIpv6.read(this.addr + offset, value, valueIndex, count);
         } else {
-            super.read(offset, value, valueOffset, size);
+            super.read(offset, value, valueIndex, count);
         }
     }
 
@@ -127,7 +127,7 @@ public class KernelPointer extends AbstractPointer {
     }
 
     @Override
-    public void write(long offset, byte[] value, int valueOffset, int count) {
+    public void write(long offset, byte[] value, int valueIndex, int count) {
         checkRange();
 
         KernelAccessor ka = KernelReadWrite.getAccessor();
@@ -135,9 +135,9 @@ public class KernelPointer extends AbstractPointer {
             // When using IPv6 based accessor, use a more efficient write method
             // rather that writing 8-bytes at a time.
             KernelAccessorIPv6 kaIpv6 = (KernelAccessorIPv6) ka;
-            kaIpv6.write(this.addr + offset, value, valueOffset, count);
+            kaIpv6.write(this.addr + offset, value, valueIndex, count);
         } else {
-            super.write(offset, value, valueOffset, count);
+            super.write(offset, value, valueIndex, count);
         }
     }
 
@@ -179,20 +179,6 @@ public class KernelPointer extends AbstractPointer {
     @Override
     protected void write8impl(long offset, long value) {
         KernelReadWrite.getAccessor().write8(this.addr + offset, value);
-    }
-
-    /**
-     * Copies values in kernel memory associated with this pointer to a pointer specified by <code>dest</code>.
-     *
-     * @param dest Pointer to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
-     * @param offset Offset in this memory to read the data from.
-     * @param size Size of data to copy.
-     * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
-     */
-    public void copyTo(KernelPointer dest, long offset, int size) {
-        byte[] data = new byte[size];
-        read(offset, data, 0, size);
-        dest.write(0, data, 0, size);
     }
 
     /**

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
@@ -45,7 +47,18 @@ public interface JarLoader extends Runnable {
         // This is important to be able to load the modified copy of the same class on the next iteration.
         Status.println("Loading the JAR...");
 
-        java.net.URLClassLoader ldr = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarFile.toURL() }, getClass().getClassLoader());
+        ClassLoader parentClassloader = new URLClassLoader(new URL[0], getClass().getClassLoader()) {
+            @Override
+            protected Class loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                // Bypass various restrictions in BD-J classloader
+                if (name.startsWith("java.nio") || name.startsWith("javax.security.auth") || name.startsWith("javax.net.ssl")) {
+                    return findSystemClass(name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+        java.net.URLClassLoader ldr = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarFile.toURL() }, parentClassloader);
+
         Class mainClass = ldr.loadClass(mainClassName);
         Method mainMethod = mainClass.getDeclaredMethod("main", new Class[] { String[].class });
         mainMethod.invoke(null, new Object[] { new String[0] });

@@ -16,7 +16,6 @@ import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.AbstractPointer;
-import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
@@ -193,7 +192,7 @@ public class KernelDump extends SocketListener implements UserEventListener {
      */
     private KernelPointer getKdataPtr() {
         KernelPointer result = KernelPointer.NULL;
-        String resultStr = System.getProperty(PayloadConstants.ALLPROC_ADDRESS_PROPERY);
+        String resultStr = System.getProperty(PayloadConstants.ALLPROC_ADDRESS_PROPERTY);
         if (resultStr != null) {
             try {
                 result = KernelPointer.valueOf(Long.parseLong(resultStr));

@@ -1,8 +1,7 @@
 package org.ps5jb.sdk.core;
 
-import java.util.Arrays;
-
 import org.ps5jb.loader.Status;
+import org.ps5jb.sdk.core.dataview.LongViewPointer;
 import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
@@ -10,11 +9,9 @@ import org.ps5jb.sdk.res.ErrorMessages;
  * functions in native libraries from Java code. This technique has been developed by theflow0.
  */
 class CallContext {
-    private static Pointer rtld_JVM_NativePath;
-    private static Pointer libc_setjmp;
-    private static Pointer libkernel___Ux86_64_setcontext;
-    /** Stores the handle value of libjava native library. Most useful for debugging, since this value varies in different firmware versions. */
-    static int libjava_handle;
+    private static long rtld_JVM_NativePath;
+    private static long libkernel_sigsetjmp;
+    private static long libkernel___Ux86_64_setcontext;
 
     private native long multiNewArray(long componentType, int[] dimensions);
 
@@ -36,55 +33,33 @@ class CallContext {
      */
     private static void initSymbols() {
         Library rtld = new Library(-2);
-        rtld_JVM_NativePath = rtld.addrOf("JVM_NativePath");
-
-        Library libc = new Library(2);
-        libc_setjmp = libc.addrOf("setjmp");
+        rtld_JVM_NativePath = rtld.addrOf("JVM_NativePath").addr();
 
         Library libkernel = new Library(0x2001);
-        libkernel___Ux86_64_setcontext = libkernel.addrOf("__Ux86_64_setcontext");
+        libkernel___Ux86_64_setcontext = libkernel.addrOf("__Ux86_64_setcontext").addr();
+        libkernel_sigsetjmp = libkernel.addrOf("sigsetjmp").addr();
     }
 
     private static Pointer findMultiNewArrayAddress() {
         Pointer result = null;
         SdkSymbolNotFoundException lastException = null;
 
-        // First try the known handles
         int[] knownHandles = { 0x4A, 0x4B };
-        int handleLibJava = 0;
         for (int handle : knownHandles) {
             Library libjava = new Library(handle);
             try {
                 result = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
-                handleLibJava = handle;
+                lastException = null;
                 break;
             } catch (SdkSymbolNotFoundException e) {
                 lastException = e;
             }
         }
 
-        // If that does not work, try to find it by trial and error
-        for (int handle = 0x30; handle < 0x80; ++handle) {
-            if (Arrays.binarySearch(knownHandles, handle) < 0) {
-                try {
-                    Library libjava = new Library(handle);
-                    result = libjava.addrOf("Java_java_lang_reflect_Array_multiNewArray");
-                    handleLibJava = handle;
-                    break;
-                } catch (SdkSymbolNotFoundException e) {
-                    // Continue, this is expected for most libraries
-                } catch (SdkRuntimeException e) {
-                    // Could be a problem with loading a library for a given handle, ignore.
-                }
-            }
-        }
-
         // Nothing found, throw the original symbol not found exception for the last known handle
-        if (result == null) {
+        if (lastException != null) {
             throw lastException;
         }
-
-        libjava_handle = handleLibJava;
 
         return result;
     }
@@ -98,7 +73,7 @@ class CallContext {
     private static void installMultiNewArrayHook() {
         boolean installed = false;
 
-        Pointer instance = Pointer.addrOf(new CallContext());
+        Pointer instance = Pointer.valueOf(Pointer.addrOf(new CallContext()));
         Pointer klass = Pointer.valueOf(instance.read8(0x08));
         Pointer methods = Pointer.valueOf(klass.read8(0x170));
         int numMethods = methods.read4();
@@ -107,7 +82,7 @@ class CallContext {
             Pointer constMethod = Pointer.valueOf(method.read8(0x08));
             Pointer constants = Pointer.valueOf(constMethod.read8(0x08));
             short nameIndex = constMethod.read2(0x2A);
-            Pointer nameSymbol = Pointer.valueOf(constants.read8(0x40 + nameIndex * 8) & ~(2 - 1));
+            Pointer nameSymbol = Pointer.valueOf(constants.read8(0x40 + nameIndex * 8) & -2);
             short nameLength = nameSymbol.read2();
             String name = nameSymbol.inc(0x06).readString(new Integer(nameLength));
 
@@ -123,8 +98,15 @@ class CallContext {
         }
     }
 
-    /** Memory buffer used as call stack for the native execution. */
+    /** Native memory buffer used to jump into the native calls. */
     private Pointer callBuffer;
+    /** Shadow Java heap buffer that is used to populate the {@link #callBuffer} data. */
+    private long[] callBufferData;
+
+    private static final int fakeClassOff = 0;
+    private static final int fakeKlassOff = fakeClassOff + 0x100;
+    private static final int fakeKlassVTableOff = fakeKlassOff + 0x200;
+    private static final int fakeClassOopOff = fakeKlassVTableOff + 0x400;
 
     /** Value needed to call "multiNewArray" function. */
     private int[] dimensions;
@@ -164,35 +146,46 @@ class CallContext {
         if (this.callBuffer != null) {
             this.callBuffer.free();
             this.callBuffer = null;
+            this.callBufferData = null;
         }
     }
 
-    private void buildCallContext(Pointer contextBuf, Pointer jmpBuf, long rip, long rdi, long rsi, long rdx, long rcx, long r8, long r9) {
-        long rbx = jmpBuf.read8(0x08);
-        long rsp = jmpBuf.read8(0x10);
-        long rbp = jmpBuf.read8(0x18);
-        long r12 = jmpBuf.read8(0x20);
-        long r13 = jmpBuf.read8(0x28);
-        long r14 = jmpBuf.read8(0x30);
-        long r15 = jmpBuf.read8(0x38);
+    private void buildCallContext(long rip, long rdi, long rsi, long rdx, long rcx, long r8, long r9) {
+        long rbx = callBufferData[(fakeKlassOff + 0x08) / 8];
+        long rsp = callBufferData[(fakeKlassOff + 0x10) / 8];
+        long rbp = callBufferData[(fakeKlassOff + 0x18) / 8];
+        long r12 = callBufferData[(fakeKlassOff + 0x20) / 8];
+        long r13 = callBufferData[(fakeKlassOff + 0x28) / 8];
+        long r14 = callBufferData[(fakeKlassOff + 0x30) / 8];
+        long r15 = callBufferData[(fakeKlassOff + 0x38) / 8];
 
-        contextBuf.write8(0x48, rdi);
-        contextBuf.write8(0x50, rsi);
-        contextBuf.write8(0x58, rdx);
-        contextBuf.write8(0x60, rcx);
-        contextBuf.write8(0x68, r8);
-        contextBuf.write8(0x70, r9);
-        contextBuf.write8(0x80, rbx);
-        contextBuf.write8(0x88, rbp);
-        contextBuf.write8(0xA0, r12);
-        contextBuf.write8(0xA8, r13);
-        contextBuf.write8(0xB0, r14);
-        contextBuf.write8(0xB8, r15);
-        contextBuf.write8(0xE0, rip);
-        contextBuf.write8(0xF8, rsp);
+        callBufferData[(fakeKlassOff + 0x48) / 8] = rdi;
+        callBufferData[(fakeKlassOff + 0x50) / 8] = rsi;
+        callBufferData[(fakeKlassOff + 0x58) / 8] = rdx;
+        callBufferData[(fakeKlassOff + 0x60) / 8] = rcx;
+        callBufferData[(fakeKlassOff + 0x68) / 8] = r8;
+        callBufferData[(fakeKlassOff + 0x70) / 8] = r9;
+        callBufferData[(fakeKlassOff + 0x80) / 8] = rbx;
+        callBufferData[(fakeKlassOff + 0x88) / 8] = rbp;
+        callBufferData[(fakeKlassOff + 0xA0) / 8] = r12;
+        callBufferData[(fakeKlassOff + 0xA8) / 8] = r13;
+        callBufferData[(fakeKlassOff + 0xB0) / 8] = r14;
+        callBufferData[(fakeKlassOff + 0xB8) / 8] = r15;
+        callBufferData[(fakeKlassOff + 0xE0) / 8] = rip;
+        callBufferData[(fakeKlassOff + 0xF8) / 8] = rsp;
+    }
 
-        contextBuf.write8(0x110, 0);
-        contextBuf.write8(0x118, 0);
+    /**
+     * Call "multiNewArray" hokked method to jump into a native call.
+     *
+     * @param rip Address to jump into.
+     * @return Return value from the native call execution.
+     */
+    private long invokeMultiNewArrayHook(long rip) {
+        callBufferData[fakeKlassOff / 8] = callBuffer.addr() + fakeKlassVTableOff;
+        callBufferData[(fakeKlassVTableOff + 0x158) / 8] = rip;
+
+        return this.multiNewArray(callBuffer.addr() + fakeClassOopOff, this.dimensions);
     }
 
     /**
@@ -211,42 +204,38 @@ class CallContext {
             throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(CallContext.class,"maxCallArguments", new Integer(6), new Integer(args.length)));
         }
 
-        if (this.callBuffer == null) {
-            this.callBuffer = Pointer.malloc(0x800);
-            this.dimensions = new int[] { 1 };
-        }
-
         if (this.executing) {
             throw new SdkRuntimeException(ErrorMessages.getClassErrorMessage(CallContext.class,"nestedCall"));
         }
         this.executing = true;
 
+        // On the first call, initialize internal structures
+        if (this.callBuffer == null) {
+            final int callBufferSize = 0x800;
+            LongViewPointer longViewCallBuffer = new LongViewPointer(callBufferSize / 8);
+            this.callBuffer = longViewCallBuffer;
+
+            this.callBufferData = longViewCallBuffer.dataView();
+            this.callBufferData[fakeClassOopOff / 8] = this.callBuffer.addr();
+            this.callBufferData[(fakeClassOff + 0x98) / 8] = this.callBuffer.addr() + fakeKlassOff;
+            this.callBufferData[(fakeKlassVTableOff + 0xD8) / 8] = rtld_JVM_NativePath;
+
+            this.dimensions = new int[] { 1 };
+        }
+
         try {
-            Pointer fakeClass = this.callBuffer.inc(0);
-            Pointer fakeKlass = fakeClass.inc(0x100);
-            Pointer fakeKlassVTable = fakeKlass.inc(0x200);
-            Pointer fakeClassOop = fakeKlassVTable.inc(0x400);
+            this.callBufferData[(fakeKlassOff + 0xC0) / 8] = 0;
+            this.invokeMultiNewArrayHook(libkernel_sigsetjmp + 0x23);
 
-            fakeClassOop.write8(fakeClass.addr());
-            fakeClass.write8(0x98, fakeKlass.addr());
-            fakeKlass.write4(0xC4, 0);
-            fakeKlassVTable.write8(0xD8, rtld_JVM_NativePath.addr());
-
-            fakeKlass.write8(fakeKlassVTable.addr());
-            fakeKlassVTable.write8(0x158, libc_setjmp.addr());
-            this.multiNewArray(fakeClassOop.addr(), this.dimensions);
-            this.buildCallContext(fakeKlass, fakeKlass, function.addr(),
+            this.buildCallContext(function.addr(),
                     args.length > 0 ? args[0] : 0,
                     args.length > 1 ? args[1] : 0,
                     args.length > 2 ? args[2] : 0,
                     args.length > 3 ? args[3] : 0,
                     args.length > 4 ? args[4] : 0,
                     args.length > 5 ? args[5] : 0);
+            long ret = this.invokeMultiNewArrayHook(libkernel___Ux86_64_setcontext + 0x39);
 
-            fakeKlass.write8(fakeKlassVTable.addr());
-            fakeKlassVTable.write8(0x158, libkernel___Ux86_64_setcontext.addr());
-
-            long ret = this.multiNewArray(fakeClassOop.addr(), this.dimensions);
             if (ret != 0) {
                 ret = Pointer.valueOf(ret).read8();
             }

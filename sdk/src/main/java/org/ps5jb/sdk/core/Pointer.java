@@ -11,49 +11,23 @@ import jdk.internal.misc.Unsafe;
  * Abstraction over memory pointer operations in user-space.
  */
 public class Pointer extends AbstractPointer {
-    private static final long serialVersionUID = 2230199156786175114L;
+    private static final long serialVersionUID = 2230199156786175115L;
 
-    /**
-     * Helper class to obtain an instance of Unsafe in a thread-safe manner.
-     */
-    private static class UnsafeHolder {
-        private static final Unsafe unsafe;
-        private static final long longValueOffset;
+    protected static final Unsafe UNSAFE;
 
-        static {
-            try {
-                OpenModuleAction.execute("jdk.internal.misc.Unsafe");
+    static {
+        try {
+            OpenModuleAction.execute("jdk.internal.misc.Unsafe");
 
-                unsafe = Unsafe.getUnsafe();
-                longValueOffset = unsafe.objectFieldOffset(Long.class.getDeclaredField("value"));
-            } catch (PrivilegedActionException e) {
-                if (e.getException() instanceof InvocationTargetException) {
-                    throw new SdkRuntimeException(((InvocationTargetException) e.getException()).getTargetException());
-                }
-                throw new SdkRuntimeException(e.getException());
-            } catch (NoSuchFieldException | RuntimeException | Error e) {
-                throw new SdkRuntimeException(e);
+            UNSAFE = Unsafe.getUnsafe();
+        } catch (PrivilegedActionException e) {
+            if (e.getException() instanceof InvocationTargetException) {
+                throw new SdkRuntimeException(((InvocationTargetException) e.getException()).getTargetException());
             }
+            throw new SdkRuntimeException(e.getException());
+        } catch (RuntimeException | Error e) {
+            throw new SdkRuntimeException(e);
         }
-    }
-
-    /**
-     * Get the instance of {@link Unsafe} class.
-     *
-     * @return Singleton instance of <code>Unsafe</code> class.
-     */
-    protected static Unsafe getUnsafe() {
-        return UnsafeHolder.unsafe;
-    }
-
-    /**
-     * Return the field offset for the "value" field of the <code>Long</code> class.
-     * Used by native call framework to retrieve native memory addresses of Java objects.
-     *
-     * @return Field offset of <code>Long#value</code>.
-     */
-    private static long getLongValueOffset() {
-        return UnsafeHolder.longValueOffset;
     }
 
     /**
@@ -64,7 +38,7 @@ public class Pointer extends AbstractPointer {
      * @throws OutOfMemoryError if the allocation is refused by the system.
      */
     public static Pointer malloc(long size) {
-        return new Pointer(getUnsafe().allocateMemory(size), new Long(size));
+        return new Pointer(UNSAFE.allocateMemory(size), new Long(size));
     }
 
     /**
@@ -137,12 +111,14 @@ public class Pointer extends AbstractPointer {
      * Return the native address of a given object.
      *
      * @param object Object whose native address to retrieve.
-     * @return Pointer to the native address of the given object.
+     * @return The native address of the given object
+     *   suitable for creating a {@link Pointer} instance.
      */
-    static Pointer addrOf(Object object) {
-        Long val = new Long(0);
-        getUnsafe().putObject(val, getLongValueOffset(), object);
-        return Pointer.valueOf(getUnsafe().getLong(val, getLongValueOffset()));
+    protected static long addrOf(Object object) {
+        Object[] val = new Object[] { object };
+        long result = UNSAFE.getLong(val, Unsafe.ARRAY_OBJECT_BASE_OFFSET);
+        val[0] = null;
+        return result;
     }
 
     /**
@@ -168,63 +144,199 @@ public class Pointer extends AbstractPointer {
 
     @Override
     protected byte read1impl(long offset) {
-        return getUnsafe().getByte(this.addr + offset);
+        return UNSAFE.getByte(this.addr + offset);
     }
 
     @Override
     protected short read2impl(long offset) {
-        return getUnsafe().getShort(this.addr + offset);
+        return UNSAFE.getShort(this.addr + offset);
     }
 
     @Override
     protected int read4impl(long offset) {
-        return getUnsafe().getInt(this.addr + offset);
+        return UNSAFE.getInt(this.addr + offset);
     }
 
     @Override
     protected long read8impl(long offset) {
-        return getUnsafe().getLong(this.addr + offset);
+        return UNSAFE.getLong(this.addr + offset);
+    }
+
+    @Override
+    public void read(long offset, byte[] value, int valueIndex, int count) {
+        readImpl(offset, value, valueIndex, count, Unsafe.ARRAY_BYTE_BASE_OFFSET, Unsafe.ARRAY_BYTE_INDEX_SCALE);
+    }
+
+    /**
+     * Read the given number of shorts at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to read the value into.
+     * @param valueIndex Starting index in the buffer where to place the read value.
+     * @param count Number of shorts to read.
+     * @throws IndexOutOfBoundsException If the buffer is not large enough to hold the value
+     *   of the specified size.
+     */
+    public void read(long offset, short[] value, int valueIndex, int count) {
+        readImpl(offset, value, valueIndex, count, Unsafe.ARRAY_SHORT_BASE_OFFSET, Unsafe.ARRAY_SHORT_INDEX_SCALE);
+    }
+
+    /**
+     * Read the given number of ints at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to read the value into.
+     * @param valueIndex Starting index in the buffer where to place the read value.
+     * @param count Number of ints to read.
+     * @throws IndexOutOfBoundsException If the buffer is not large enough to hold the value
+     *   of the specified size.
+     */
+    public void read(long offset, int[] value, int valueIndex, int count) {
+        readImpl(offset, value, valueIndex, count, Unsafe.ARRAY_INT_BASE_OFFSET, Unsafe.ARRAY_INT_INDEX_SCALE);
+    }
+
+    /**
+     * Read the given number of longs at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to read the value into.
+     * @param valueIndex Starting index in the buffer where to place the read value.
+     * @param count Number of longs to read.
+     * @throws IndexOutOfBoundsException If the buffer is not large enough to hold the value
+     *   of the specified size.
+     */
+    public void read(long offset, long[] value, int valueIndex, int count) {
+        readImpl(offset, value, valueIndex, count, Unsafe.ARRAY_LONG_BASE_OFFSET, Unsafe.ARRAY_LONG_INDEX_SCALE);
+    }
+
+    /**
+     * Read a number of arbitrary size elements from the pointer and write them to a Java heap array.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to read the value into. Must be a properly sized array of the same type as
+     *  the scale specified by <code>indexScale</code>
+     * @param valueIndex Starting index in the buffer where to place the read value.
+     * @param count Number of elements to read.
+     * @param baseOffset Base offset of data start in the Java heap array. Can be obtained from
+     *   {@link Unsafe#arrayBaseOffset(Class)}.
+     * @param indexScale Size of each element in the Java heap array. Can be obtained from
+     *   {@link Unsafe#arrayIndexScale(Class)}.
+     * @throws IndexOutOfBoundsException If the buffer is not large enough to hold the value
+     *   of the specified size.
+     */
+    protected void readImpl(long offset, Object value, int valueIndex, int count, int baseOffset, int indexScale) {
+        long readSize = ((long) count) * indexScale;
+        overflow(this, offset, readSize);
+
+        long writeAddr = addrOf(value) + baseOffset;
+        long writeStart = ((long) valueIndex) * indexScale;
+
+        UNSAFE.copyMemory(this.addr + offset, writeAddr + writeStart, readSize);
     }
 
     @Override
     protected void write1impl(long offset, byte value) {
-        getUnsafe().putByte(this.addr + offset, value);
+        UNSAFE.putByte(this.addr + offset, value);
     }
 
     @Override
     protected void write2impl(long offset, short value) {
-        getUnsafe().putShort(this.addr + offset, value);
+        UNSAFE.putShort(this.addr + offset, value);
     }
 
     @Override
     protected void write4impl(long offset, int value) {
-        getUnsafe().putInt(this.addr + offset, value);
+        UNSAFE.putInt(this.addr + offset, value);
     }
 
     @Override
     protected void write8impl(long offset, long value) {
-        getUnsafe().putLong(this.addr + offset, value);
+        UNSAFE.putLong(this.addr + offset, value);
+    }
+
+    @Override
+    public void write(long offset, byte[] value, int valueIndex, int count) {
+        writeImpl(offset, value, valueIndex, count, Unsafe.ARRAY_BYTE_BASE_OFFSET, Unsafe.ARRAY_BYTE_INDEX_SCALE);
     }
 
     /**
-     * Copies values in native memory associated with this pointer to a pointer specified by <code>dest</code>.
+     * Write the given number of shorts at the specified offset from the pointer.
      *
-     * @param dest Memory to copy the data to. The data will always be copied starting at offset 0 in <code>dest</code>.
-     * @param offset Offset in this memory to read the data from.
-     * @param size Size of data to copy.
-     * @throws IndexOutOfBoundsException If the read or the write beyond one of the two pointers' sizes occurs.
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to write.
+     * @param valueIndex Index in the buffer from which to start writing.
+     * @param count Number of shorts to write.
+     * @throws IndexOutOfBoundsException If the buffer or the native memory
+     *   are not large enough for the given values of <code>offset</code>,
+     *   <code>valueIndex</code> and <code>count</code>.
      */
-    public void copyTo(AbstractPointer dest, long offset, int size) {
-        byte[] data = new byte[size];
-        read(offset, data, 0, size);
-        dest.write(0, data, 0, size);
+    public void write(long offset, short[] value, int valueIndex, int count) {
+        writeImpl(offset, value, valueIndex, count, Unsafe.ARRAY_SHORT_BASE_OFFSET, Unsafe.ARRAY_SHORT_INDEX_SCALE);
+    }
+
+    /**
+     * Write the given number of ints at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to write.
+     * @param valueIndex Index in the buffer from which to start writing.
+     * @param count Number of ints to write.
+     * @throws IndexOutOfBoundsException If the buffer or the native memory
+     *   are not large enough for the given values of <code>offset</code>,
+     *   <code>valueIndex</code> and <code>count</code>.
+     */
+    public void write(long offset, int[] value, int valueIndex, int count) {
+        writeImpl(offset, value, valueIndex, count, Unsafe.ARRAY_INT_BASE_OFFSET, Unsafe.ARRAY_INT_INDEX_SCALE);
+    }
+
+    /**
+     * Write the given number of longs at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to write.
+     * @param valueIndex Index in the buffer from which to start writing.
+     * @param count Number of longs to write.
+     * @throws IndexOutOfBoundsException If the buffer or the native memory
+     *   are not large enough for the given values of <code>offset</code>,
+     *   <code>valueIndex</code> and <code>count</code>.
+     */
+    public void write(long offset, long[] value, int valueIndex, int count) {
+        writeImpl(offset, value, valueIndex, count, Unsafe.ARRAY_LONG_BASE_OFFSET, Unsafe.ARRAY_LONG_INDEX_SCALE);
+    }
+
+    /**
+     * Write a number of arbitrary size elements at the specified offset from the pointer.
+     *
+     * @param offset Offset in bytes relative to {@link #addr}.
+     * @param value Buffer to write.
+     * @param valueIndex Index in the buffer from which to start writing.
+     * @param count Number of elements to write.
+     * @param baseOffset Base offset of data start in the <code>value</code>. Can be obtained from
+     *   {@link Unsafe#arrayBaseOffset(Class)}.
+     * @param indexScale Size of each element in the <code>value</code>. Can be obtained from
+     *   {@link Unsafe#arrayIndexScale(Class)}.
+     * @throws IndexOutOfBoundsException If the buffer or the native memory
+     *   are not large enough for the given values of <code>offset</code>,
+     *   <code>valueIndex</code> and <code>count</code>.
+     */
+    protected void writeImpl(long offset, Object value, int valueIndex, int count, int baseOffset, int indexScale) {
+        long writeSize = ((long) count) * indexScale;
+        overflow(this, offset, writeSize);
+
+        long readAddr = addrOf(value) + baseOffset;
+        long readStart = ((long) valueIndex) * indexScale;
+
+        UNSAFE.copyMemory(readAddr + readStart,this.addr + offset, writeSize);
     }
 
     /**
      * Free the native memory associated with this pointer.
+     * After the call to this method, this pointer should not be used.
+     * Pointers not created using {@link #malloc(long)} or {@link #calloc(long)}
+     * should not be freed using this method.
      */
     public void free() {
-        getUnsafe().freeMemory(this.addr);
+        UNSAFE.freeMemory(this.addr);
         this.addr = 0;
         this.size = null;
     }

@@ -1,5 +1,8 @@
 package org.ps5jb.client.utils.process;
 
+import org.ps5jb.client.PayloadConstants;
+import org.ps5jb.loader.KernelReadWrite;
+import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.proc.Process;
@@ -14,7 +17,28 @@ public class ProcessUtils {
     private LibKernel libKernel;
 
     /**
-     * Constructor.
+     * Constructor taking only libKernel instance as the argument.
+     * The instance of this class should only be used by the same thread
+     * as the thread that is using the supplied LibKernel instance.
+     *
+     * @param libKernel Instance of LibKernel native library.
+     */
+    public ProcessUtils(LibKernel libKernel) {
+        if (KernelReadWrite.getAccessor() == null) {
+            throw new SdkRuntimeException("Kernel R/W is required to instantiate this class.");
+        }
+
+        this.libKernel = libKernel;
+        this.kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
+
+        int sw = libKernel.getSystemSoftwareVersion();
+        this.offsets = new KernelOffsets(sw);
+    }
+
+    /**
+     * Constructor taking existing instances of the required utility classes.
+     * The instance of this class should only be used by the same thread
+     * as the thread that is using the supplied LibKernel instance.
      *
      * @param libKernel An instance of LibKernel library.
      * @param kbaseAddress Base address of the kernel.
@@ -34,8 +58,19 @@ public class ProcessUtils {
     public org.ps5jb.sdk.include.sys.proc.Process getCurrentProcess() {
         int curPid = libKernel.getpid();
 
-        KernelPointer kdataAddress = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA);
-        KernelPointer allproc = kdataAddress.inc(offsets.OFFSET_KERNEL_DATA_BASE_ALLPROC);
+        KernelPointer allproc = KernelPointer.NULL;
+        if (KernelPointer.NULL.equals(kbaseAddress) || kbaseAddress == null) {
+            String allProcAddrStr = System.getProperty(PayloadConstants.ALLPROC_ADDRESS_PROPERTY);
+            if (allProcAddrStr != null) {
+                allproc = KernelPointer.valueOf(Long.parseLong(allProcAddrStr));
+            }
+        } else {
+            KernelPointer kdataAddress = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA);
+            allproc = kdataAddress.inc(offsets.OFFSET_KERNEL_DATA_BASE_ALLPROC);
+        }
+
+        KernelPointer.nonNull(allproc, "Kernel allproc address could not be determined");
+
         Process curProc = new Process(KernelPointer.valueOf(allproc.read8()));
         while (curProc != null) {
             int pid = libKernel.getpid();

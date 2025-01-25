@@ -32,7 +32,7 @@
         <loader.payload.root>jar-payloads</loader.payload.root>
 
         <!-- Do not use the same version as parent project for Xlet because it will be modified less frequently. We only want to burn new disc if Xlet changes -->
-        <xlet.version>2.2.0</xlet.version>
+        <xlet.version>3.0.0</xlet.version>
     </properties>
 
     <modules>
@@ -153,6 +153,10 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.0</version>
+                    <configuration>
+                        <!-- PS5 does not use compressed OOPs -->
+                        <argLine>-XX:-UseCompressedOops</argLine>
+                    </configuration>
                 </plugin>
 
                 <plugin>
