@@ -28,8 +28,11 @@
         <!-- Name of the Xlet class from "xlet" module that will be run by BD-J when the BD-R disk is played -->
         <xlet.className>org.ps5jb.loader.LoaderXlet</xlet.className>
 
+        <!-- Path relative to AVCHD directory on disc where the loader will scan for JARs -->
+        <loader.payload.root>jar-payloads</loader.payload.root>
+
         <!-- Do not use the same version as parent project for Xlet because it will be modified less frequently. We only want to burn new disc if Xlet changes -->
-        <xlet.version>2.1.0</xlet.version>
+        <xlet.version>2.2.0</xlet.version>
     </properties>
 
     <modules>

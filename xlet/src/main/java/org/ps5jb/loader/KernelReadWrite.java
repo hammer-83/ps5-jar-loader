@@ -77,7 +77,18 @@ public final class KernelReadWrite {
      * @return Instance of a kernel accessor or null.
      */
     public static synchronized KernelAccessor getAccessor() {
-        return KernelReadWrite.kernelAccessor;
+        return kernelAccessor;
+    }
+
+    /**
+     * Checks whether a serialized kernel accessor is available for payloads.
+     *
+     * @return True if kernel accessor is not currently active but
+     *   kernel access has been acquired by BD-J process and JAR payloads
+     *   will be able to use it.
+     */
+    public static synchronized boolean hasAccessorState() {
+        return kernelAccessorState != null;
     }
 
     /**

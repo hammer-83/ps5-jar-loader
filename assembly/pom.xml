@@ -13,6 +13,7 @@
 
     <groupId>org.ps5jb</groupId>
     <artifactId>assembly</artifactId>
+    <!-- Using token here gives a warning that can be ignored, at least until Maven stops supporting such configuration -->
     <version>${xlet.version}</version>
     <packaging>pom</packaging>
     <description>Builds the filesystem that can be burned onto a BD-R disc to be run on PS5.</description>
@@ -194,4 +195,60 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>xploitOnDisc</id>
+            <dependencies>
+                <!--
+                  Explicitly list all the xploit payloads that will be included on disc.
+                  This will make sure that the JAR is built before the assembly when compiling.
+                -->
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>byepervisor</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>ftpserver</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>kerneldump</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>dumpclasspath</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>listdirents</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>minitennis</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>printsysprops</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.umtx</groupId>
+                    <artifactId>umtx1</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.umtx</groupId>
+                    <artifactId>umtx2</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
