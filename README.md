@@ -38,7 +38,7 @@ The following properties in [xlet/pom.xml](xlet/pom.xml) can be adjusted before 
 * `loader.logger.host` - IP address where to echo the messages shown on screen. If blank, remote logging will not be used. This host can also receive binary data, see [RemoteLogger#sendBytes](xlet/src/main/java/org/ps5jb/loader/RemoteLogger.java).
 * `loader.logger.port` - Port on which remote logger will send the status messages.
 * `loader.logger.timeout` - Number of milliseconds to wait before abandoning attempts to connect to the remote logging host. If host is down after this timeout on the first send attempt, no further tries to do remote logging will be done.
-* `loader.payload.root` - It's possible to include JAR payloads into the disc assembly (see below). This configuraiton parameter specifies the path relative to the disc root where the payloads will be placed.
+* `loader.payload.root` - It's possible to include JAR payloads into the disc assembly (see below). This configuration parameter specifies the path relative to the disc root where the payloads will be placed.
 
 Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -Dloader.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
 
