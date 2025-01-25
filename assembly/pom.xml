@@ -13,6 +13,7 @@
 
     <groupId>org.ps5jb</groupId>
     <artifactId>assembly</artifactId>
+    <!-- Using token here gives a warning that can be ignored, at least until Maven stops supporting such configuration -->
     <version>${xlet.version}</version>
     <packaging>pom</packaging>
     <description>Builds the filesystem that can be burned onto a BD-R disc to be run on PS5.</description>
@@ -67,34 +68,6 @@
                         <phase>process-resources</phase>
                         <goals>
                             <goal>resources</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Copy payloads to disc root directory 'jar-payloads' -->
-            <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.build.directory}/classes/disc/AVCHD/jar-payloads" />
-                                <copy todir="${project.build.directory}/classes/disc/AVCHD/jar-payloads" flatten="true">
-                                    <fileset dir="${basedir}/../xploit">
-                                        <include name="**/target/*.jar"/>
-                                        <exclude name="**/*-api*.jar"/>
-                                        <exclude name="**/jar-*.jar"/>
-                                        <exclude name="**/stubs-*.jar"/>
-                                        <exclude name="**/xlet-*.jar"/>
-                                        <exclude name="**/umtx/common/**/*.jar"/>
-                                    </fileset>
-                                </copy>
-                            </target>
-                        </configuration>
-                        <goals>
-                            <goal>run</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -222,4 +195,60 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>xploitOnDisc</id>
+            <dependencies>
+                <!--
+                  Explicitly list all the xploit payloads that will be included on disc.
+                  This will make sure that the JAR is built before the assembly when compiling.
+                -->
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>byepervisor</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>ftpserver</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>kerneldump</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>dumpclasspath</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>listdirents</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>minitennis</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>printsysprops</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.umtx</groupId>
+                    <artifactId>umtx1</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.umtx</groupId>
+                    <artifactId>umtx2</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

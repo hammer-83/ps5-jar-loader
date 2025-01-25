@@ -1,7 +1,17 @@
 package org.ps5jb.loader;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Encapsulates the Xlet configuration.
@@ -92,5 +102,65 @@ public class Config {
      */
     public static int getLoaderResolutionHeight() {
         return Integer.parseInt(props.getProperty("loader.resolution.height", "1080"));
+    }
+
+    /**
+     * Get the absolute path to the directory on disc where the payloads will be searched
+     *
+     * @return Absolute path to the directory on disc with JARs included in the disc assembly
+     *   (possibly non-existent if no JARs were included).
+     */
+    public static File getLoaderPayloadPath() {
+        File discRoot;
+        try {
+            discRoot = getDiscRootPath();
+        } catch (IOException e) {
+            throw new RuntimeException("Payload root path could not be retrieved due to I/O error", e);
+        }
+        return new File(discRoot, props.getProperty("loader.payload.root", "jar-payloads"));
+    }
+
+    /**
+     * Returns the path to the root of Blu-ray disc directory.
+     *
+     * @return Path to the root of Blu-ray disc or null if the
+     *   path could not be determined.
+     * @throws IOException If path could not be determined due to U/O error.
+     * @throws RuntimeException If exception occurs that is due
+     *   to usage of reflection in the implementation of this method.
+     */
+    public static File getDiscRootPath() throws IOException {
+        ClassLoader cl = Config.class.getClassLoader();
+
+        try {
+            Field ucpField = cl.getClass().getDeclaredField("ucp");
+            ucpField.setAccessible(true);
+            Object ucp = ucpField.get(cl);
+
+            Field lmapField = ucp.getClass().getDeclaredField("lmap");
+            lmapField.setAccessible(true);
+            Map lmap = (Map) lmapField.get(ucp);
+
+            Set urlSet = lmap.keySet();
+            Iterator urlIter = urlSet.iterator();
+            while (urlIter.hasNext()) {
+                URL url = (URL) urlIter.next();
+                if (url.getProtocol().equals("file") && url.getPath().endsWith("00000.jar")) {
+                    File xletJarFile = new File(new URI(url.toString()));
+                    if (xletJarFile.isFile()) {
+                        File discDirectory = new File(xletJarFile.getParentFile(), "../..").getCanonicalFile();
+                        if (discDirectory.isDirectory() && discDirectory.getName().equals("disc")) {
+                            return discDirectory;
+                        }
+                    }
+                }
+            }
+        } catch (URISyntaxException e) {
+            throw new IOException(e.getMessage());
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
+        throw new FileNotFoundException("Disc root directory could not be detected");
     }
 }

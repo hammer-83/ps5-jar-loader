@@ -38,8 +38,9 @@ The following properties in [xlet/pom.xml](xlet/pom.xml) can be adjusted before 
 * `loader.logger.host` - IP address where to echo the messages shown on screen. If blank, remote logging will not be used. This host can also receive binary data, see [RemoteLogger#sendBytes](xlet/src/main/java/org/ps5jb/loader/RemoteLogger.java).
 * `loader.logger.port` - Port on which remote logger will send the status messages.
 * `loader.logger.timeout` - Number of milliseconds to wait before abandoning attempts to connect to the remote logging host. If host is down after this timeout on the first send attempt, no further tries to do remote logging will be done.
+* `loader.payload.root` - It's possible to include JAR payloads into the disc assembly (see below). This configuraiton parameter specifies the path relative to the disc root where the payloads will be placed.
 
-Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -loader.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
+Either modify the POM directly, or pass the new values from command line, example: `mvn clean package -Dloader.port=9025 -Dloader.logger.host=192.168.1.100`. To listen for messages on the remote machine when remote logger is activated, use `socat udp-recv:[remote.logger.port] stdout`.
 
 Even if the remote logger is not active by default in the Xlet burned on disc, it is possible to change the remote server configuration using one of the two approaches:
 1. Specify `xploit.logger.host` and optionally `xploit.logger.port` properties when compiling the JAR. These can be set in [xploit/pom.xml](xploit/pom.xml) or on command line `mvn clean package -Dxploit.logger.host=192.168.1.110`.
@@ -56,21 +57,22 @@ Even if the remote logger is not active by default in the Xlet burned on disc, i
 4. Execute `mvn clean package` from the root of the project. It should produce the following artifacts:
    * Directory `assembly/target/assembly-[version]` contains all the files that should be burned to a BD-R disc.
    * File `xploit/[payload]/target/[payload]-[version].jar` contains the code that can be sent repeatedly to the PS5 once the loader is deployed.
-5. Burn the BD-R (better yet BD-RE) with the contents from the directory mentioned in the step 4a. Note that re-burning the JAR loader disc is only necessary when the source of [xlet](xlet) or [assembly](assembly) modules is changed.
+   It's possible to include the generated payload JAR into the disc assembly for loading from the menu rather than remotely. To do so, activate the profile `xploitOnDisc` while compiling, e.g. `mvn clean package -P xploitOnDisc`.
+5. Burn the BD-R (better yet BD-RE) with the contents from the directory mentioned in the step 4a. Note that re-burning the JAR loader disc is only necessary when the source of [xlet](xlet) or [assembly](assembly) modules is changed or if the payload was included in the disc assembly in the previous step.
 6. Insert the disc into the PS5 and launch "PS5 JAR Loader" from Media / Disc Player.
-7. A message on screen should inform about loader waiting for JAR.
-8. Send the JAR using the command:
+7. A message on screen should inform about loader waiting for JAR or the menu will be displayed if payloads are found on disc.
+8. For remote execution, send the JAR using the command:
    ```shell
    java -jar xploit/target/xploit-[version].jar <ps5 ip address>`
    ```
    PS5 should inform on screen about the status of the upload and the execution.
-9. Once execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute step 8 to retry as many times as necessary.
+9. Once remote execution is complete, the loader will wait for a new JAR. Do the necessary modifications in `xploit` project, recompile using `mvn package` and re-execute step 8 to retry as many times as necessary.
 
 ## Notes
 1. To use with IntelliJ, point `File -> Open` dialog to the root of the project. Maven import will occur. Then follow manual steps in [IntelliJ Project Structure](#intellij-project-structure) to adjust the dependencies so that IntelliJ sees BD-J classes ahead of JDK classes.
 2. If any of POMs are modified, it's necessary to do `Maven -> Reload Project` in IntelliJ to sync the project files.
 3. To generate Javadocs, use `mvn verify` rather than `mvn package`. The Javadocs are enabled for [sdk](sdk), [xlet](xlet) and [xploit](xploit) modules and are generated in the `target/site/apidocs` directory of each module.
-4. To run unit tests, use `mvn test`. Though note that not many unit tests are currently present since a lot of functionality is PS5 dependent.
+4. To run unit tests, use `mvn test`. Tests are run automatically on each compilation as well. To skip them, add `-DskipTests` property on command line. Note that not many unit tests are currently present since a lot of functionality is PS5 dependent.
 5. If the `xploit` JAR does not have PS5 specific dependencies, it can be tested locally. The important part is to have `xlet`, `stubs` and `xploit` JARs all in the same folder. If the payload refers to GEM, BD-J or Java TV API, the corresponding JAR files generated in [lib](lib) directory should also be present in the same folder. Maven build automatically creates this arrangement in `target` directory of each payload so the command to run the payload on development machine is very similar to the one that sends the JAR to PS5:
    ```shell
    java -jar xploit/[payload]/target/[payload]-[version].jar
@@ -88,14 +90,15 @@ IntelliJ Maven project files are located in a private local folder of IntelliJ. 
 
 ## Credits
 There are so many who decided to share the knowledge with the community to make this project possible.
-- [Andy "theflow" Nguyen](https://github.com/theofficialflow) for discovering and sharing BD-J vulnerabilities without which none of the work in this repo would be possible.
+- [Andy "theflow" Nguyen](https://github.com/theofficialflow) for discovering and sharing BD-J vulnerabilities and native execution techniques without which none of the work in this repo would be possible.
 - Specter for his Webkit implementations of PS5 kernel access which served as a base for Java implementation: [IPV6](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit), [UMTX](https://github.com/PS5Dev/PS5-UMTX-Jailbreak/) and [Byepervisor](https://github.com/PS5Dev/Byepervisor).
 - [Flat_z](https://github.com/flatz) for pretty much everything of significance that happened in PlayStation scene since as far back as PS3, including the UMTX exploitation strategy contained in this repo.
 - [Cheburek3000](https://github.com/cheburek3000) for contributing an alternative implementation of UMTX exploitation. 
 - [bigboss](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically in BD-J area.
+- [iakdev](https://github.com/iakdev) for the contribution of the menu loader.
 - All the other contributors to Specter's Webkit implementations: [ChendoChap](https://github.com/ChendoChap), [Znullptr](https://twitter.com/Znullptr), [sleirsgoevy](https://twitter.com/sleirsgoevy), [zecoxao](https://twitter.com/notnotzecoxao), [SocracticBliss](https://twitter.com/SocraticBliss), SlidyBat, [idlesauce](https://github.com/idlesauce), [fail0verflow](https://fail0verflow.com/blog/) [kiwidog](https://kiwidog.me/), [EchoStretch](https://github.com/EchoStretch), [LM](https://github.com/LightningMods).
 - Testers of various firmware revisions: jamdoogen, CryoNumb, Twan322, MSZ_MGS, KingMaxLeo, RdSklld, Ishaan, Kirua, PLK, benja44_, MisaAmane, Unai G, Leo.
 
-Sample BD-J payloads in this repositories are adaptations of the following work:
+Sample BD-J payloads in this repository are adaptations of the following work:
 - FTP server by [pReya](https://github.com/pReya/ftpServer). 
 - Mini Tennis by [Edu4Java](http://www.edu4java.com/en/game/game0-en.html).

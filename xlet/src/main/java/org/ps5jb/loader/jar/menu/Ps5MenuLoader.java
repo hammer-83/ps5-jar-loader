@@ -3,8 +3,10 @@ package org.ps5jb.loader.jar.menu;
 import org.ps5jb.loader.Config;
 import org.ps5jb.loader.KernelReadWrite;
 
-import java.awt.*;
-import java.io.IOException;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 
 public class Ps5MenuLoader {
     private int selected = 1;
@@ -14,24 +16,20 @@ public class Ps5MenuLoader {
     private final Ps5MenuItem[] menuItems;
     private Ps5MenuItem[] submenuItems;
 
-    public Ps5MenuLoader(final Ps5MenuItem[] menuItems) throws IOException {
+    public Ps5MenuLoader(final Ps5MenuItem[] menuItems) {
         this.menuItems = menuItems;
     }
 
     public void renderMenu(final Graphics g) {
         final Graphics2D g2d = (Graphics2D) g;
 
-        try {
-            g2d.setColor(Color.BLACK);
-            g2d.fillRect(0, 0, Config.getLoaderResolutionWidth(), Config.getLoaderResolutionHeight());
-            renderIcons(g2d);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        g2d.setColor(Color.BLACK);
+        g2d.fillRect(0, 0, Config.getLoaderResolutionWidth(), Config.getLoaderResolutionHeight());
+        renderIcons(g2d);
     }
 
     // now it gets ugly
-    private void renderIcons(final Graphics2D g2d) throws IOException {
+    private void renderIcons(final Graphics2D g2d) {
         final int iconSpaceing = 200;
         int nextX = iconSpaceing;
         for (int i = 0; i < menuItems.length; i++) {
@@ -71,7 +69,7 @@ public class Ps5MenuLoader {
         g2d.setColor(new Color(64, 156, 217, 51));
         g2d.fillRoundRect(iconSpaceing - 10 + (selected-1)*(256+50), 100 - 10, 256 + 10 + 10, 256 + 10 + 10 + 30, 40, 40);
 
-        if (KernelReadWrite.getAccessor() != null) {
+        if (KernelReadWrite.getAccessor() != null || KernelReadWrite.hasAccessorState()) {
             g2d.setColor(Color.GREEN);
             g2d.setFont(new Font("Sans", Font.PLAIN, 16));
             g2d.drawString("Kernel R/W available!", 30, 30);
