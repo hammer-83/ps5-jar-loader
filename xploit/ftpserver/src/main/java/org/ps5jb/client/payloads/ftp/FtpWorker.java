@@ -34,8 +34,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -49,10 +47,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.ps5jb.loader.Status;
-import org.ps5jb.sdk.core.Library;
-import org.ps5jb.sdk.include.sys.FCntl;
 import org.ps5jb.sdk.include.sys.stat.FileStatusMode;
-import org.ps5jb.sdk.lib.LibKernel;
 
 /**
  * Class for an FTP server worker thread.
@@ -94,7 +89,6 @@ public class FtpWorker extends Thread {
     // Path information
     private String root;
     private String currDirectory;
-    private String fileSeparator = "/";
 
     // control connection
     private Socket controlSocket;
@@ -114,8 +108,6 @@ public class FtpWorker extends Thread {
     private String validUser = DEFAULT_USERNAME;
     private String validPassword = DEFAULT_PASSWORD;
     private FtpServer server;
-    private LibKernel libKernel;
-    private FCntl fcntl;
     private boolean useNativeCalls;
 
     private boolean quitCommandLoop = false;
@@ -129,25 +121,13 @@ public class FtpWorker extends Thread {
      * @param name Name of the worker thread.
      * @throws IOException If any I/O errors occur.
      */
-    public FtpWorker(FtpServer server, Socket client, int dataPort, String name) throws IOException {
+    public FtpWorker(FtpServer server, Socket client, int dataPort, String name, boolean useNativeCalls) throws IOException {
         super(name);
 
         this.server = server;
         this.controlSocket = client;
         this.dataPort = dataPort;
-
-        try {
-            Method getLibJavaHandleMethod = Library.class.getDeclaredMethod("getLibJavaHandle", new Class[0]);
-            getLibJavaHandleMethod.setAccessible(true);
-            int libJavaHandle = ((Integer) getLibJavaHandleMethod.invoke(null, new Object[0])).intValue();
-            this.libKernel = new LibKernel();
-            this.fcntl = new FCntl(libKernel);
-            this.useNativeCalls = true;
-            debugOutput("Using native calls from libjava @ 0x" + Integer.toHexString(libJavaHandle));
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | NoClassDefFoundError e) {
-            this.useNativeCalls = false;
-            debugOutput("Using Java file I/O");
-        }
+        this.useNativeCalls = useNativeCalls;
 
         File rootFile = createFile(System.getProperty("user.dir"));
         rootFile = rootFile.getCanonicalFile();
@@ -252,9 +232,6 @@ public class FtpWorker extends Thread {
                 Status.printStackTrace("Could not close the socket", e);
             }
             closeDataConnection();
-            if (libKernel != null) {
-                libKernel.closeLibrary();
-            }
             debugOutput("Worker stopped");
         }
     }

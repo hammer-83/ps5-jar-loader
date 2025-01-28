@@ -50,6 +50,8 @@ import org.ps5jb.sdk.core.OpenModuleAction;
 public class FtpServer extends SocketListener implements UserEventListener {
     private List workers;
 
+    private boolean useNativeCalls;
+
     private boolean isKeyConfirming;
 
     public FtpServer() throws IOException {
@@ -78,7 +80,7 @@ public class FtpServer extends SocketListener implements UserEventListener {
         int dataPort = serverSocket.getLocalPort() + workers.size() + 1;
 
         // Create new worker thread for new connection
-        FtpWorker w = new FtpWorker(this, clientSocket, dataPort, "FTPWorker " + (workers.size() + 1));
+        FtpWorker w = new FtpWorker(this, clientSocket, dataPort, "FTPWorker " + (workers.size() + 1), useNativeCalls);
 
         Status.println("New connection received from " + clientSocket.getInetAddress().getHostAddress());
 
@@ -99,11 +101,14 @@ public class FtpServer extends SocketListener implements UserEventListener {
 
         try {
             OpenModuleAction.execute(BDJ_FACTORY_CLASS_NAME);
+            useNativeCalls = true;
+            Status.println("Using native calls for file I/O");
         } catch (PrivilegedActionException e) {
             Status.println("Error while opening PS5-specific com.oracle.orbis.io package. " +
                     "Assuming this package does not exist in the current execution environment. " +
                     "Error: " + e.getException().getClass() + "; " +
                     "Message: " + e.getException().getMessage());
+            Status.println("Using Java file I/O");
             return;
         }
 

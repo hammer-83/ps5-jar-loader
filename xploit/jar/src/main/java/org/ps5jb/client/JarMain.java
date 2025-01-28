@@ -3,9 +3,6 @@ package org.ps5jb.client;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
@@ -182,32 +179,5 @@ public class JarMain {
         }
 
         JarUtils.sendJar(host, port, jarPath);
-    }
-
-    /**
-     * Disables warnings emitted by JDK about illegal access to unopened modules.
-     */
-    private static void disableIllegalAccessWarnings() {
-        // Disable warnings about illegal access
-        try {
-            Class unsafeClass = Class.forName("sun.misc.Unsafe");
-            Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
-            unsafeField.setAccessible(true);
-            Object unsafe = unsafeField.get(null);
-
-            Method putObjectVolatileMethod = unsafeClass.getDeclaredMethod("putObjectVolatile", new Class[] { Object.class, long.class, Object.class });
-            Method staticFieldOffsetMethod = unsafeClass.getDeclaredMethod("staticFieldOffset", new Class[] { Field.class });
-
-            Class loggerClass = Class.forName("jdk.internal.module.IllegalAccessLogger");
-            Field loggerField = loggerClass.getDeclaredField("logger");
-            Long offset = (Long) staticFieldOffsetMethod.invoke(unsafe, new Object[] { loggerField });
-            putObjectVolatileMethod.invoke(unsafe, new Object[] { loggerClass, offset, null });
-        } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException | NoSuchMethodException | InvocationTargetException e) {
-            // Ignore
-        }
-    }
-
-    static {
-        disableIllegalAccessWarnings();
     }
 }

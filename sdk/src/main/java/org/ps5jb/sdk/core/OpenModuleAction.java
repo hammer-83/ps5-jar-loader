@@ -1,5 +1,6 @@
 package org.ps5jb.sdk.core;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
@@ -58,5 +59,32 @@ public class OpenModuleAction implements PrivilegedExceptionAction {
      */
     public static void execute(String className) throws PrivilegedActionException {
         AccessController.doPrivileged(new OpenModuleAction(className));
+    }
+
+    /**
+     * Disables warnings emitted by JDK about illegal access to unopened modules.
+     */
+    private static void disableIllegalAccessWarnings() {
+        // Disable warnings about illegal access
+        try {
+            Class unsafeClass = Class.forName("sun.misc.Unsafe");
+            Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            Object unsafe = unsafeField.get(null);
+
+            Method putObjectVolatileMethod = unsafeClass.getDeclaredMethod("putObjectVolatile", new Class[] { Object.class, long.class, Object.class });
+            Method staticFieldOffsetMethod = unsafeClass.getDeclaredMethod("staticFieldOffset", new Class[] { Field.class });
+
+            Class loggerClass = Class.forName("jdk.internal.module.IllegalAccessLogger");
+            Field loggerField = loggerClass.getDeclaredField("logger");
+            Long offset = (Long) staticFieldOffsetMethod.invoke(unsafe, new Object[] { loggerField });
+            putObjectVolatileMethod.invoke(unsafe, new Object[] { loggerClass, offset, null });
+        } catch (ClassNotFoundException | IllegalAccessException | NoSuchFieldException | NoSuchMethodException | InvocationTargetException e) {
+            // Ignore
+        }
+    }
+
+    static {
+        disableIllegalAccessWarnings();
     }
 }
