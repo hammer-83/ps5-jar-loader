@@ -69,7 +69,7 @@ public class Ps5MenuLoader {
         g2d.setColor(new Color(64, 156, 217, 51));
         g2d.fillRoundRect(iconSpaceing - 10 + (selected-1)*(256+50), 100 - 10, 256 + 10 + 10, 256 + 10 + 10 + 30, 40, 40);
 
-        if (KernelReadWrite.getAccessor() != null || KernelReadWrite.hasAccessorState()) {
+        if (KernelReadWrite.hasAccessorState()) {
             g2d.setColor(Color.GREEN);
             g2d.setFont(new Font("Sans", Font.PLAIN, 16));
             g2d.drawString("Kernel R/W available!", 30, 30);

@@ -18,14 +18,34 @@ public class KernelPointer extends AbstractPointer {
     /** Flag which makes sure that range of kernel space is validated prior to accessing the memory. */
     private boolean rangeValidated = false;
 
+    /** Whether kernel accessor should be cached on first access, for the duration of this pointer instance. */
+    private volatile boolean cacheKernelAccessor = false;
+
+    /** Cached kernel accessor. Note that if this pointer deserialized then the cached accessor is not restored. */
+    private volatile KernelAccessor kernelAccessor = null;
+
     /**
-     * Returns a pointer instance equivalent to the given native memory address.
+     * Returns a kernel pointer instance with a cached kernel accessor
      *
      * @param addr Address to convert to a Pointer instance.
      * @return Pointer instance representing the given native memory address.
      */
     public static KernelPointer valueOf(long addr) {
-        return addr == 0 ? NULL : new KernelPointer(addr);
+        return valueOf(addr, true);
+    }
+
+    /**
+     * Returns a pointer instance equivalent to the given native memory address.
+     *
+     * @param addr Address to convert to a Pointer instance.
+     * @param cacheAccessor Whether to cache the kernel accessor instance active
+     *   at the time of this pointer creation. Doing so improves performance
+     *   but if the application changes to a different accessor implementation,
+     *   this pointer instance will not see this change.
+     * @return Pointer instance representing the given native memory address.
+     */
+    public static KernelPointer valueOf(long addr, boolean cacheAccessor) {
+        return addr == 0 ? NULL : new KernelPointer(addr, null, cacheAccessor);
     }
 
     /**
@@ -43,14 +63,30 @@ public class KernelPointer extends AbstractPointer {
     }
 
     /** Static constant for NULL pointer. */
-    public static final KernelPointer NULL = new KernelPointer(0);
+    public static final KernelPointer NULL = new KernelPointer(0, null, false);
 
     public KernelPointer(long addr) {
-        super(addr);
+        this(addr, null);
     }
 
     public KernelPointer(long addr, Long size) {
+        this(addr, size, true);
+    }
+
+    public KernelPointer(long addr, Long size, boolean cacheAccessor) {
         super(addr, size);
+        this.cacheKernelAccessor = cacheAccessor;
+    }
+
+    protected KernelAccessor getKernelAccessor() {
+        KernelAccessor result = kernelAccessor;
+        if (result == null) {
+            result = KernelReadWrite.getAccessor(getClass().getClassLoader());
+            if (cacheKernelAccessor) {
+                kernelAccessor = result;
+            }
+        }
+        return result;
     }
 
     /**
@@ -91,7 +127,7 @@ public class KernelPointer extends AbstractPointer {
     public void read(long offset, byte[] value, int valueIndex, int count) {
         checkRange();
 
-        KernelAccessor ka = KernelReadWrite.getAccessor();
+        KernelAccessor ka = getKernelAccessor();
         if (ka instanceof KernelAccessorIPv6) {
             // When using IPv6 based accessor, use a more efficient read method
             // rather that writing 8-bytes at a time.
@@ -130,7 +166,7 @@ public class KernelPointer extends AbstractPointer {
     public void write(long offset, byte[] value, int valueIndex, int count) {
         checkRange();
 
-        KernelAccessor ka = KernelReadWrite.getAccessor();
+        KernelAccessor ka = getKernelAccessor();
         if (ka instanceof KernelAccessorIPv6) {
             // When using IPv6 based accessor, use a more efficient write method
             // rather that writing 8-bytes at a time.
@@ -143,42 +179,42 @@ public class KernelPointer extends AbstractPointer {
 
     @Override
     protected byte read1impl(long offset) {
-        return KernelReadWrite.getAccessor().read1(this.addr + offset);
+        return getKernelAccessor().read1(this.addr + offset);
     }
 
     @Override
     protected short read2impl(long offset) {
-        return KernelReadWrite.getAccessor().read2(this.addr + offset);
+        return getKernelAccessor().read2(this.addr + offset);
     }
 
     @Override
     protected int read4impl(long offset) {
-        return KernelReadWrite.getAccessor().read4(this.addr + offset);
+        return getKernelAccessor().read4(this.addr + offset);
     }
 
     @Override
     protected long read8impl(long offset) {
-        return KernelReadWrite.getAccessor().read8(this.addr + offset);
+        return getKernelAccessor().read8(this.addr + offset);
     }
 
     @Override
     protected void write1impl(long offset, byte value) {
-        KernelReadWrite.getAccessor().write1(this.addr + offset, value);
+        getKernelAccessor().write1(this.addr + offset, value);
     }
 
     @Override
     protected void write2impl(long offset, short value) {
-        KernelReadWrite.getAccessor().write2(this.addr + offset, value);
+        getKernelAccessor().write2(this.addr + offset, value);
     }
 
     @Override
     protected void write4impl(long offset, int value) {
-        KernelReadWrite.getAccessor().write4(this.addr + offset, value);
+        getKernelAccessor().write4(this.addr + offset, value);
     }
 
     @Override
     protected void write8impl(long offset, long value) {
-        KernelReadWrite.getAccessor().write8(this.addr + offset, value);
+        getKernelAccessor().write8(this.addr + offset, value);
     }
 
     /**
@@ -186,10 +222,11 @@ public class KernelPointer extends AbstractPointer {
      *
      * @param delta Offset from the current address of this pointer.
      * @return New pointer instance whose size is unknown and whose address is the address of
-     *   this pointer shifted by <code>delta</code> bytes.
+     *   this pointer shifted by <code>delta</code> bytes. If this instance has a cached
+     *   kernel accessor then the new pointer instance will also have it cached.
      */
     public KernelPointer inc(long delta) {
         // Size is intentionally left unknown
-        return KernelPointer.valueOf(this.addr + delta);
+        return KernelPointer.valueOf(this.addr + delta, cacheKernelAccessor);
     }
 }

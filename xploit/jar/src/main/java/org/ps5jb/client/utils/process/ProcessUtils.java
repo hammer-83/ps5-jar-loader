@@ -1,11 +1,16 @@
 package org.ps5jb.client.utils.process;
 
 import org.ps5jb.client.PayloadConstants;
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.loader.KernelReadWrite;
+import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
+import org.ps5jb.sdk.include.sys.RtPrio;
 import org.ps5jb.sdk.include.sys.proc.Process;
+import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
+import org.ps5jb.sdk.include.sys.rtprio.SchedulingClass;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
@@ -24,12 +29,13 @@ public class ProcessUtils {
      * @param libKernel Instance of LibKernel native library.
      */
     public ProcessUtils(LibKernel libKernel) {
-        if (KernelReadWrite.getAccessor() == null) {
+        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
+        if (kernelAccessor == null) {
             throw new SdkRuntimeException("Kernel R/W is required to instantiate this class.");
         }
 
         this.libKernel = libKernel;
-        this.kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
+        this.kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
 
         int sw = libKernel.getSystemSoftwareVersion();
         this.offsets = new KernelOffsets(sw);
@@ -157,5 +163,25 @@ public class ProcessUtils {
         ucredAddr.write1(0x83, (byte) privs[3]);  // cr_sceAttr[0]
 
         return prevValue;
+    }
+
+    /**
+     * This method can be used to set the priority of Java thread and of the
+     * corresponding native thread.
+     *
+     * @param javaPriority Priority to set for the java thread. See {@link Thread#setPriority(int)}.
+     *   If null, Java thread priority will not be touched.
+     * @param rtPrioValue Priority of the native thread. See {@link RtPrio#setRtPrio(int, RtPrioType)}.
+     * @throws SdkException If native priority value is not null and native call failed.
+     */
+    public void setCurrentThreadPriority(Integer javaPriority, Short rtPrioValue) throws SdkException {
+        if (javaPriority != null) {
+            Thread.currentThread().setPriority(javaPriority.intValue());
+        }
+
+        if (rtPrioValue != null) {
+            RtPrio rtPrio = new RtPrio(libKernel);
+            rtPrio.setRtPrio(0, new RtPrioType(SchedulingClass.RTP_PRIO_REALTIME, rtPrioValue.shortValue()));
+        }
     }
 }

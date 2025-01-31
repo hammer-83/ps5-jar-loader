@@ -34,7 +34,8 @@ public class Socket {
     }
 
     public void setSocketOptionsIPv6(int socket, OptionIPv6 optionName, Pointer optionValue) throws SdkException {
-        int ret = libKernel.setsockopt(socket, ProtocolType.IPPROTO_IPV6.value(), optionName.value(), optionValue, optionValue.size());
+        long optSize = optionValue.size().longValue();
+        int ret = libKernel.setsockopt(socket, ProtocolType.IPPROTO_IPV6.value(), optionName.value(), optionValue, optSize);
         if (ret == -1) {
             throw errNo.getLastException(getClass(), "setSocketOptionsIPv6");
         }

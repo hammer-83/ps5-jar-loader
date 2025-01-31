@@ -102,6 +102,15 @@ class CallContext {
     private Pointer callBuffer;
     /** Shadow Java heap buffer that is used to populate the {@link #callBuffer} data. */
     private long[] callBufferData;
+    /**
+     * Whether to use data view pointers and if so to what extent. Data view pointers
+     * significantly accelerates the native calls at the possible expense of stability.
+     * Levels:
+     * 0 - don't use data view
+     * 1 - create data view in local function scope, don't pass it across method boundary to minimize GC risk.
+     * 2 - cache data view in call context which further minimizes overhead but may be subject to invalid memory access by GC.
+     */
+    private int dataViewUsageLevel = 0;
 
     private static final int fakeClassOff = 0;
     private static final int fakeKlassOff = fakeClassOff + 0x100;
@@ -151,41 +160,71 @@ class CallContext {
     }
 
     private void buildCallContext(long rip, long rdi, long rsi, long rdx, long rcx, long r8, long r9) {
-        long rbx = callBufferData[(fakeKlassOff + 0x08) / 8];
-        long rsp = callBufferData[(fakeKlassOff + 0x10) / 8];
-        long rbp = callBufferData[(fakeKlassOff + 0x18) / 8];
-        long r12 = callBufferData[(fakeKlassOff + 0x20) / 8];
-        long r13 = callBufferData[(fakeKlassOff + 0x28) / 8];
-        long r14 = callBufferData[(fakeKlassOff + 0x30) / 8];
-        long r15 = callBufferData[(fakeKlassOff + 0x38) / 8];
+        long[] localCallBuffer;
+        if (this.dataViewUsageLevel != 1) {
+            localCallBuffer = this.callBufferData;
+        } else {
+            localCallBuffer = ((LongViewPointer) this.callBuffer).dataView();
+        }
 
-        callBufferData[(fakeKlassOff + 0x48) / 8] = rdi;
-        callBufferData[(fakeKlassOff + 0x50) / 8] = rsi;
-        callBufferData[(fakeKlassOff + 0x58) / 8] = rdx;
-        callBufferData[(fakeKlassOff + 0x60) / 8] = rcx;
-        callBufferData[(fakeKlassOff + 0x68) / 8] = r8;
-        callBufferData[(fakeKlassOff + 0x70) / 8] = r9;
-        callBufferData[(fakeKlassOff + 0x80) / 8] = rbx;
-        callBufferData[(fakeKlassOff + 0x88) / 8] = rbp;
-        callBufferData[(fakeKlassOff + 0xA0) / 8] = r12;
-        callBufferData[(fakeKlassOff + 0xA8) / 8] = r13;
-        callBufferData[(fakeKlassOff + 0xB0) / 8] = r14;
-        callBufferData[(fakeKlassOff + 0xB8) / 8] = r15;
-        callBufferData[(fakeKlassOff + 0xE0) / 8] = rip;
-        callBufferData[(fakeKlassOff + 0xF8) / 8] = rsp;
+        long rbx = localCallBuffer[(fakeKlassOff + 0x08) / 8];
+        long rsp = localCallBuffer[(fakeKlassOff + 0x10) / 8];
+        long rbp = localCallBuffer[(fakeKlassOff + 0x18) / 8];
+        long r12 = localCallBuffer[(fakeKlassOff + 0x20) / 8];
+        long r13 = localCallBuffer[(fakeKlassOff + 0x28) / 8];
+        long r14 = localCallBuffer[(fakeKlassOff + 0x30) / 8];
+        long r15 = localCallBuffer[(fakeKlassOff + 0x38) / 8];
+
+        localCallBuffer[(fakeKlassOff + 0x48) / 8] = rdi;
+        localCallBuffer[(fakeKlassOff + 0x50) / 8] = rsi;
+        localCallBuffer[(fakeKlassOff + 0x58) / 8] = rdx;
+        localCallBuffer[(fakeKlassOff + 0x60) / 8] = rcx;
+        localCallBuffer[(fakeKlassOff + 0x68) / 8] = r8;
+        localCallBuffer[(fakeKlassOff + 0x70) / 8] = r9;
+        localCallBuffer[(fakeKlassOff + 0x80) / 8] = rbx;
+        localCallBuffer[(fakeKlassOff + 0x88) / 8] = rbp;
+        localCallBuffer[(fakeKlassOff + 0xA0) / 8] = r12;
+        localCallBuffer[(fakeKlassOff + 0xA8) / 8] = r13;
+        localCallBuffer[(fakeKlassOff + 0xB0) / 8] = r14;
+        localCallBuffer[(fakeKlassOff + 0xB8) / 8] = r15;
+        localCallBuffer[(fakeKlassOff + 0xE0) / 8] = rip;
+        localCallBuffer[(fakeKlassOff + 0xF8) / 8] = rsp;
+
+        // Remove any references to call buffer to prevent GC from considering it.
+        localCallBuffer = null;
     }
 
     /**
      * Call "multiNewArray" hokked method to jump into a native call.
      *
      * @param rip Address to jump into.
+     * @param lastInvoke Is this call the last invocation in the chain?
      * @return Return value from the native call execution.
      */
-    private long invokeMultiNewArrayHook(long rip) {
-        callBufferData[fakeKlassOff / 8] = callBuffer.addr() + fakeKlassVTableOff;
-        callBufferData[(fakeKlassVTableOff + 0x158) / 8] = rip;
+    private long invokeMultiNewArrayHook(long rip, boolean lastInvoke) {
+        long[] localCallBuffer;
+        if (this.dataViewUsageLevel != 1) {
+            localCallBuffer = this.callBufferData;
+        } else {
+            localCallBuffer = ((LongViewPointer) this.callBuffer).dataView();
+        }
+        localCallBuffer[fakeKlassOff / 8] = callBuffer.addr() + fakeKlassVTableOff;
+        localCallBuffer[(fakeKlassVTableOff + 0x158) / 8] = rip;
 
-        return this.multiNewArray(callBuffer.addr() + fakeClassOopOff, this.dimensions);
+        if (dataViewUsageLevel == 0) {
+            callBuffer.write(0, localCallBuffer, 0, localCallBuffer.length);
+        }
+
+        // Remove any references to call buffer to prevent GC from considering it.
+        localCallBuffer = null;
+
+        long ret = this.multiNewArray(callBuffer.addr() + fakeClassOopOff, this.dimensions);
+
+        if (!lastInvoke && dataViewUsageLevel == 0) {
+            callBuffer.read(0, this.callBufferData, 0, this.callBufferData.length);
+        }
+
+        return ret;
     }
 
     /**
@@ -210,22 +249,42 @@ class CallContext {
         this.executing = true;
 
         // On the first call, initialize internal structures
+        long[] localCallBuffer;
         if (this.callBuffer == null) {
             final int callBufferSize = 0x800;
-            LongViewPointer longViewCallBuffer = new LongViewPointer(callBufferSize / 8);
-            this.callBuffer = longViewCallBuffer;
+            if (dataViewUsageLevel != 0) {
+                LongViewPointer longViewCallBuffer = new LongViewPointer(callBufferSize / 8);
+                this.callBuffer = longViewCallBuffer;
+                localCallBuffer = longViewCallBuffer.dataView();
+                if (dataViewUsageLevel != 1) {
+                    this.callBufferData = localCallBuffer;
+                }
+            } else {
+                this.callBuffer = Pointer.malloc(callBufferSize);
+                localCallBuffer = new long[callBufferSize / 8];
+                this.callBufferData = localCallBuffer;
+            }
 
-            this.callBufferData = longViewCallBuffer.dataView();
-            this.callBufferData[fakeClassOopOff / 8] = this.callBuffer.addr();
-            this.callBufferData[(fakeClassOff + 0x98) / 8] = this.callBuffer.addr() + fakeKlassOff;
-            this.callBufferData[(fakeKlassVTableOff + 0xD8) / 8] = rtld_JVM_NativePath;
+            localCallBuffer[fakeClassOopOff / 8] = this.callBuffer.addr();
+            localCallBuffer[(fakeClassOff + 0x98) / 8] = this.callBuffer.addr() + fakeKlassOff;
+            localCallBuffer[(fakeKlassVTableOff + 0xD8) / 8] = rtld_JVM_NativePath;
 
             this.dimensions = new int[] { 1 };
+        } else {
+            if (this.dataViewUsageLevel != 1) {
+                localCallBuffer = this.callBufferData;
+            } else {
+                localCallBuffer = ((LongViewPointer) this.callBuffer).dataView();
+            }
         }
 
         try {
-            this.callBufferData[(fakeKlassOff + 0xC0) / 8] = 0;
-            this.invokeMultiNewArrayHook(libkernel_sigsetjmp + 0x23);
+            localCallBuffer[(fakeKlassOff + 0xC0) / 8] = 0;
+
+            // Remove any references to call buffer to prevent GC from considering it.
+            localCallBuffer = null;
+
+            this.invokeMultiNewArrayHook(libkernel_sigsetjmp + 0x23, false);
 
             this.buildCallContext(function.addr(),
                     args.length > 0 ? args[0] : 0,
@@ -234,7 +293,7 @@ class CallContext {
                     args.length > 3 ? args[3] : 0,
                     args.length > 4 ? args[4] : 0,
                     args.length > 5 ? args[5] : 0);
-            long ret = this.invokeMultiNewArrayHook(libkernel___Ux86_64_setcontext + 0x39);
+            long ret = this.invokeMultiNewArrayHook(libkernel___Ux86_64_setcontext + 0x39, true);
 
             if (ret != 0) {
                 ret = Pointer.valueOf(ret).read8();

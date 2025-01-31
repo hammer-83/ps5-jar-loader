@@ -32,16 +32,10 @@ public class RemoteJarLoader extends SocketListener implements JarLoader {
      * Called when a client connection sending a JAR file is accepted.
      *
      * @param clientSocket Client socket.
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
+     * @throws Exception Exception that occurred during JAR execution.
      */
     @Override
-    protected void acceptClient(Socket clientSocket) throws IOException, ClassNotFoundException,
-            NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-
+    protected void acceptClient(Socket clientSocket) throws Exception {
         InputStream jarStream = clientSocket.getInputStream();
         try {
             // Generate a unique JAR filename in the temporary directory.
@@ -68,26 +62,11 @@ public class RemoteJarLoader extends SocketListener implements JarLoader {
                      jarOut.close();
                 }
                 Status.println("Received " + totalSize + " bytes...Done", true);
-                Status.println("Reading JAR Manifest...");
 
-                this.loadJar(jarPath);
-            } finally {
-                // Delete the file containing the temporary JAR
-                if (!jarFile.delete()) {
-                    // Assume temp path changed by JAR. Try the new temp path
-                    boolean displaced = false;
-                    String tempPath = System.getProperty("java.io.tmpdir");
-                    if (jarFile.getAbsolutePath().indexOf(tempPath) != 0) {
-                        jarFile = new File(tempPath, jarFile.getName());
-                        if (jarFile.delete()) {
-                            displaced = true;
-                        }
-                    }
-
-                    if (!displaced) {
-                        Status.println("Failed to delete the temporary JAR");
-                    }
-                }
+                this.loadJar(jarFile, true);
+            } catch (IOException | RuntimeException | Error e) {
+                deleteTempJar(jarFile);
+                throw e;
             }
         } finally {
             jarStream.close();

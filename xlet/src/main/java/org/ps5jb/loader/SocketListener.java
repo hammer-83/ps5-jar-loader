@@ -108,7 +108,7 @@ public abstract class SocketListener implements Runnable {
      * closes the socket.
      *
      * @param clientSocket Socket to dispose.
-     * @throws Exception  Any exception thrown by the implementation.
+     * @throws Exception Any exception thrown by the implementation.
      */
     protected void disposeClient(Socket clientSocket) throws Exception {
         try {

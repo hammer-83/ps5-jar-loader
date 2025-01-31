@@ -1,6 +1,7 @@
 package org.ps5jb.client.payloads;
 
 import org.ps5jb.client.utils.process.ProcessUtils;
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
@@ -26,7 +27,8 @@ public class Byepervisor implements Runnable {
     @Override
     public void run() {
         // Don't continue if there is no kernel r/w
-        if (KernelReadWrite.getAccessor() == null) {
+        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
+        if (kernelAccessor == null) {
             Status.println("Unable to execute Byepervisor without kernel read/write capabilities");
             return;
         }
@@ -43,7 +45,7 @@ public class Byepervisor implements Runnable {
             }
 
             // KASLR defeated?
-            kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
+            kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
             if (KernelPointer.NULL.equals(kbaseAddress)) {
                 Status.println("Kernel base address has not been determined. Aborting.");
                 return;

@@ -49,7 +49,7 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                     if (!waiting) {
                         if (discPayloadPath != null) {
                             try {
-                                loadJar(discPayloadPath);
+                                loadJar(discPayloadPath, false);
                             } catch (Throwable ex) {
                                 // JAR execution didn't work, notify and wait to return to the menu
                                 Status.printStackTrace("Could not load JAR from disc", ex);

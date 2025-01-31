@@ -70,10 +70,12 @@ public class JarMain {
      * @throws Exception Any exception during JAR execution is rethrown.
      */
     protected void execute() throws Exception {
+        ClassLoader classLoader = getClass().getClassLoader();
+
         // Search manifests on the classpath
         boolean foundManifest = false;
         boolean foundPayload = false;
-        Enumeration manifests = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF");
+        Enumeration manifests = classLoader.getResources("META-INF/MANIFEST.MF");
         while (manifests.hasMoreElements() && !foundManifest) {
             URL manifestUrl = (URL) manifests.nextElement();
             Status.println("Searching manifest for payload: " + manifestUrl);
@@ -104,7 +106,7 @@ public class JarMain {
                             Status.println("Executing payload: " + payloadName);
 
                             // Activate Kernel accessor, if any
-                            if (!KernelReadWrite.restoreAccessor(getClass().getClassLoader())) {
+                            if (!KernelReadWrite.restoreAccessor(classLoader)) {
                                 Status.println("Kernel R/W not available");
                             } else {
                                 Status.println("Kernel R/W restored");
@@ -138,7 +140,7 @@ public class JarMain {
                         } catch (ClassCastException e) {
                             Status.printStackTrace("Unable to execute the payload. Make sure it implements the " + Runnable.class.getName() + " interface", e);
                         } finally {
-                            if (KernelReadWrite.getAccessor() != null && KernelReadWrite.saveAccessor()) {
+                            if (KernelReadWrite.getAccessor(classLoader) != null && KernelReadWrite.saveAccessor(classLoader)) {
                                 Status.println("Kernel R/W is active and is saved for future payloads");
                             }
 

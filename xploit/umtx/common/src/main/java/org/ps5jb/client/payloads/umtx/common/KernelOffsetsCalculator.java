@@ -63,14 +63,14 @@ public class KernelOffsetsCalculator {
         // Note, there is also a way of doing it from the cookie
         final Long potentialThreadAddress = classifier.getMostOccuredHeapAddress(DEFAULT_KERNEL_THREAD_POINTER_OCCURRENCE_THRESHOLD);
         if (potentialThreadAddress != null) {
-            final KernelPointer threadAddressPtr = KernelPointer.valueOf(potentialThreadAddress.longValue());
+            final KernelPointer threadAddressPtr = KernelPointer.valueOf(potentialThreadAddress.longValue(), false);
             final String threadNameCheck = threadAddressPtr.readString(OFFSET_THREAD_TD_NAME, new Integer(MAX_RECLAIM_THREAD_NAME - 1), Charset.defaultCharset().name());
             if (threadNameCheck.equals(reclaimThreadName)) {
                 threadAddress = threadAddressPtr;
-                processAddress = KernelPointer.valueOf(threadAddress.read8(OFFSET_THREAD_TD_PROC));
+                processAddress = KernelPointer.valueOf(threadAddress.read8(OFFSET_THREAD_TD_PROC), false);
 
-                final KernelPointer p_fd = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_FD));
-                processOpenFilesAddress = KernelPointer.valueOf(p_fd.read8() + OFFSET_FDESCENTTBL_FDT_OFILES);
+                final KernelPointer p_fd = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_FD), false);
+                processOpenFilesAddress = KernelPointer.valueOf(p_fd.read8() + OFFSET_FDESCENTTBL_FDT_OFILES, false);
 
                 allProcAddress = calculateAllProcAddress(processAddress);
 
@@ -102,7 +102,7 @@ public class KernelOffsetsCalculator {
 
         while (!KernelPointer.NULL.equals(allproc) && ((allproc.addr() & KDATA_MASK) != KDATA_MASK)) {
             try {
-                allproc = KernelPointer.valueOf(allproc.read8(0x8)); // proc->p_list->le_prev
+                allproc = KernelPointer.valueOf(allproc.read8(0x8), false); // proc->p_list->le_prev
             } catch (IllegalAccessError e) {
                 // Ignore
                 allproc = KernelPointer.NULL;

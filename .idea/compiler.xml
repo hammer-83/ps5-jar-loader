@@ -12,6 +12,7 @@
         <module name="bdjo" />
         <module name="index" />
         <module name="minitennis" />
+        <module name="klogserver" />
         <module name="ftpserver" />
         <module name="stubs" />
         <module name="dumpclasspath" />
@@ -21,6 +22,7 @@
         <module name="printsysprops" />
         <module name="umtx2" />
         <module name="common" />
+        <module name="jailbreak" />
         <module name="jar" />
         <module name="xlet" />
         <module name="id" />
@@ -39,12 +41,13 @@
       <module name="grin" options="" />
       <module name="id" options="" />
       <module name="index" options="" />
+      <module name="jailbreak" options="--patch-module java.base=$PROJECT_DIR$/xploit/jailbreak/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/jailbreak/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/jailbreak/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="jar" options="--patch-module java.base=$PROJECT_DIR$/xploit/jar/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/jar/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/jar/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="kerneldump" options="--patch-module java.base=$PROJECT_DIR$/xploit/kerneldump/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/kerneldump/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/kerneldump/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
+      <module name="klogserver" options="--patch-module java.base=$PROJECT_DIR$/xploit/klogserver/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/klogserver/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/klogserver/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED --add-exports jdk.unsupported/sun.misc=ALL-UNNAMED" />
       <module name="listdirents" options="--patch-module java.base=$PROJECT_DIR$/xploit/samples/listdirents/../../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/samples/listdirents/../../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/samples/listdirents/../../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="minitennis" options="--patch-module java.base=$PROJECT_DIR$/xploit/samples/minitennis/../../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/samples/minitennis/../../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/samples/minitennis/../../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="movieobject" options="" />
-      <module name="pmap" options="--patch-module java.base=$PROJECT_DIR$/xploit/pmap/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/pmap/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/pmap/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="printsysprops" options="--patch-module java.base=$PROJECT_DIR$/xploit/samples/printsysprops/../../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/samples/printsysprops/../../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/samples/printsysprops/../../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="samples" options="" />
       <module name="sdk" options="--patch-module java.base=$PROJECT_DIR$/sdk/../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/sdk/../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/sdk/../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.misc=ALL-UNNAMED" />

@@ -39,7 +39,7 @@ public class CommandProcessor {
             }
             long len = this.len.get();
             if (Pointer.NULL.equals(pipeScratchBuf)) {
-                KernelAccessorSlow ka = (KernelAccessorSlow) KernelReadWrite.getAccessor();
+                KernelAccessorSlow ka = (KernelAccessorSlow) KernelReadWrite.getAccessor(getClass().getClassLoader());
                 pipeReadFd = ka.pipeReadFd;
                 pipeWriteFd = ka.pipeWriteFd;
                 pipeScratchBuf = ka.pipeScratchBuf;

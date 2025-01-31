@@ -7,14 +7,23 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Class managing capability of SDK to read/write the kernel memory.
  */
 public final class KernelReadWrite {
-    private static KernelAccessor kernelAccessor;
+    private static final Map kernelAccessorsPerClassLoader = new HashMap();
 
-    /** Kernel accessor state, serialized by calling {@link #saveAccessor()} */
+    /**
+     * Kernel accessor state, serialized by calling {@link #saveAccessor(ClassLoader)}.
+     * Only one copy is kept at a time even though multiple accessors may be defined
+     * by parallel class loaders. This only works because it is assumed that all
+     * classloaders use a compatible accessor instance
+     * (i.e. they can all deserialize the same accessor correctly).
+     */
     private static byte[] kernelAccessorState;
 
     /** Custom object input stream which can use a specific class loader to find the class */
@@ -62,22 +71,58 @@ public final class KernelReadWrite {
 
     /**
      * Register a global instance of a kernel accessor, responsible for
-     * reading and writing kernel memory.
+     * reading and writing kernel memory. The global instances are tracked
+     * per classloader of the accessor instance.
      *
      * @param kernelAccessor New accessor instance.
+     * @throws NullPointerException If the given accessor instance is null.
      */
     public static synchronized void setAccessor(KernelAccessor kernelAccessor) {
-        KernelReadWrite.kernelAccessor = kernelAccessor;
+        if (kernelAccessor == null) {
+            throw new NullPointerException("Accessor instance may not be null");
+        }
+
+        kernelAccessorsPerClassLoader.put(kernelAccessor.getClass().getClassLoader(), kernelAccessor);
     }
 
     /**
-     * Retrieve a global instance of a kernel accessor. May be null
-     * if none are installed.
+     * Unregisters a global instance of a kernel accessor for a given classloader.
      *
-     * @return Instance of a kernel accessor or null.
+     * @param classLoader Classloader whose accessor to remove.
      */
+    public static synchronized void removeAccessor(ClassLoader classLoader) {
+        kernelAccessorsPerClassLoader.remove(classLoader);
+    }
+
+    /**
+     * Retrieves the first available kernel accessor instance.
+     *
+     * @return Instance of a kernel accessor if one is registered or null.
+     * @deprecated This method only works if there is not more than one
+     *   JAR loaded in parallel. When there are background JARs running,
+     *   use {@link #getAccessor(ClassLoader)} instead, passing the
+     *   classloader instance that was used to load the JAR file.
+     */
+    @Deprecated
     public static synchronized KernelAccessor getAccessor() {
-        return kernelAccessor;
+        Iterator valIter = kernelAccessorsPerClassLoader.values().iterator();
+        KernelAccessor result = null;
+        if (valIter.hasNext()) {
+            result = (KernelAccessor) valIter.next();
+        }
+        return result;
+    }
+
+    /**
+     * Retrieves the kernel accessor for a given class loader. Most often,
+     * the caller of this method can use <code>getClass().getClassLoader()</code>
+     * to specify the parameter value.
+     *
+     * @param classLoader Class loader used to load the JAR.
+     * @return Instance of a kernel accessor if one is registered or null.
+     */
+    public static synchronized KernelAccessor getAccessor(ClassLoader classLoader) {
+        return (KernelAccessor) kernelAccessorsPerClassLoader.get(classLoader);
     }
 
     /**
@@ -92,13 +137,20 @@ public final class KernelReadWrite {
     }
 
     /**
-     * Saves the current state of a global kernel accessor instance internally and
-     * sets it to <code>null</code>.
+     * Saves the current state of the kernel accessor associated with the
+     * given classloader. If there is already an existing accessor state
+     * replaces it with the new value.
      *
-     * @return True if state was successfully saved.
+     * @param classLoader ClassLoader for which to save the accessor.
+     * @return True there is a saved accessor state available at the end of the execution.
      */
-    public static synchronized boolean saveAccessor() {
+    public static synchronized boolean saveAccessor(ClassLoader classLoader) {
+        KernelAccessor kernelAccessor = getAccessor(classLoader);
         if (kernelAccessor != null) {
+            // Remove accessor from the map
+            kernelAccessorsPerClassLoader.remove(classLoader);
+
+            // Save the serialized state
             try {
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 try {
@@ -120,13 +172,7 @@ public final class KernelReadWrite {
             kernelAccessorState = null;
         }
 
-        // If error occurred on close, state is correctly serialized so consider it a success.
-        boolean result = kernelAccessorState != null || kernelAccessor == null;
-        if (kernelAccessorState != null) {
-            kernelAccessor = null;
-        }
-
-        return result;
+        return kernelAccessorState != null;
     }
 
     /**
@@ -137,6 +183,8 @@ public final class KernelReadWrite {
      *   accessor or if it could not be activated.
      */
     public static synchronized boolean restoreAccessor(ClassLoader classLoader) {
+        KernelAccessor kernelAccessor = null;
+
         if (kernelAccessorState != null) {
             try {
                 ByteArrayInputStream inBytes = new ByteArrayInputStream(kernelAccessorState);
@@ -150,16 +198,12 @@ public final class KernelReadWrite {
                 } finally {
                     inBytes.close();
                 }
+                setAccessor(kernelAccessor);
             } catch (ClassNotFoundException | IOException | RuntimeException | Error e) {
                 Status.printStackTrace("Exception occurred while restoring the kernel accessor", e);
             }
         }
 
-        boolean result = kernelAccessor != null;
-        if (result) {
-            kernelAccessorState = null;
-        }
-
-        return result;
+        return kernelAccessor != null;
     }
 }

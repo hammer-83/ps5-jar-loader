@@ -52,7 +52,7 @@ public class FtpServer extends SocketListener implements UserEventListener {
 
     private boolean useNativeCalls;
 
-    private boolean isKeyConfirming;
+    private int exitConfirmCount;
 
     public FtpServer() throws IOException {
         super("FTP Server", 9225);
@@ -165,22 +165,24 @@ public class FtpServer extends SocketListener implements UserEventListener {
             if (userEvent.getType() == HRcEvent.KEY_RELEASED) {
                 switch (userEvent.getCode()) {
                     case HRcEvent.VK_COLORED_KEY_0:
-                        if (!isKeyConfirming) {
-                            Status.println("Are you sure you want to terminate the " + this.listenerName + "? Press the same key again to confirm or any other key to cancel.");
-                            isKeyConfirming = true;
-                        } else {
+                        if (exitConfirmCount == 2) {
                             try {
                                 terminate();
                             } catch (IOException e) {
                                 Status.printStackTrace(e.getMessage(), e);
-                                isKeyConfirming = false;
+                                exitConfirmCount = 0;
                             }
+                        } else {
+                            if (exitConfirmCount == 1) {
+                                Status.println("Are you sure you want to terminate the " + this.listenerName + "? Press the same key one last time to confirm or any other key to cancel.");
+                            }
+                            ++exitConfirmCount;
                         }
                         break;
                     default:
-                        if (isKeyConfirming) {
+                        if (exitConfirmCount > 1) {
                             Status.println("Termination request cancelled.");
-                            isKeyConfirming = false;
+                            exitConfirmCount = 0;
                         }
                 }
             }

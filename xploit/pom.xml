@@ -24,6 +24,9 @@
         <!-- Class name of the payload that will be executed when JAR is loaded. -->
         <xploit.payload></xploit.payload>
 
+        <!-- If specified, the payload will run in the background thread with the given name -->
+        <xploit.background.thread.name></xploit.background.thread.name>
+
         <!-- Override the default Xlet remote logger configuration. Applies for the duration of JAR execution. -->
         <xploit.logger.host></xploit.logger.host>
         <xploit.logger.port>18194</xploit.logger.port>
@@ -36,6 +39,8 @@
         <module>umtx</module>
         <module>byepervisor</module>
         <module>kerneldump</module>
+        <module>klogserver</module>
+        <module>jailbreak</module>
     </modules>
 
     <dependencies>
@@ -117,6 +122,7 @@
                                         <PS5JB-Client-Payload>${xploit.payload}</PS5JB-Client-Payload>
                                         <PS5JB-Client-Logger-Host>${xploit.logger.host}</PS5JB-Client-Logger-Host>
                                         <PS5JB-Client-Logger-Port>${xploit.logger.port}</PS5JB-Client-Logger-Port>
+                                        <PS5JB-Client-Background-Thread-Name>${xploit.background.thread.name}</PS5JB-Client-Background-Thread-Name>
                                     </manifestEntries>
                                 </archive>
                             </configuration>

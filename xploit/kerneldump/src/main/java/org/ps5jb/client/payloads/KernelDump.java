@@ -12,6 +12,7 @@ import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
 import org.ps5jb.client.PayloadConstants;
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
@@ -63,11 +64,12 @@ public class KernelDump extends SocketListener implements UserEventListener {
     @Override
     public void run() {
         // Don't continue if there is no kernel r/w
-        if (KernelReadWrite.getAccessor() == null) {
+        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
+        if (kernelAccessor == null) {
             Status.println("Unable to dump without kernel read/write capabilities");
             return;
         }
-        kbaseAddress = KernelPointer.valueOf(KernelReadWrite.getAccessor().getKernelBase());
+        kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
 
         // Determine kernel data start, either from known offsets or by scanning.
         // For scanning to work, the code depends on SYSTEM_PROPERTY_KERNEL_DATA_POINTER to be set.

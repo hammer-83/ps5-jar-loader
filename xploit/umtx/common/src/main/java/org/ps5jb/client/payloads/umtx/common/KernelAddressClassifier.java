@@ -17,7 +17,7 @@ public class KernelAddressClassifier {
 
         KernelAddressClassifier result = new KernelAddressClassifier();
         for (long i = 0; (i + 8) <= buffer.size().longValue(); i += 8) {
-            KernelPointer kptr = new KernelPointer(buffer.read8(i));
+            KernelPointer kptr = new KernelPointer(buffer.read8(i), null, false);
             try {
                 KernelPointer.validRange(kptr);
 

@@ -12,16 +12,15 @@
     </parent>
 
     <groupId>org.ps5jb.xploit</groupId>
-    <artifactId>ftpserver</artifactId>
+    <artifactId>jailbreak</artifactId>
     <description>
-        Implementation of a limited FTP server.
+        This payload removes various restrictions on the BD-J process.
     </description>
 
     <properties>
         <bdjstack.dir>${project.basedir}/../../lib</bdjstack.dir>
 
-        <xploit.payload>org.ps5jb.client.payloads.ftp.FtpServer</xploit.payload>
-        <xploit.background.thread.name>FTP Server</xploit.background.thread.name>
+        <xploit.payload>Jailbreak</xploit.payload>
     </properties>
 
     <dependencies>
@@ -41,10 +40,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -19,7 +19,9 @@ public class Process {
     public static final long OFFSET_P_UCRED = OFFSET_P_SLOCK + MutexType.SIZE;
     public static final long OFFSET_P_FD = OFFSET_P_UCRED + 8L;
     public static final long OFFSET_P_PID = 188L;
+    public static final long OFFSET_P_PPTR = 232L;
     public static final long OFFSET_P_VM_SPACE = 512L;
+    public static final long OFFSET_P_DYNLIB = 1000L;
     public static final long OFFSET_P_COMM = 1080L;
 
     private final KernelPointer ptr;
@@ -61,6 +63,22 @@ public class Process {
     }
 
     /**
+     * Parent process.
+     *
+     * @return Returns the Process pointed to by the value of
+     *   <code>p_pptr</code> field of <code>proc</code> structure.
+     *   If <code>p_pptr</code> is <code>NULL</code>, the return value
+     *   of this method is <code>null</code>.
+     */
+    public Process getParentProcess() {
+        KernelPointer pptr = KernelPointer.valueOf(ptr.read8(OFFSET_P_PPTR));
+        if (KernelPointer.NULL.equals(pptr)) {
+            return null;
+        }
+        return new Process(pptr);
+    }
+
+    /**
      * Process spin lock.
      *
      * @return Returns the value of <code>p_slock</code> field of <code>proc</code> structure.
@@ -88,6 +106,15 @@ public class Process {
      */
     public KernelPointer getFd() {
         return KernelPointer.valueOf(ptr.read8(OFFSET_P_FD));
+    }
+
+    /**
+     * Process dynamic library info (PS5-specific structure).
+     *
+     * @return Returns the pointer to dynamic library info structure of the process.
+     */
+    public KernelPointer getDynLib() {
+        return KernelPointer.valueOf(ptr.read8(OFFSET_P_DYNLIB));
     }
 
     /**

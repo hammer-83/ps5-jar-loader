@@ -10,16 +10,18 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Path;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 public interface JarLoader extends Runnable {
+    String MANIFEST_BACKGROUND_KEY = "PS5JB-Client-Background-Thread-Name";
 
-    default void loadJar(final File jarFile) throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    default void loadJar(final File jarFile, final boolean deleteJar) throws Exception {
+        Status.println("Reading JAR Manifest...");
         String mainClassName;
+        String backgroundThreadName;
         JarFile jar = new JarFile(jarFile);
         try {
             JarEntry manifestEntry = jar.getJarEntry("META-INF/MANIFEST.MF");
@@ -34,6 +36,12 @@ public interface JarLoader extends Runnable {
                 if (mainClassName == null) {
                     throw new ClassNotFoundException("Main class not defined in the JAR");
                 }
+
+                // See if this payload should run in a named background thread
+                backgroundThreadName = mf.getMainAttributes().getValue(MANIFEST_BACKGROUND_KEY);
+                if ("".equals(backgroundThreadName)) {
+                    backgroundThreadName = null;
+                }
             } finally {
                 manifestStream.close();
             }
@@ -44,10 +52,11 @@ public interface JarLoader extends Runnable {
 
         // Load the JAR in a new classloader and execute the main method.
         // When classloader is garbage collected, all classes will be unloaded as well.
-        // This is important to be able to load the modified copy of the same class on the next iteration.
-        Status.println("Loading the JAR...");
+        // This is important to be able to load the modified copy or a parallel copy of the same class in another JAR.
+        Status.println("Loading the JAR" + (backgroundThreadName != null ? " in a background thread [" + backgroundThreadName + "]" : "") + "...");
 
-        ClassLoader parentClassloader = new URLClassLoader(new URL[0], getClass().getClassLoader()) {
+        ClassLoader parentLoader = getClass().getClassLoader();
+        ClassLoader bypassRestrictionsLoader = new URLClassLoader(new URL[0], parentLoader) {
             @Override
             protected Class loadClass(String name, boolean resolve) throws ClassNotFoundException {
                 // Bypass various restrictions in BD-J classloader
@@ -57,15 +66,56 @@ public interface JarLoader extends Runnable {
                 return super.loadClass(name, resolve);
             }
         };
-        java.net.URLClassLoader ldr = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarFile.toURL() }, parentClassloader);
+        java.net.URLClassLoader contextLoader = java.net.URLClassLoader.newInstance(new java.net.URL[] { jarFile.toURL() }, bypassRestrictionsLoader);
 
-        Class mainClass = ldr.loadClass(mainClassName);
-        Method mainMethod = mainClass.getDeclaredMethod("main", new Class[] { String[].class });
-        mainMethod.invoke(null, new Object[] { new String[0] });
+        final Class mainClass = contextLoader.loadClass(mainClassName);
+        final Method mainMethod = mainClass.getDeclaredMethod("main", new Class[] { String[].class });
+
+        Runnable jarMain = () -> {
+            try {
+                mainMethod.invoke(null, new Object[] { new String[0] });
+                if (deleteJar) {
+                    deleteTempJar(jarFile);
+                }
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        };
+
+        if (backgroundThreadName != null) {
+            Thread jarThread = new Thread(jarMain, backgroundThreadName);
+            jarThread.start();
+        } else {
+            try {
+                jarMain.run();
+            } catch (RuntimeException e) {
+                // Unwrap runtime exception from runnable
+                if (e.getCause() instanceof Exception) {
+                    throw (Exception) e.getCause();
+                }
+                throw e;
+            }
+        }
     }
 
-    default void loadJar(final Path jarPath) throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        this.loadJar(jarPath.toFile());
+    default void deleteTempJar(File jarFile) {
+        // Delete the file containing the temporary JAR
+        if (!jarFile.delete()) {
+            // Assume the system temp path was changed by the JAR payload.
+            // Try the new temp path.
+            boolean displaced = false;
+            String tempPath = System.getProperty("java.io.tmpdir");
+            if (jarFile.getAbsolutePath().indexOf(tempPath) != 0) {
+                jarFile = new File(tempPath, jarFile.getName());
+                if (jarFile.delete()) {
+                    displaced = true;
+                }
+            }
+
+            if (!displaced) {
+                Status.println("Failed to delete the temporary JAR");
+            }
+        }
     }
 
     void terminate() throws IOException;

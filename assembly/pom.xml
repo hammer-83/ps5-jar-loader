@@ -219,6 +219,16 @@
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>jailbreak</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>klogserver</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
                     <groupId>org.ps5jb.xploit.samples</groupId>
                     <artifactId>dumpclasspath</artifactId>
                     <version>${project.parent.version}</version>
