@@ -92,7 +92,7 @@ IntelliJ Maven project files are located in a private local folder of IntelliJ. 
 There are so many who decided to share the knowledge with the community to make this project possible.
 - [Andy "theflow" Nguyen](https://github.com/theofficialflow) for discovering and sharing BD-J vulnerabilities and native execution techniques without which none of the work in this repo would be possible.
 - Specter for his Webkit implementations of PS5 kernel access which served as a base for Java implementation: [IPV6](https://github.com/Cryptogenic/PS5-IPV6-Kernel-Exploit), [UMTX](https://github.com/PS5Dev/PS5-UMTX-Jailbreak/) and [Byepervisor](https://github.com/PS5Dev/Byepervisor).
-- [Flat_z](https://github.com/flatz) for pretty much everything of significance that happened in PlayStation scene since as far back as PS3, including the UMTX exploitation strategy contained in this repo.
+- [Flat_z](https://github.com/flatz) for pretty much everything of significance that happened in PlayStation scene since as far back as PS3, including the UMTX exploitation strategy and AGC-based kernel r/w contained in this repo.
 - [Cheburek3000](https://github.com/cheburek3000) for contributing an alternative implementation of UMTX exploitation. 
 - [bigboss](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically in BD-J area.
 - [iakdev](https://github.com/iakdev) for the contribution of the menu loader.
