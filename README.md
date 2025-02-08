@@ -96,8 +96,9 @@ There are so many who decided to share the knowledge with the community to make 
 - [Cheburek3000](https://github.com/cheburek3000) for contributing an alternative implementation of UMTX exploitation. 
 - [bigboss](https://github.com/psxdev) and [John Törnblom](https://github.com/john-tornblom) for their work specifically in BD-J area.
 - [iakdev](https://github.com/iakdev) for the contribution of the menu loader.
+- CryoNumb for ideas, code contributions and helping with testing on various firmware versions.
 - All the other contributors to Specter's Webkit implementations: [ChendoChap](https://github.com/ChendoChap), [Znullptr](https://twitter.com/Znullptr), [sleirsgoevy](https://twitter.com/sleirsgoevy), [zecoxao](https://twitter.com/notnotzecoxao), [SocracticBliss](https://twitter.com/SocraticBliss), SlidyBat, [idlesauce](https://github.com/idlesauce), [fail0verflow](https://fail0verflow.com/blog/) [kiwidog](https://kiwidog.me/), [EchoStretch](https://github.com/EchoStretch), [LM](https://github.com/LightningMods).
-- Testers of various firmware revisions: jamdoogen, CryoNumb, Twan322, MSZ_MGS, KingMaxLeo, RdSklld, Ishaan, Kirua, PLK, benja44_, MisaAmane, Unai G, Leo.
+- Testers of various firmware revisions: jamdoogen, Twan322, MSZ_MGS, KingMaxLeo, RdSklld, Ishaan, Kirua, PLK, benja44_, MisaAmane, Unai G, Leo.
 
 Sample BD-J payloads in this repository are adaptations of the following work:
 - FTP server by [pReya](https://github.com/pReya/ftpServer). 
