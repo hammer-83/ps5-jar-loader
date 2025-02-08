@@ -26,17 +26,19 @@ package org.ps5jb.client.payloads.ftp;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.Socket;
-import java.net.SocketException;
 import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.tv.xlet.Xlet;
 
 import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
 import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
+import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.OpenModuleAction;
@@ -55,7 +57,7 @@ public class FtpServer extends SocketListener implements UserEventListener {
     private int exitConfirmCount;
 
     public FtpServer() throws IOException {
-        super("FTP Server", 9225);
+        super("FTP Server v" + ManifestUtils.getClassImplementationVersion(FtpServer.class, "ftpserver"), 9225);
         workers = new ArrayList();
 
         // Subscribe to all events
@@ -186,16 +188,6 @@ public class FtpServer extends SocketListener implements UserEventListener {
                         }
                 }
             }
-        }
-    }
-
-    @Override
-    protected void handleException(Throwable ex) {
-        if (ex instanceof SocketException) {
-            // This usually happens when server forcefully exits so don't print full stacktrace.
-            Status.println(ex.getMessage());
-        } else {
-            super.handleException(ex);
         }
     }
 }

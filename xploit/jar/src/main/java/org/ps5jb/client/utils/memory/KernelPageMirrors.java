@@ -51,7 +51,8 @@ public class KernelPageMirrors {
      * Constructor
      *
      * @param curProc Address of the proc structure in kernel for the current process.
-     *   Can be obtained using {@link ProcessUtils#getCurrentProcess()}.
+     *   Can be obtained using {@link ProcessUtils#getCurrentProcess()} or
+     *   {@link org.ps5jb.client.utils.init.SdkInit#CUR_PROC_ADDRESS}.
      */
     public KernelPageMirrors(Process curProc) {
         this.libKernel = new LibKernel();
@@ -82,7 +83,7 @@ public class KernelPageMirrors {
         PhysicalMap pmap = curProc.getVmSpace().getPhysicalMap();
 
         // Mask virtual address to page alignment and extract physical address
-        long kernelPa = PMap.pmap_kextract(kernelVa.addr() & PhysicalMapEntryMask.PG_PHYS_FRAME.value());
+        long kernelPa = PMap.pmap_kextract(getKernelVaPageStart(kernelVa));
 
         // Map a user page
         final ProtectionFlag[] prot = new ProtectionFlag[] { ProtectionFlag.PROT_READ, ProtectionFlag.PROT_WRITE };
@@ -121,6 +122,21 @@ public class KernelPageMirrors {
     }
 
     /**
+     * Make sure the virtual address is aligned to page start.
+     *
+     * @param kernelVa Virtual address.
+     * @return Same kernel pointer instance if it is already aligned to page start,
+     *   or a new kernel pointer instance with the aligned address.
+     */
+    private KernelPointer getKernelVaPageStart(KernelPointer kernelVa) {
+        long pageStartAddr = kernelVa.addr() & PhysicalMapEntryMask.PG_PHYS_FRAME.value();
+        if (pageStartAddr == kernelVa.addr()) {
+            return kernelVa;
+        }
+        return new KernelPointer(pageStartAddr, null, kernelVa.getKernelAccessor());
+    }
+
+    /**
      * Convenience method to retrieve the user space pointer for a given kernel virtual address.
      * If a mirror already exists for the page containing this kernel address, it will be used.
      * Otherwise, a new mirror will be created.
@@ -130,7 +146,7 @@ public class KernelPageMirrors {
      * @throws SdkException If kernel page could not be mapped.
      */
     public Pointer getMirroredAddress(KernelPointer kernelVa) throws SdkException {
-        long kernelPa = PMap.pmap_kextract(kernelVa.addr() & PhysicalMapEntryMask.PG_PHYS_FRAME.value());
+        long kernelPa = PMap.pmap_kextract(getKernelVaPageStart(kernelVa));
         PageMirror pageMirror = (PageMirror) mirroredPages.get(new Long(kernelPa));
         if (pageMirror == null) {
             pageMirror = mirrorPage(kernelVa);

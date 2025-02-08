@@ -41,6 +41,7 @@
         <module>kerneldump</module>
         <module>klogserver</module>
         <module>jailbreak</module>
+        <module>debugsettings</module>
     </modules>
 
     <dependencies>

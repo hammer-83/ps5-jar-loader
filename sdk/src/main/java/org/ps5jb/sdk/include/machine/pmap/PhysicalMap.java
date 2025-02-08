@@ -32,7 +32,7 @@ public class PhysicalMap {
      */
     public MutexType getMutex() {
         if (mutex == null) {
-            mutex = new MutexType(new KernelPointer(ptr.addr() + OFFSET_PM_MTX, new Long(MutexType.SIZE)));
+            mutex = new MutexType(new KernelPointer(ptr.addr() + OFFSET_PM_MTX, new Long(MutexType.SIZE), ptr.getKernelAccessor()));
         }
         return mutex;
     }

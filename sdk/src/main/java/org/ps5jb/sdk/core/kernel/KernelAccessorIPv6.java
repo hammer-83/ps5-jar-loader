@@ -1,7 +1,9 @@
 package org.ps5jb.sdk.core.kernel;
 
 import java.io.IOException;
+import java.io.NotActiveException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.Pointer;
@@ -24,7 +26,7 @@ import org.ps5jb.sdk.res.ErrorMessages;
  * Requires an existing kernel accessor on creation.
  */
 public class KernelAccessorIPv6 implements KernelAccessor {
-    private static final long serialVersionUID = 8937512308105266960L;
+    private static final long serialVersionUID = 8937512308105266961L;
 
     private Pointer master_target_buffer;
     private Pointer slave_buffer;
@@ -41,7 +43,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     private int[] pipe_fd;
     private KernelPointer pipe_addr;
 
-    private KernelPointer kernelBase;
+    private long kernelBaseAddr;
 
     /**
      * Constructor for kernel IPv6 accessor.
@@ -54,7 +56,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         this.libKernel = new LibKernel();
         this.errNo = new ErrNo(libKernel);
         this.socket = new Socket(this.libKernel);
-        this.kernelBase = kernelBase;
+        this.kernelBaseAddr = kernelBase == null ? 0 : kernelBase.addr();
 
         final long sock_opt_size = 0x14;
         master_target_buffer = Pointer.calloc(sock_opt_size);
@@ -91,7 +93,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         int pipe_read = pipe_fd[0];
         KernelPointer pipe_filedescent = ofilesAddress.inc(pipe_read * 0x30L);
         KernelPointer pipe_file = KernelPointer.valueOf(ipv6_kread8(pipe_filedescent));
-        pipe_addr = KernelPointer.valueOf(ipv6_kread8(pipe_file));
+        pipe_addr = KernelPointer.valueOf(ipv6_kread8(pipe_file), false);
 
         // Increase refcounts on socket fds which we corrupt
         inc_socket_refcount(master_sock, ofilesAddress);
@@ -113,24 +115,34 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     public synchronized void free() {
         if (master_target_buffer != null) {
             master_target_buffer.free();
+            master_target_buffer = null;
         }
         if (slave_buffer != null) {
             slave_buffer.free();
+            slave_buffer = null;
         }
         if (pipemap_buffer != null) {
             pipemap_buffer.free();
+            pipemap_buffer = null;
         }
         if (krw_buffer != null) {
             krw_buffer.free();
-        }
-        if (pipe_fd[0] != -1) {
-            this.libKernel.close(pipe_fd[0]);
-        }
-        if (pipe_fd[1] != -1) {
-            this.libKernel.close(pipe_fd[1]);
+            krw_buffer = null;
         }
 
-        libKernel.closeLibrary();
+        if (libKernel != null) {
+            if (pipe_fd[0] != -1) {
+                this.libKernel.close(pipe_fd[0]);
+                pipe_fd[0] = -1;
+            }
+            if (pipe_fd[1] != -1) {
+                this.libKernel.close(pipe_fd[1]);
+                pipe_fd[1] = -1;
+            }
+
+            libKernel.closeLibrary();
+            libKernel = null;
+        }
     }
 
     private void write_to_victim(KernelPointer kernelAddress) throws SdkException {
@@ -357,7 +369,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
 
     @Override
     public long getKernelBase() {
-        return kernelBase == null ? 0 : kernelBase.addr();
+        return kernelBaseAddr;
     }
 
     private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
@@ -367,5 +379,14 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         libKernel = new LibKernel();
         errNo = new ErrNo(libKernel);
         socket = new Socket(this.libKernel);
+    }
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        if (master_target_buffer == null) {
+            // Don't allow to serialize if freed.
+            throw new NotActiveException(ErrorMessages.getClassErrorMessage(getClass(), "nonSerializable"));
+        }
+
+        stream.defaultWriteObject();
     }
 }

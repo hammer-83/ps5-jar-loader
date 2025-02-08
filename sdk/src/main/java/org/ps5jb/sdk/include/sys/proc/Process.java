@@ -43,7 +43,7 @@ public class Process {
      * @return Returns the value of <code>p_list.le_prev</code> field of <code>proc</code> structure.
      */
     public KernelPointer getPreviousProcessPointer() {
-        return KernelPointer.valueOf(ptr.read8(OFFSET_P_LIST_LE_PREV));
+        return new KernelPointer(ptr.read8(OFFSET_P_LIST_LE_PREV), null, this.ptr.getKernelAccessor());
     }
 
     /**
@@ -55,7 +55,7 @@ public class Process {
      *   of this method is <code>null</code>.
      */
     public Process getNextProcess() {
-        KernelPointer next = KernelPointer.valueOf(ptr.read8(OFFSET_P_LIST_LE_NEXT));
+        KernelPointer next = new KernelPointer(ptr.read8(OFFSET_P_LIST_LE_NEXT), null, this.ptr.getKernelAccessor());
         if (KernelPointer.NULL.equals(next)) {
             return null;
         }
@@ -71,7 +71,7 @@ public class Process {
      *   of this method is <code>null</code>.
      */
     public Process getParentProcess() {
-        KernelPointer pptr = KernelPointer.valueOf(ptr.read8(OFFSET_P_PPTR));
+        KernelPointer pptr = new KernelPointer(ptr.read8(OFFSET_P_PPTR), null, this.ptr.getKernelAccessor());
         if (KernelPointer.NULL.equals(pptr)) {
             return null;
         }
@@ -85,7 +85,7 @@ public class Process {
      */
     public MutexType getSpinLock() {
         if (slock == null) {
-            slock = new MutexType(new KernelPointer(ptr.read8(OFFSET_P_SLOCK), new Long(MutexType.SIZE)));
+            slock = new MutexType(new KernelPointer(ptr.read8(OFFSET_P_SLOCK), new Long(MutexType.SIZE), this.ptr.getKernelAccessor()));
         }
         return slock;
     }
@@ -96,7 +96,7 @@ public class Process {
      * @return Returns the value of <code>p_ucred</code> field of <code>proc</code> structure.
      */
     public KernelPointer getUCred() {
-        return KernelPointer.valueOf(ptr.read8(OFFSET_P_UCRED));
+        return new KernelPointer(ptr.read8(OFFSET_P_UCRED), null, this.ptr.getKernelAccessor());
     }
 
     /**
@@ -105,7 +105,7 @@ public class Process {
      * @return Returns the value of <code>p_fd</code> field of <code>proc</code> structure.
      */
     public KernelPointer getFd() {
-        return KernelPointer.valueOf(ptr.read8(OFFSET_P_FD));
+        return new KernelPointer(ptr.read8(OFFSET_P_FD), null, this.ptr.getKernelAccessor());
     }
 
     /**
@@ -114,7 +114,7 @@ public class Process {
      * @return Returns the pointer to dynamic library info structure of the process.
      */
     public KernelPointer getDynLib() {
-        return KernelPointer.valueOf(ptr.read8(OFFSET_P_DYNLIB));
+        return new KernelPointer(ptr.read8(OFFSET_P_DYNLIB), null, this.ptr.getKernelAccessor());
     }
 
     /**
@@ -133,7 +133,7 @@ public class Process {
      */
     public VmSpace getVmSpace() {
         if (vmSpace == null) {
-            vmSpace = new VmSpace(KernelPointer.valueOf(ptr.read8(OFFSET_P_VM_SPACE)));
+            vmSpace = new VmSpace(new KernelPointer(ptr.read8(OFFSET_P_VM_SPACE), null, this.ptr.getKernelAccessor()));
         }
         return vmSpace;
     }

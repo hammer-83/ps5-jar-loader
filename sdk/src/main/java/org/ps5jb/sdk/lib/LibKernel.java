@@ -63,6 +63,11 @@ public class LibKernel extends Library {
     private Pointer sceKernelSetEventFlag;
     private Pointer sceKernelOpenEventFlag;
     private Pointer sceKernelCloseEventFlag;
+    private Pointer sceKernelAllocateMainDirectMemory;
+    private Pointer sceKernelReleaseDirectMemory;
+    private Pointer sceKernelMapDirectMemory;
+    private Pointer sceKernelGetDirectMemorySize;
+    private Pointer sceKernelMunmap;
 
     /**
      * Constructor.
@@ -565,5 +570,46 @@ public class LibKernel extends Library {
         }
 
         return (int) call(sceKernelCloseEventFlag, eventFlag.addr());
+    }
+
+    public int sceKernelAllocateMainDirectMemory(long len, long alignment, int unkn5, Pointer result) {
+        if (sceKernelAllocateMainDirectMemory == null) {
+            sceKernelAllocateMainDirectMemory = addrOf("sceKernelAllocateMainDirectMemory");
+        }
+
+        return (int) call(sceKernelAllocateMainDirectMemory, len, alignment, unkn5, result.addr());
+    }
+
+    public int sceKernelReleaseDirectMemory(Pointer directMem, long len) {
+        if (sceKernelReleaseDirectMemory == null) {
+            sceKernelReleaseDirectMemory = addrOf("sceKernelReleaseDirectMemory");
+        }
+
+        return (int) call(sceKernelReleaseDirectMemory, directMem.addr(), len);
+    }
+
+    public int sceKernelMapDirectMemory(Pointer addr, long len, int prot, int flags,
+                                        Pointer directMem, long alignment) {
+        if (sceKernelMapDirectMemory == null) {
+            sceKernelMapDirectMemory = addrOf("sceKernelMapDirectMemory");
+        }
+
+        return (int) call(sceKernelMapDirectMemory, addr.addr(), len, prot, flags, directMem.addr(), alignment);
+    }
+
+    public long sceKernelGetDirectMemorySize() {
+        if (sceKernelGetDirectMemorySize == null) {
+            sceKernelGetDirectMemorySize = addrOf("sceKernelGetDirectMemorySize");
+        }
+
+        return call(sceKernelGetDirectMemorySize);
+    }
+
+    public int sceKernelMunmap(Pointer addr, long len) {
+        if (sceKernelMunmap == null) {
+            sceKernelMunmap = addrOf("sceKernelMunmap");
+        }
+
+        return (int) call(sceKernelMunmap, addr.addr(), len);
     }
 }

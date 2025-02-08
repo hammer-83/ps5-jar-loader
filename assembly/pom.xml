@@ -254,8 +254,8 @@
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
-                    <groupId>org.ps5jb.xploit.umtx</groupId>
-                    <artifactId>umtx2</artifactId>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>debugsettings</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
             </dependencies>

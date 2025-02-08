@@ -110,7 +110,7 @@ class CallContext {
      * 1 - create data view in local function scope, don't pass it across method boundary to minimize GC risk.
      * 2 - cache data view in call context which further minimizes overhead but may be subject to invalid memory access by GC.
      */
-    private int dataViewUsageLevel = 0;
+    private int dataViewUsageLevel = 2;
 
     private static final int fakeClassOff = 0;
     private static final int fakeKlassOff = fakeClassOff + 0x100;

@@ -1,6 +1,13 @@
 package org.ps5jb.loader;
 
 import java.awt.BorderLayout;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Enumeration;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 import javax.tv.xlet.Xlet;
 import javax.tv.xlet.XletContext;
 
@@ -115,5 +122,15 @@ public class LoaderXlet implements Xlet {
         // Clear the screen
         scene.remove(Screen.getInstance());
         scene = null;
+    }
+
+    /**
+     * Returns the implementation version of the Xlet JAR.
+     *
+     * @return Xlet JAR version.
+     * @throws IOException If version could not be read.
+     */
+    public static String getXletImplementationVersion() throws IOException {
+        return ManifestUtils.getClassImplementationVersion(LoaderXlet.class, "xlet");
     }
 }

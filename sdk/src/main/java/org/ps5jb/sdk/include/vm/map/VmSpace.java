@@ -16,6 +16,8 @@ public class VmSpace {
     public static final long OFFSET_VM_MAP = 0;
     /** Firmware-dependent offset to pmap from the start of the VmSpace pointer. If -1, then the offset could not be determined for the current firmware version. */
     public static long OFFSET_VM_PMAP = -1;
+    /** Firmware-dependent offset to GPU vmid from the start of the VmSpace pointer. If -1, then the offset could not be determined for the current firmware version. */
+    public static long OFFSET_GPU_VMID = -1;
 
     private final KernelPointer ptr;
 
@@ -34,7 +36,7 @@ public class VmSpace {
      * @return Returns the value of <code>vm_map</code> field of <code>vmspace</code> structure.
      */
     public KernelPointer getMap() {
-        return KernelPointer.valueOf(this.ptr.read8(OFFSET_VM_MAP));
+        return new KernelPointer(this.ptr.read8(OFFSET_VM_MAP), null, this.ptr.getKernelAccessor());
     }
 
     /**
@@ -45,6 +47,16 @@ public class VmSpace {
     public PhysicalMap getPhysicalMap() {
         detectVmPmapOffset();
         return new PhysicalMap(getPointer().inc(OFFSET_VM_PMAP));
+    }
+
+    /**
+     * GPU VM space id.
+     *
+     * @return Returns the id of the GPU vm space assigned to this process.
+     */
+    public int getGpuVmId() {
+        detectGpuVmIdOffset();
+        return this.ptr.read4(OFFSET_GPU_VMID);
     }
 
     /**
@@ -82,6 +94,33 @@ public class VmSpace {
 
             if (OFFSET_VM_PMAP == -1) {
                 throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(VmSpace.class,"offsetVmPmapUnknown"));
+            }
+        }
+    }
+
+    /**
+     * Offset to GPU vmid is firmware dependent. This method does a one-time detection of this value.
+     */
+    private void detectGpuVmIdOffset() {
+        if (OFFSET_GPU_VMID == -1) {
+            synchronized (VmSpace.class) {
+                if (OFFSET_GPU_VMID == -1) {
+                    // Note, this is the offset of vm_space.vm_map.pmap on 1.xx.
+                    // It is assumed that on higher firmwares it's only increasing.
+                    long curScanOffset = 0x1D4;
+                    for (int i = 0; i < 7; ++i) {
+                        long scanOffset = curScanOffset + i * 4L;
+                        int scanVal = this.ptr.read4(scanOffset);
+                        if (scanVal > 0 && scanVal < 0x10) {
+                            OFFSET_GPU_VMID = scanOffset;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (OFFSET_GPU_VMID == -1) {
+                throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(VmSpace.class,"offsetGpuVmIdUnknown"));
             }
         }
     }

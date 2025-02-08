@@ -8,19 +8,25 @@ import org.ps5jb.sdk.res.ErrorMessages;
 public final class ProtectionFlag implements Comparable {
     /** Pages may not be accessed */
     public static final ProtectionFlag PROT_NONE = new ProtectionFlag(0x0000, "PROT_NONE");
-    /** Pages may be	read */
+    /** Pages may be read */
     public static final ProtectionFlag PROT_READ = new ProtectionFlag(0x0001, "PROT_READ");
-    /** Pages may be	written */
+    /** Pages may be written */
     public static final ProtectionFlag PROT_WRITE = new ProtectionFlag(0x0002, "PROT_WRITE");
-    /** Pages may be	executed */
+    /** Pages may be executed */
     public static final ProtectionFlag PROT_EXEC = new ProtectionFlag(0x0004, "PROT_EXEC");
+    /** Pages may be read by GPU */
+    public static final ProtectionFlag PROT_GPU_READ = new ProtectionFlag(0x0010, "PROT_GPU_READ");
+    /** Pages may be written by GPU */
+    public static final ProtectionFlag PROT_GPU_WRITE = new ProtectionFlag(0x0020, "PROT_GPU_WRITE");
 
     /** All possible ProtectionFlag values. */
     private static final ProtectionFlag[] values = new ProtectionFlag[] {
             PROT_NONE,
             PROT_READ,
             PROT_WRITE,
-            PROT_EXEC
+            PROT_EXEC,
+            PROT_GPU_READ,
+            PROT_GPU_WRITE
     };
 
     private int value;

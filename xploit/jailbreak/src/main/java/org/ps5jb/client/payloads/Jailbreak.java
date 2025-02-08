@@ -21,12 +21,10 @@ import java.util.Stack;
 import java.util.Set;
 import java.util.jar.JarFile;
 
+import org.ps5jb.client.utils.init.SdkInit;
 import org.ps5jb.client.utils.process.ProcessUtils;
-import org.ps5jb.loader.KernelAccessor;
-import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.OpenModuleAction;
-import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.lib.LibKernel;
@@ -55,25 +53,12 @@ public class Jailbreak implements Runnable {
 
     @Override
     public void run() {
-        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
-        if (kernelAccessor == null) {
-            println("Unable to jailbreak without kernel read/write capabilities");
-            return;
-        }
-
-        KernelPointer kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
-        if (KernelPointer.NULL.equals(kbaseAddress)) {
-            println("Unable to jailbreak since KASLR has not been defeated");
-            return;
-        }
-
         final LibKernel libKernel = new LibKernel();
         try {
-            int softwareVersion = libKernel.getSystemSoftwareVersion();
+            SdkInit sdk = SdkInit.init(true, true);
 
-            KernelOffsets o = new KernelOffsets(softwareVersion);
-            procUtils = new ProcessUtils(libKernel, kbaseAddress, o);
-            KernelPointer kdataAddress = kbaseAddress.inc(o.OFFSET_KERNEL_DATA);
+            procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS), sdk.KERNEL_OFFSETS);
+            KernelPointer kdataAddress = KernelPointer.valueOf(sdk.KERNEL_DATA_ADDRESS);
 
             int curUid = libKernel.getuid();
             int curPid = libKernel.getpid();
@@ -86,12 +71,12 @@ public class Jailbreak implements Runnable {
                 return;
             }
 
-            Process curProc = procUtils.getCurrentProcess();
+            Process curProc = new Process(KernelPointer.valueOf(sdk.CUR_PROC_ADDRESS));
             if (curProc != null) {
                 String curProcName = curProc.getName();
                 println("Found current process at " + curProc.getPointer() + " named " + curProcName, true);
 
-                KernelPointer rootvnode = KernelPointer.valueOf(kdataAddress.read8(o.OFFSET_KERNEL_DATA_BASE_ROOTVNODE));
+                KernelPointer rootvnode = KernelPointer.valueOf(kdataAddress.read8(sdk.KERNEL_OFFSETS.OFFSET_KERNEL_DATA_BASE_ROOTVNODE));
 
                 // Patch the current and the parent process
                 patchProcess(curProc, rootvnode);

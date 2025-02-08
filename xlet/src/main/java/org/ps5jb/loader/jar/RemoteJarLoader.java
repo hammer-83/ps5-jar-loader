@@ -1,5 +1,6 @@
 package org.ps5jb.loader.jar;
 
+import org.ps5jb.loader.LoaderXlet;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 
@@ -25,7 +26,7 @@ public class RemoteJarLoader extends SocketListener implements JarLoader {
      * @see ServerSocket#ServerSocket(int)
      */
     public RemoteJarLoader(int port) throws IOException {
-        super("JAR Loader", port);
+        super("JAR Loader v" + LoaderXlet.getXletImplementationVersion(), port);
     }
 
     /**

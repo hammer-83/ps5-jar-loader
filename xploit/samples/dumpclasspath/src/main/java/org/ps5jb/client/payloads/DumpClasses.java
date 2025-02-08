@@ -22,6 +22,7 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.OpenModuleAction;
@@ -59,7 +60,7 @@ public class DumpClasses extends SocketListener {
      * @throws IOException If listening socket could not be created.
      */
     public DumpClasses(int port) throws IOException {
-        super("Classpath Dumper", port);
+        super("Classpath Dumper v" + ManifestUtils.getClassImplementationVersion(DumpClasses.class, "dumpclassspath"), port);
     }
 
     /**

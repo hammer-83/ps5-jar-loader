@@ -3,19 +3,19 @@ package org.ps5jb.client.payloads;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 
 import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
 import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
+import org.ps5jb.client.utils.init.SdkInit;
 import org.ps5jb.client.utils.process.ProcessUtils;
-import org.ps5jb.loader.KernelAccessor;
-import org.ps5jb.loader.KernelReadWrite;
+import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
+import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.CpuSet;
 import org.ps5jb.sdk.include.sys.FCntl;
 import org.ps5jb.sdk.include.sys.Select;
@@ -42,7 +42,7 @@ public class KlogServer extends SocketListener implements UserEventListener {
 
     public KlogServer() throws IOException {
         // Use same port as webkit implementation from sb
-        super("Klog Server", 3232);
+        super("Klog Server v" + ManifestUtils.getClassImplementationVersion(KlogServer.class, "klogserver"), 3232);
 
         // Subscribe to all events
         EventManager eventManager = EventManager.getInstance();
@@ -53,15 +53,10 @@ public class KlogServer extends SocketListener implements UserEventListener {
 
     @Override
     public void run() {
-        // Don't continue if there is no kernel r/w
-        KernelAccessor kaccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
-        if (kaccessor == null) {
-            Status.println("Unable to read klog without kernel read/write capabilities");
-            return;
-        }
-
         libKernel = new LibKernel();
         try {
+            SdkInit sdk = SdkInit.init(true, true);
+
             // Abort if the process does not have root privileges
             int uid = libKernel.getuid();
             if (uid != 0) {
@@ -76,7 +71,7 @@ public class KlogServer extends SocketListener implements UserEventListener {
             // Disconnecting the client connection removes the lagging.
 
             // Set thread to a lower priority
-            ProcessUtils procUtils = new ProcessUtils(libKernel);
+            ProcessUtils procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS), sdk.KERNEL_OFFSETS);
             procUtils.setCurrentThreadPriority(new Integer(Thread.MIN_PRIORITY), new Short((short) 767));
 
             // Pin to a single CPU
@@ -181,16 +176,6 @@ public class KlogServer extends SocketListener implements UserEventListener {
                         }
                 }
             }
-        }
-    }
-
-    @Override
-    protected void handleException(Throwable ex) {
-        if (ex instanceof SocketException) {
-            // This usually happens when listener forcefully terminates, mute the stacktrace.
-            Status.println(ex.getMessage());
-        } else {
-            super.handleException(ex);
         }
     }
 }

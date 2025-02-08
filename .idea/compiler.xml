@@ -28,6 +28,7 @@
         <module name="id" />
         <module name="movieobject" />
         <module name="sdk" />
+        <module name="debugsettings" />
       </profile>
     </annotationProcessing>
   </component>
@@ -36,6 +37,7 @@
       <module name="bdjo" options="" />
       <module name="byepervisor" options="--patch-module java.base=$PROJECT_DIR$/xploit/byepervisor/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/byepervisor/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/byepervisor/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="common" options="--patch-module java.base=$PROJECT_DIR$/xploit/umtx/common/../../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/umtx/common/../../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/umtx/common/../../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
+      <module name="debugsettings" options="--patch-module java.base=$PROJECT_DIR$/xploit/debugsettings/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/debugsettings/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/debugsettings/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="dumpclasspath" options="--patch-module java.base=$PROJECT_DIR$/xploit/samples/dumpclasspath/../../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/samples/dumpclasspath/../../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/samples/dumpclasspath/../../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="ftpserver" options="--patch-module java.base=$PROJECT_DIR$/xploit/ftpserver/../../lib/pbp-base.jar --patch-module java.desktop=$PROJECT_DIR$/xploit/ftpserver/../../lib/pbp-desktop.jar --patch-module java.rmi=$PROJECT_DIR$/xploit/ftpserver/../../lib/pbp-rmi.jar --limit-modules java.base,java.desktop,java.rmi --add-exports java.base/jdk.internal.loader=ALL-UNNAMED" />
       <module name="grin" options="" />

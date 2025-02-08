@@ -1,18 +1,15 @@
 package org.ps5jb.loader.jar;
 
+import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.Status;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 public interface JarLoader extends Runnable {
@@ -20,34 +17,18 @@ public interface JarLoader extends Runnable {
 
     default void loadJar(final File jarFile, final boolean deleteJar) throws Exception {
         Status.println("Reading JAR Manifest...");
-        String mainClassName;
-        String backgroundThreadName;
-        JarFile jar = new JarFile(jarFile);
-        try {
-            JarEntry manifestEntry = jar.getJarEntry("META-INF/MANIFEST.MF");
-            if (manifestEntry == null) {
-                throw new FileNotFoundException("Unable to find JAR manifest");
-            }
+        Manifest mf = ManifestUtils.loadJarManifest(jarFile);
 
-            InputStream manifestStream = jar.getInputStream(manifestEntry);
-            try {
-                Manifest mf = new Manifest(manifestStream);
-                mainClassName = mf.getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
-                if (mainClassName == null) {
-                    throw new ClassNotFoundException("Main class not defined in the JAR");
-                }
-
-                // See if this payload should run in a named background thread
-                backgroundThreadName = mf.getMainAttributes().getValue(MANIFEST_BACKGROUND_KEY);
-                if ("".equals(backgroundThreadName)) {
-                    backgroundThreadName = null;
-                }
-            } finally {
-                manifestStream.close();
-            }
-        } finally {
-            jar.close();
+        String mainClassName = mf.getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
+        if (mainClassName == null) {
+            throw new ClassNotFoundException("Main class not defined in the JAR");
         }
+
+        String backgroundThreadName = mf.getMainAttributes().getValue(MANIFEST_BACKGROUND_KEY);
+        if ("".equals(backgroundThreadName)) {
+            backgroundThreadName = null;
+        }
+
         Status.println("Reading JAR Manifest... Main Class: " + mainClassName, true);
 
         // Load the JAR in a new classloader and execute the main method.

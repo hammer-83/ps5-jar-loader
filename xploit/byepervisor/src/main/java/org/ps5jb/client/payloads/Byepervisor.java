@@ -1,8 +1,7 @@
 package org.ps5jb.client.payloads;
 
+import org.ps5jb.client.utils.init.SdkInit;
 import org.ps5jb.client.utils.process.ProcessUtils;
-import org.ps5jb.loader.KernelAccessor;
-import org.ps5jb.loader.KernelReadWrite;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkRuntimeException;
@@ -26,41 +25,24 @@ public class Byepervisor implements Runnable {
 
     @Override
     public void run() {
-        // Don't continue if there is no kernel r/w
-        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
-        if (kernelAccessor == null) {
-            Status.println("Unable to execute Byepervisor without kernel read/write capabilities");
-            return;
-        }
-
         libKernel = new LibKernel();
         try {
-            // Byepervisor is only available before fw 3.xx
+            SdkInit sdk = SdkInit.init(true, true);
 
-            int fw = libKernel.getSystemSoftwareVersion();
+            // Byepervisor is only available before fw 3.xx
+            int fw = sdk.KERNEL_OFFSETS.SOFTWARE_VERSION;
             if (fw >= 0x0300) {
                 Status.println("Unable to execute Byepervisor on firmware version: " +
                         ((fw >> 8) & 0xFF) + "." + ((fw & 0xFF) < 10 ? "0" : "") + (fw & 0xFF));
                 return;
             }
 
-            // KASLR defeated?
-            kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
-            if (KernelPointer.NULL.equals(kbaseAddress)) {
-                Status.println("Kernel base address has not been determined. Aborting.");
-                return;
-            }
-
-            // Get offsets for current firmware
-            offsets = new KernelOffsets(fw);
+            kbaseAddress = KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS);
+            offsets = sdk.KERNEL_OFFSETS;
 
             // Find current process
             ProcessUtils procUtils = new ProcessUtils(libKernel, kbaseAddress, offsets);
-            Process curProc = procUtils.getCurrentProcess();
-            if (curProc == null) {
-                Status.println("Current process could not be found. Aborting.");
-                return;
-            }
+            Process curProc = new Process(KernelPointer.valueOf(sdk.CUR_PROC_ADDRESS));
 
             boolean alreadyApplied = checkRwFlag(false);
 
@@ -95,10 +77,6 @@ public class Byepervisor implements Runnable {
                     0x80
             });
 
-            // Refresh dmap offsets
-            KernelPointer pmap = kbaseAddress.inc(offsets.OFFSET_KERNEL_DATA + offsets.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE);
-            PMap.refresh(pmap.inc(offsets.OFFSET_PMAP_STORE_DMPML4I), pmap.inc(offsets.OFFSET_PMAP_STORE_DMPDPI), pmap.inc(offsets.OFFSET_PMAP_STORE_PML4PML4I));
-
             // Enable RW on kernel text pages and disable XO
             Status.println("Enabling kernel text read/write...");
             enableKernelTextWrite();
@@ -115,7 +93,7 @@ public class Byepervisor implements Runnable {
             Status.println("If this does not happen automatically, manually put the system to sleep.");
             Status.println("Upon resume, kernel text will be accessible after re-running the kernel read/write payload.");
             try {
-                Thread.sleep(4000L);
+                Thread.sleep(8000L);
             } catch (InterruptedException e) {
                 // Ignore
             }

@@ -1,5 +1,6 @@
 package org.ps5jb.sdk.include.machine;
 
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.SdkRuntimeException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.pmap.PhysicalMap;
@@ -87,30 +88,30 @@ public class PMap {
         return pmap_valid_bit(pmap).value() | PhysicalMapEntryMask.SCE_PG_53.value() | PhysicalMapEntryMask.SCE_PG_55.value();
     }
 
-    private static long pmap_pte_index(long va) {
-        return ((va >> Param.PHYS_PAGE_SHIFT) & ((1L << Param.NPTEPGSHIFT) - 1));
+    public static long pmap_pte_index(long va) {
+        return ((va >>> Param.PHYS_PAGE_SHIFT) & ((1L << Param.NPTEPGSHIFT) - 1));
     }
 
-    private static long pmap_pde_index(long va) {
-        return (va >> Param.PDRSHIFT) & ((1L << Param.NPDEPGSHIFT) - 1);
+    public static long pmap_pde_index(long va) {
+        return (va >>> Param.PDRSHIFT) & ((1L << Param.NPDEPGSHIFT) - 1);
     }
 
-    private static long pmap_pdpe_index(long va) {
-        return (va >> Param.PDPSHIFT) & ((1L << Param.NPDPEPGSHIFT) - 1);
+    public static long pmap_pdpe_index(long va) {
+        return (va >>> Param.PDPSHIFT) & ((1L << Param.NPDPEPGSHIFT) - 1);
     }
 
-    private static long pmap_pml4e_index(long va) {
-        return (va >> Param.PML4SHIFT) & ((1L << Param.NPML4EPGSHIFT) - 1);
+    public static long pmap_pml4e_index(long va) {
+        return (va >>> Param.PML4SHIFT) & ((1L << Param.NPML4EPGSHIFT) - 1);
     }
 
     private static KernelPointer pmap_pml4e(PhysicalMap pmap, long va) {
-        return new KernelPointer(pmap.getPml4() + pmap_pml4e_index(va) * 8, new Long(8));
+        return new KernelPointer(pmap.getPml4() + pmap_pml4e_index(va) * 8, new Long(8), pmap.getPointer().getKernelAccessor());
     }
 
     private static KernelPointer pmap_pml4e_to_pdpe(KernelPointer pml4e, long va) {
         long pml4eFrame = pml4e.read8() & PhysicalMapEntryMask.PG_PHYS_FRAME.value();
         long pdpe = VmParam.PHYS_TO_DMAP(pml4eFrame);
-        return new KernelPointer(pdpe + pmap_pdpe_index(va) * 8, new Long(8));
+        return new KernelPointer(pdpe + pmap_pdpe_index(va) * 8, new Long(8), pml4e.getKernelAccessor());
     }
 
     private static KernelPointer pmap_pdpe(PhysicalMap pmap, long va) {
@@ -125,7 +126,7 @@ public class PMap {
     private static KernelPointer pmap_pdpe_to_pde(KernelPointer pdpe, long va) {
         long pdpeFrame = pdpe.read8() & PhysicalMapEntryMask.PG_PHYS_FRAME.value();
         long pde = VmParam.PHYS_TO_DMAP(pdpeFrame);
-        return new KernelPointer(pde + pmap_pde_index(va) * 8, new Long(8));
+        return new KernelPointer(pde + pmap_pde_index(va) * 8, new Long(8), pdpe.getKernelAccessor());
     }
 
     public static KernelPointer pmap_pde(PhysicalMap pmap, long va) {
@@ -140,7 +141,7 @@ public class PMap {
     private static KernelPointer pmap_pde_to_pte(KernelPointer pde, long va) {
         long pdeFrame = pde.read8() & PhysicalMapEntryMask.PG_PHYS_FRAME.value();
         long pte = VmParam.PHYS_TO_DMAP(pdeFrame);
-        return new KernelPointer(pte + pmap_pte_index(va) * 8, new Long(8));
+        return new KernelPointer(pte + pmap_pte_index(va) * 8, new Long(8), pde.getKernelAccessor());
     }
 
     public static KernelPointer pmap_pte(PhysicalMap pmap, long va) {
@@ -152,28 +153,29 @@ public class PMap {
         return pmap_pde_to_pte(pde, va);
     }
 
-    private static KernelPointer vtopde(long va) {
+    private static KernelPointer vtopde(KernelPointer va) {
         long mask = (1L << (Param.NPDEPGSHIFT + Param.NPDPEPGSHIFT + Param.NPML4EPGSHIFT)) - 1;
-        return new KernelPointer(addr_PDmap + ((va >> Param.PDRSHIFT) & mask) * 8, new Long(8));
+        return new KernelPointer(addr_PDmap + ((va.addr() >> Param.PDRSHIFT) & mask) * 8, new Long(8), va.getKernelAccessor());
     }
 
-    private static KernelPointer vtopte(long va) {
+    private static KernelPointer vtopte(KernelPointer va) {
         long mask = ((1L << (Param.NPTEPGSHIFT + Param.NPDEPGSHIFT + Param.NPDPEPGSHIFT + Param.NPML4EPGSHIFT)) - 1);
-        return new KernelPointer(addr_PTmap + ((va >> Param.PHYS_PAGE_SHIFT) & mask) * 8, new Long(8));
+        return new KernelPointer(addr_PTmap + ((va.addr() >> Param.PHYS_PAGE_SHIFT) & mask) * 8, new Long(8), va.getKernelAccessor());
     }
 
-    public static long pmap_kextract(long va) {
+    public static long pmap_kextract(KernelPointer va) {
         long pa;
-        if (va >= VmParam.DMAP_MIN_ADDRESS && va < VmParam.DMAP_MAX_ADDRESS) {
-            pa = VmParam.DMAP_TO_PHYS(va);
+        long vaAddr = va.addr();
+        if (vaAddr >= VmParam.DMAP_MIN_ADDRESS && vaAddr < VmParam.DMAP_MAX_ADDRESS) {
+            pa = VmParam.DMAP_TO_PHYS(vaAddr);
         } else {
             KernelPointer pdeAddr = vtopde(va);
             long pde = pdeAddr.read8();
             if ((pde & PhysicalMapEntryMask.X86_PG_PS.value()) != 0) {
-                pa = (pde & PhysicalMapEntryMask.PG_PS_FRAME.value()) | (va & Param.PDRMASK);
+                pa = (pde & PhysicalMapEntryMask.PG_PS_FRAME.value()) | (vaAddr & Param.PDRMASK);
             } else {
-                pa = pmap_pde_to_pte(pdeAddr, va).read8();
-                pa = (pa & PhysicalMapEntryMask.PG_PHYS_FRAME.value()) | (va & Param.PAGE_MASK);
+                pa = pmap_pde_to_pte(pdeAddr, vaAddr).read8();
+                pa = (pa & PhysicalMapEntryMask.PG_PHYS_FRAME.value()) | (vaAddr & Param.PAGE_MASK);
             }
         }
         return pa;

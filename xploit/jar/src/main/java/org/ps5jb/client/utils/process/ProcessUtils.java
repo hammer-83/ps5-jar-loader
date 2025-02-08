@@ -17,9 +17,9 @@ import org.ps5jb.sdk.lib.LibKernel;
  * Utility class for various operations on kernel processes.
  */
 public class ProcessUtils {
-    private KernelPointer kbaseAddress;
-    private KernelOffsets offsets;
-    private LibKernel libKernel;
+    private final KernelPointer kbaseAddress;
+    private final KernelOffsets offsets;
+    private final LibKernel libKernel;
 
     /**
      * Constructor taking only libKernel instance as the argument.

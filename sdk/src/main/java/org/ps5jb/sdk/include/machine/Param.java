@@ -26,7 +26,7 @@ public class Param {
     public static final long KSTACK_PAGES = 1L;
 
     public static long atop(long x) {
-        return x >> PAGE_SHIFT;
+        return x >>> PAGE_SHIFT;
     }
 
     public static long ptoa(long x) {

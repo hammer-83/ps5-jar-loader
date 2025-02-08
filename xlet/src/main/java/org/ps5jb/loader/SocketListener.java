@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * Base class that can be used to listen for incoming network connections and send back the data.
@@ -83,6 +84,11 @@ public abstract class SocketListener implements Runnable {
                     acceptClient(clientSocket);
                 } finally {
                     disposeClient(clientSocket);
+                }
+            } catch (SocketException e) {
+                // Ignore under expected conditions (external termination or client disconnect)
+                if (!terminated && !serverSocket.isClosed()) {
+                    handleException(e);
                 }
             } catch (InterruptedIOException e) {
                 // Do nothing, this is expected due to socket timeout.

@@ -3,7 +3,6 @@ package org.ps5jb.client.payloads;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.Arrays;
 
 import org.dvb.event.EventManager;
@@ -12,8 +11,8 @@ import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
 import org.ps5jb.client.PayloadConstants;
-import org.ps5jb.loader.KernelAccessor;
-import org.ps5jb.loader.KernelReadWrite;
+import org.ps5jb.client.utils.init.SdkInit;
+import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.AbstractPointer;
@@ -58,41 +57,39 @@ public class KernelDump extends SocketListener implements UserEventListener {
 
     public KernelDump() throws IOException {
         // Use same port as webkit implementation from Specter
-        super("Kernel Data Dumper", 5656);
+        super("Kernel Data Dumper v" + ManifestUtils.getClassImplementationVersion(KernelDump.class, "kerneldump"), 5656);
     }
 
     @Override
     public void run() {
-        // Don't continue if there is no kernel r/w
-        KernelAccessor kernelAccessor = KernelReadWrite.getAccessor(getClass().getClassLoader());
-        if (kernelAccessor == null) {
-            Status.println("Unable to dump without kernel read/write capabilities");
-            return;
-        }
-        kbaseAddress = KernelPointer.valueOf(kernelAccessor.getKernelBase());
-
-        // Determine kernel data start, either from known offsets or by scanning.
-        // For scanning to work, the code depends on SYSTEM_PROPERTY_KERNEL_DATA_POINTER to be set.
         libKernel = new LibKernel();
         try {
-            int softwareVersion = libKernel.getSystemSoftwareVersion();
+            SdkInit sdk;
             try {
-                offsets = new KernelOffsets(softwareVersion);
+                sdk = SdkInit.init(true, false);
+                kbaseAddress = KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS);
+                kdataAddress = KernelPointer.valueOf(sdk.KERNEL_DATA_ADDRESS);
+                offsets = sdk.KERNEL_OFFSETS;
+
+                // If switched to AGC, need to switch back because AGC is not able to read text segment
+                sdk.restoreNonAgcKernelReadWrite();
             } catch (SdkSoftwareVersionUnsupportedException e) {
-                // Ignore
+                // Ignore, scan will be performed to determine data base
             }
 
-            kdataAddress = getKnownKDataAddress();
             if (KernelPointer.NULL.equals(kdataAddress)) {
-                KernelPointer kdataPtr = getKdataPtr();
-                if (KernelPointer.NULL.equals(kdataPtr)) {
-                    Status.println("No kernel addresses have been exposed. Aborting.");
-                    return;
-                }
+                kdataAddress = getKnownKDataAddress();
+                if (KernelPointer.NULL.equals(kdataAddress)) {
+                    KernelPointer kdataPtr = getKdataPtr();
+                    if (KernelPointer.NULL.equals(kdataPtr)) {
+                        Status.println("No kernel addresses have been exposed. Aborting.");
+                        return;
+                    }
 
-                kdataAddress = scanKdataStartFromPtr(kdataPtr);
-                if (!KernelPointer.NULL.equals(kdataAddress)) {
-                    Status.println("Known pointer offset from data start: " + KernelPointer.valueOf(kdataPtr.addr() - kdataAddress.addr()));
+                    kdataAddress = scanKdataStartFromPtr(kdataPtr);
+                    if (!KernelPointer.NULL.equals(kdataAddress)) {
+                        Status.println("Known pointer offset from data start: " + KernelPointer.valueOf(kdataPtr.addr() - kdataAddress.addr()));
+                    }
                 }
             }
 
@@ -261,16 +258,6 @@ public class KernelDump extends SocketListener implements UserEventListener {
                     }
                     break;
             }
-        }
-    }
-
-    @Override
-    protected void handleException(Throwable ex) {
-        if (ex instanceof SocketException) {
-            // This usually happens when listener forcefully terminates, mute the stacktrace.
-            Status.println(ex.getMessage());
-        } else {
-            super.handleException(ex);
         }
     }
 }

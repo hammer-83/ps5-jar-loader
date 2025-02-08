@@ -1,5 +1,6 @@
 package org.ps5jb.sdk.include.sys.uio;
 
+import org.ps5jb.loader.KernelAccessor;
 import org.ps5jb.sdk.core.AbstractPointer;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 
@@ -28,13 +29,28 @@ public class UioType {
     }
 
     /**
+     * Helper method to retrieve the kernel accessor instance used
+     * to produce kernel pointers.
+     *
+     * @return Kernel accessor instance backing the <code>ptr</code> pointer
+     *   or null if it is not a kernel pointer.
+     */
+    private KernelAccessor getKernelAccessor() {
+        KernelAccessor ka = null;
+        if (ptr instanceof KernelPointer) {
+            ka = ((KernelPointer) ptr).getKernelAccessor();
+        }
+        return ka;
+    }
+
+    /**
      * Scatter/gather list.
      *
      * @return Returns the value of <code>uio_iov</code> field of <code>uio</code> structure,
      *   which is a pointer to a list of {@link org.ps5jb.sdk.include.sys.iovec.IoVecType} structures.
      */
     public KernelPointer getIov() {
-        return KernelPointer.valueOf(this.ptr.read8(OFFSET_IOV));
+        return new KernelPointer(this.ptr.read8(OFFSET_IOV), null, getKernelAccessor());
     }
 
     /**
@@ -97,7 +113,7 @@ public class UioType {
      * @return Returns the value of <code>uio_td</code> field of <code>uio</code> structure.
      */
     public KernelPointer getOwner() {
-        return KernelPointer.valueOf(this.ptr.read8(OFFSET_OWNER));
+        return new KernelPointer(this.ptr.read8(OFFSET_OWNER), null, getKernelAccessor());
     }
 
     /**
