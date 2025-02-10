@@ -142,6 +142,7 @@ public class SdkInit {
         synchronized (KernelReadWrite.class) {
             KernelAccessor ka = KernelReadWrite.getAccessor(getClass().getClassLoader());
             if (!(ka instanceof KernelAccessorAgc)) {
+                // Note: the DMA writes may only be necessary on 7.xx.
                 if (!onlyIfNecessary || KERNEL_OFFSETS.SOFTWARE_VERSION >= 0x0600) {
                     KernelReadWrite.setAccessor(new KernelAccessorAgc(KernelPointer.valueOf(CUR_PROC_ADDRESS)));
                     result = true;

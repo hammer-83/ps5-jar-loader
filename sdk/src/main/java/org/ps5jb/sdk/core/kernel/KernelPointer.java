@@ -287,7 +287,16 @@ public class KernelPointer extends AbstractPointer {
      *   kernel accessor then the new pointer instance will also have it cached.
      */
     public KernelPointer inc(long delta) {
+        long newAddr = this.addr + delta;
+
         // Size is intentionally left unknown
-        return new KernelPointer(this.addr + delta, null, this.getKernelAccessor());
+        KernelPointer result;
+        if (this.cacheKernelAccessor) {
+            result = new KernelPointer(newAddr, null, this.getKernelAccessor());
+        } else {
+            result = new KernelPointer(newAddr, null, false);
+        }
+
+        return result;
     }
 }

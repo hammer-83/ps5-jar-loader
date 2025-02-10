@@ -6,7 +6,7 @@ import org.ps5jb.sdk.include.sys.rtprio.SchedulingClass;
 
 public class Config {
     // Configuration.
-    public static final boolean dumpKernelStackPartially = true;
+    public static final boolean dumpKernelStackPartially = false;
     public static final boolean dumpKernelStackOfReclaimThread = false;
 
     public static final boolean toggleSetThreadPriorities = false;
@@ -17,6 +17,7 @@ public class Config {
     public static final boolean toggleUnmappingOnFailure = true;
     public static final boolean toggleSprayOnDestroyThread = true;
     public static final boolean toggleMainThreadWait = false;
+    public static final boolean toggleLoggingUi = false;
 
     // Common parameters.
     public static final int MAX_EXPLOITATION_ATTEMPTS = 100000;

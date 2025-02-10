@@ -163,7 +163,7 @@ public class KernelAccessorAgc implements KernelAccessor {
             mman.memoryProtect(victimBuffer[0], GpuPMap.DIRECT_MEMORY_PAGE_SIZE, protRO);
             victimBufferPteMaskRO = victimBufferPteAddr.read8() & ~(victimBuffer[1].addr() + GpuPMap.DIRECT_MEMORY_OFFSET);
 
-            mman.memoryProtect(victimBuffer[0],  GpuPMap.DIRECT_MEMORY_PAGE_SIZE, protRW);
+            mman.memoryProtect(victimBuffer[0], GpuPMap.DIRECT_MEMORY_PAGE_SIZE, protRW);
             victimBufferPteInitialRW = victimBufferPteAddr.read8();
         } catch (InvalidValueException | OperationNotPermittedException e) {
             throw new SdkRuntimeException(e);

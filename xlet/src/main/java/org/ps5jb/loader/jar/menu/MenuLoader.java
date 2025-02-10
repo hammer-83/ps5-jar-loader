@@ -26,7 +26,7 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
     private boolean terminated = false;
     private boolean waiting = false;
 
-    private final Ps5MenuLoader ps5MenuLoader;
+    private Ps5MenuLoader ps5MenuLoader;
 
     private File discPayloadPath = null;
     private Thread remoteJarLoaderThread = null;
@@ -50,6 +50,8 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                         if (discPayloadPath != null) {
                             try {
                                 loadJar(discPayloadPath, false);
+                            } catch (InterruptedException e) {
+                                // Ignore
                             } catch (Throwable ex) {
                                 // JAR execution didn't work, notify and wait to return to the menu
                                 Status.printStackTrace("Could not load JAR from disc", ex);
@@ -66,6 +68,9 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                             }
                         }
 
+                        // Reload the menu in case paths to payloads changed after JAR execution
+                        reloadMenuLoader();
+
                         // Wait for user input before returning
                         Status.println("Press X to return to the menu");
                         waiting = true;
@@ -76,7 +81,7 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                     initRenderLoop();
                 }
             }
-        } catch (RuntimeException | Error ex) {
+        } catch (RuntimeException | Error | IOException ex) {
             Status.printStackTrace("Unhandled exception", ex);
             terminated = true;
         } finally {
@@ -117,6 +122,16 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
         }
         ps5MenuLoader.setSubmenuItems(subItems);
         return ps5MenuLoader;
+    }
+
+    private void reloadMenuLoader() throws IOException {
+        Ps5MenuLoader oldMenuLoader = ps5MenuLoader;
+
+        discPayloadList = null;
+        ps5MenuLoader = initMenuLoader();
+        ps5MenuLoader.setSelected(oldMenuLoader.getSelected());
+        ps5MenuLoader.setSelectedSub(oldMenuLoader.getSelectedSub());
+        ps5MenuLoader.setSubMenuActive(oldMenuLoader.isSubMenuActive());
     }
 
     private void initRenderLoop() {

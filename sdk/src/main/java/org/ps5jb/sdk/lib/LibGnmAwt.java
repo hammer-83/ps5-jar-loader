@@ -6,11 +6,13 @@ import java.util.Set;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Library;
 import org.ps5jb.sdk.core.Pointer;
+import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.PMap;
 import org.ps5jb.sdk.include.machine.pmap.PhysicalMap;
 import org.ps5jb.sdk.include.machine.pmap.PhysicalMapEntryMask;
 import org.ps5jb.sdk.include.sys.proc.Process;
+import org.ps5jb.sdk.res.ErrorMessages;
 
 public class LibGnmAwt extends Library {
     private Pointer lockFunc;
@@ -60,28 +62,63 @@ public class LibGnmAwt extends Library {
         removeXo(userPmap, processedPtes, refFuncAddr, refFuncSize);
 
         // Read offsets to target functions from the reference function code
-        Pointer callToLock = refFuncAddr.inc(0x0E);
-        lockFunc = Pointer.valueOf(callToLock.addr() + 4 + callToLock.read4());
+        Pointer callToLock = refFuncAddr.inc(0x0D);
+        int opcodes = callToLock.read1() & 0xFF;
+        if (opcodes != 0xE8) {
+            throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(
+                    getClass(),
+                    "resolveInternal.unexpectedInstruction",
+                    callToLock.inc(-refFuncAddr.addr()), "0x" + Integer.toHexString(opcodes), "lock"));
+        }
+        lockFunc = Pointer.valueOf(callToLock.addr() + 5 + callToLock.read4(1));
 
-        Pointer callToDma = refFuncAddr.inc(0x74);
-        dmaFunc = Pointer.valueOf(callToDma.addr() + 4 + callToDma.read4());
+        Pointer callToDma = refFuncAddr.inc(0x73);
+        opcodes = callToDma.read1() & 0xFF;
+        if (opcodes != 0xE8) {
+            throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(
+                    getClass(),
+                    "resolveInternal.unexpectedInstruction",
+                    callToDma.inc(-refFuncAddr.addr()), "0x" + Integer.toHexString(opcodes), "dma"));
+        }
+        dmaFunc = Pointer.valueOf(callToDma.addr() + 5 + callToDma.read4(1));
 
-        Pointer jmpToUnlock = refFuncAddr.inc(0xFF);
-        unlockFunc = Pointer.valueOf(jmpToUnlock.addr() + 4 + jmpToUnlock.read4());
+        Pointer jmpToUnlock = refFuncAddr.inc(0xFE);
+        opcodes = jmpToUnlock.read1() & 0xFF;
+        if (opcodes != 0xE9) {
+            throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(
+                    getClass(),
+                    "resolveInternal.unexpectedInstruction",
+                    jmpToUnlock.inc(-refFuncAddr.addr()), "0x" + Integer.toHexString(opcodes), "unlock"));
+        }
+        unlockFunc = Pointer.valueOf(jmpToUnlock.addr() + 5 + jmpToUnlock.read4(1));
 
         // DMA function also has a synchronization object that changes value when GPU processed the operation.
         // Can be used to check for DMA completion.
-        final Pointer refSyncObjectInstrAddr = dmaFunc.inc(0x112);
-        final long refSyncInstrSize = 0x28;
-        removeXo(userPmap, processedPtes, refSyncObjectInstrAddr, refSyncInstrSize);
+        final long dmaFuncSize = 0x1B5;
+        removeXo(userPmap, processedPtes, dmaFunc, dmaFuncSize);
 
         // Read offset to the sync object location in library data section
-        final Pointer syncObjectPtr = Pointer.valueOf(refSyncObjectInstrAddr.addr() + 4 + refSyncObjectInstrAddr.read4());
+        final Pointer refSyncObjectInstrAddr = dmaFunc.inc(0x10F);
+        opcodes = refSyncObjectInstrAddr.read2() & 0xFFFF;
+        if (opcodes != 0x8B4C && opcodes != 0x8B48) {
+            throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(
+                    getClass(),
+                    "resolveInternal.unexpectedInstruction",
+                    refSyncObjectInstrAddr.inc(-dmaFunc.addr()), "0x" + Integer.toHexString(opcodes), "syncObj"));
+        }
+        final Pointer syncObjectPtr = Pointer.valueOf(refSyncObjectInstrAddr.addr() + 7 + refSyncObjectInstrAddr.read4(3));
         syncObject = Pointer.valueOf(syncObjectPtr.read8());
 
         // Read offset to the sync value pointer in library data section
         final Pointer refSyncValueInstrAddr = refSyncObjectInstrAddr.inc(0x24);
-        syncValuePtr = Pointer.valueOf(refSyncValueInstrAddr.addr() + 4 + refSyncValueInstrAddr.read4());
+        opcodes = refSyncValueInstrAddr.read2() & 0xFFFF;
+        if (opcodes != 0x8B44) {
+            throw new SdkSoftwareVersionUnsupportedException(ErrorMessages.getClassErrorMessage(
+                    getClass(),
+                    "resolveInternal.unexpectedInstruction",
+                    refSyncValueInstrAddr.inc(-dmaFunc.addr()), "0x" + Integer.toHexString(opcodes), "syncValue"));
+        }
+        syncValuePtr = Pointer.valueOf(refSyncValueInstrAddr.addr() + 7 + refSyncValueInstrAddr.read4(3));
     }
 
     /**
