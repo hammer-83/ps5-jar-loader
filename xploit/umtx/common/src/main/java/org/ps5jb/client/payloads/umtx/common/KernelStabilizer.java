@@ -47,7 +47,7 @@ public class KernelStabilizer {
      * @param threadAddress Address of the thread struct of the reclaimed thread.
      */
     public void fixupKernelStack(KernelPointer threadAddress) {
-        KernelPointer kstack_obj_ptr = KernelPointer.valueOf(threadAddress.read8(OFFSET_THREAD_KSTACK_OBJ));    // struct thread -> struct vm_object *td_kstack_obj
+        KernelPointer kstack_obj_ptr = threadAddress.pptr(OFFSET_THREAD_KSTACK_OBJ);                            // struct thread -> struct vm_object *td_kstack_obj
 
         // Wipe `td_kstack`, thus kernel would not try to destroy it.
         threadAddress.write8(OFFSET_THREAD_KSTACK, 0L);                                                   // struct thread -> vm_offset_t td_kstack
@@ -68,14 +68,14 @@ public class KernelStabilizer {
         if (mappedKernelStackAddresses != null) {
             final int stackUserAddressCount = mappedKernelStackAddresses.size();
 
-            KernelPointer vmSpaceAddress = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_VM_SPACE));
-            KernelPointer vmMapAddress = KernelPointer.valueOf(vmSpaceAddress.read8(VmSpace.OFFSET_VM_MAP));
+            KernelPointer vmSpaceAddress = processAddress.pptr(Process.OFFSET_P_VM_SPACE);
+            KernelPointer vmMapAddress = vmSpaceAddress.pptr(VmSpace.OFFSET_VM_MAP);
 
             while (!KernelPointer.NULL.equals(vmMapAddress) && (numFixes < stackUserAddressCount)) {
                 if (fixVmMapEntry(vmMapAddress, mappedKernelStackAddresses)) {
                     numFixes++;
                 }
-                vmMapAddress = KernelPointer.valueOf(vmMapAddress.read8(OFFSET_VM_MAP_ENTRY_NEXT));
+                vmMapAddress = vmMapAddress.pptr(OFFSET_VM_MAP_ENTRY_NEXT);
             }
         }
         return numFixes;
@@ -98,9 +98,9 @@ public class KernelStabilizer {
         }
 
         KernelPointer fileDescEntryAddress = openFilesAddress.inc(lookupDescriptor * 0x30L);           // fdt_ofiles[lookup_fd], sizeof(filedescent) = 0x30
-        KernelPointer fileAddress = KernelPointer.valueOf(fileDescEntryAddress.read8());                     // struct filedescent -> struct file *fde_file
+        KernelPointer fileAddress = fileDescEntryAddress.pptr(0);                                      // struct filedescent -> struct file *fde_file
 
-        final KernelPointer sharedMemoryFileDescAddress = KernelPointer.valueOf(fileAddress.read8(OFFSET_FILE_F_DATA));       // struct file -> void* f_data (struct shmfd*)
+        final KernelPointer sharedMemoryFileDescAddress = fileAddress.pptr(OFFSET_FILE_F_DATA);              // struct file -> void* f_data (struct shmfd*)
         if (!KernelPointer.NULL.equals(sharedMemoryFileDescAddress)) {
             KernelPointer shmRefCountAddress = sharedMemoryFileDescAddress.inc(OFFSET_SHMFD_SHM_REFS);                        // struct shmfd -> int shm_refs
             shmRefCountAddress.write4(0x10);
@@ -121,7 +121,7 @@ public class KernelStabilizer {
         while (iterator.hasNext()) {
             final Pointer userAddress = (Pointer) iterator.next();
             if (userAddress.addr() == startUserAddress) {
-                final KernelPointer objectAddress = KernelPointer.valueOf(mapEntryKernelAddress.read8(OFFSET_VM_MAP_ENTRY_OBJECT));
+                final KernelPointer objectAddress = mapEntryKernelAddress.pptr(OFFSET_VM_MAP_ENTRY_OBJECT);
                 if (!KernelPointer.NULL.equals(objectAddress)) {
                     final KernelPointer refCountAddress = objectAddress.inc(OFFSET_VM_OBJECT_REF_COUNT);
                     refCountAddress.write4(0x10);
@@ -151,7 +151,7 @@ public class KernelStabilizer {
             KernelPointer fileDescEntryAddress = openFilesAddress.inc(descriptor * 0x30L);
             KernelPointer fileAddress = KernelPointer.NULL;
             if (!KernelPointer.NULL.equals(fileDescEntryAddress)) {
-                fileAddress = KernelPointer.valueOf(fileDescEntryAddress.read8());
+                fileAddress = fileDescEntryAddress.pptr(0);
             }
 
             if (!KernelPointer.NULL.equals(fileAddress)) {

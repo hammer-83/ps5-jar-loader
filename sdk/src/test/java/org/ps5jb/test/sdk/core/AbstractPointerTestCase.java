@@ -45,6 +45,17 @@ public class AbstractPointerTestCase {
     }
 
     @Test
+    public void testReadNull() {
+        try {
+            TestPointer test = new TestPointer(0);
+            test.read(1);;
+            Assertions.fail("Should have thrown NullPointerException when reading from a null pointer");
+        } catch (NullPointerException ex) {
+            Assertions.assertNull(ex.getMessage());
+        }
+    }
+
+    @Test
     public void testNullZero() {
         final String msg = "pointer is null";
         try {

@@ -1,18 +1,12 @@
 package org.ps5jb.client.payloads;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.ps5jb.loader.Status;
-import org.ps5jb.sdk.core.Pointer;
-import org.ps5jb.sdk.core.SdkException;
-import org.ps5jb.sdk.include.sys.FCntl;
-import org.ps5jb.sdk.include.sys.dirent.DirEnt;
-import org.ps5jb.sdk.include.sys.dirent.DirType;
-import org.ps5jb.sdk.include.sys.fcntl.OpenFlag;
 import org.ps5jb.sdk.io.File;
-import org.ps5jb.sdk.lib.LibKernel;
 
 /**
  * This sample uses native code execution to list accessible entries starting from root directory.
@@ -26,77 +20,42 @@ public class ListDirEnts implements Runnable {
      */
     public void run() {
         try {
-            LibKernel libKernel = new LibKernel();
-            FCntl fcntl = new FCntl(libKernel);
-            try {
-                printDirEnts("/", "", libKernel, fcntl);
-            } finally {
-                libKernel.closeLibrary();
-            }
-        } catch (SdkException e) {
+            printDirEnts("/", "");
+        } catch (Throwable e) {
             Status.printStackTrace(e.getMessage(), e);
         }
     }
 
-    public void getDirEnts(List dirEnts, String path, LibKernel libKernel, FCntl fcntl, boolean recurse) throws SdkException {
-        if (libKernel.sceKernelCheckReachability(path) == 0) {
-            int fd = fcntl.open(path, OpenFlag.O_RDONLY, OpenFlag.O_DIRECTORY);
-            try {
-                File root = new File(path);
-                int BUF_SIZE = 16 * 1024;
-                Pointer db = Pointer.malloc(BUF_SIZE);
-                try {
-                    DirEnt dirEnt = null;
-                    int remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
-                    while (remainingSize > 0 && remainingSize <= BUF_SIZE) {
-                        if (dirEnt == null) {
-                            dirEnt = new DirEnt(db);
-                        }
-                        if (!dirEnt.getName().equals(".") && !dirEnt.getName().equals("..")) {
-                            dirEnts.add(new File(root, dirEnt.getName()));
+    public void getDirEnts(List dirEnts, String path, boolean recurse) throws IOException {
+        File root = new File(path);
 
-                            if (recurse && DirType.DT_DIR.equals(dirEnt.getDirType())) {
-                                String childPath = path + (path == "/" ? "" : "/") + dirEnt.getName();
-                                try {
-                                    getDirEnts(dirEnts, childPath, libKernel, fcntl, recurse);
-                                } catch (SdkException e) {
-                                    Status.println("[ERROR] " + e.getMessage());
-                                }
-                            }
-                        }
+        java.io.File[] children = root.listFiles();
+        if (children != null) {
+            for (int i = 0; i < children.length; ++i) {
+                File childFile = (File) children[i];
+                dirEnts.add(childFile);
 
-                        long oldAddr = dirEnt.getPointer().addr();
-                        dirEnt = dirEnt.next(remainingSize);
-                        if (dirEnt == null) {
-                            remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
-                        } else {
-                            remainingSize -= (int) (dirEnt.getPointer().addr() - oldAddr);
-                        }
-                    }
-                } finally {
-                    db.free();
+                if (recurse && childFile.isDirectory()) {
+                    getDirEnts(dirEnts, childFile.getCanonicalPath(), recurse);
                 }
-            } finally {
-                fcntl.close(fd);
             }
         }
     }
 
-    private void printDirEnts(String path, String indent, LibKernel libKernel, FCntl fcntl) throws SdkException {
+    private void printDirEnts(String path, String indent) throws IOException {
         List dirEnts = new ArrayList();
         try {
-            getDirEnts(dirEnts, path, libKernel, fcntl, false);
-        } catch (SdkException e) {
+            getDirEnts(dirEnts, path, false);
+        } catch (IOException e) {
             Status.println(indent + "  [ERROR] " + e.getMessage());
         }
 
         Iterator dirEntsIter = dirEnts.iterator();
         while (dirEntsIter.hasNext()) {
             File file = (File) dirEntsIter.next();
-            String childPath = file.getAbsolutePath();
             Status.println(indent + file.getName() + (file.isDirectory() ? " [DIR]" : ""));
             if (file.isDirectory()) {
-                printDirEnts(childPath, indent + "  ", libKernel, fcntl);
+                printDirEnts(file.getCanonicalPath(), indent + "  ");
             }
         }
     }

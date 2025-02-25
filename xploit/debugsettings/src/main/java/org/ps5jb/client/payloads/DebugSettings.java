@@ -26,8 +26,8 @@ public class DebugSettings implements Runnable {
         final LibKernel libKernel = new LibKernel();
         try {
             SdkInit sdk = SdkInit.init(true, true);
-            KernelPointer kbase = KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS, false);
-            KernelOffsets o = sdk.KERNEL_OFFSETS;
+            KernelPointer kbase = KernelPointer.valueOf(sdk.kernelBaseAddress, false);
+            KernelOffsets o = sdk.kernelOffsets;
 
             qaFlags = kbase.inc(o.OFFSET_KERNEL_DATA + o.OFFSET_KERNEL_DATA_BASE_QA_FLAGS);
             secFlags = kbase.inc(o.OFFSET_KERNEL_DATA + o.OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS);

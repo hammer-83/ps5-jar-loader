@@ -1,6 +1,7 @@
 package org.ps5jb.sdk.include.sys.mman;
 
-import org.ps5jb.sdk.res.ErrorMessages;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Constants for memory protection flags.
@@ -55,20 +56,24 @@ public final class ProtectionFlag implements Comparable {
     }
 
     /**
-     * Convert a numeric value into a ProtectionFlag constant.
+     * Convert a numeric value into an array of ProtectionFlag constants.
      *
      * @param value Number to convert
-     * @return ProtectionFlag constant corresponding to the given value.
-     * @throws IllegalArgumentException If value does not correspond to any ProtectionFlag.
+     * @return Array of ProtectionFlag constants ORed in the numeric value.
      */
-    public static ProtectionFlag valueOf(int value) {
-        for (ProtectionFlag protectionFlag : values) {
-            if (value == protectionFlag.value()) {
-                return protectionFlag;
+    public static ProtectionFlag[] valueOf(int value) {
+        List result = new ArrayList();
+        for (ProtectionFlag flag : values) {
+            if (!PROT_NONE.equals(flag) && ((value & flag.value) == flag.value)) {
+                result.add(flag);
             }
         }
 
-        throw new IllegalArgumentException(ErrorMessages.getClassErrorMessage(ProtectionFlag.class,"invalidValue", Integer.toString(value)));
+        if (result.isEmpty()) {
+            result.add(PROT_NONE);
+        }
+
+        return (ProtectionFlag[]) result.toArray(new ProtectionFlag[result.size()]);
     }
 
     /**

@@ -30,19 +30,19 @@ public class Byepervisor implements Runnable {
             SdkInit sdk = SdkInit.init(true, true);
 
             // Byepervisor is only available before fw 3.xx
-            int fw = sdk.KERNEL_OFFSETS.SOFTWARE_VERSION;
+            int fw = sdk.kernelOffsets.SOFTWARE_VERSION;
             if (fw >= 0x0300) {
                 Status.println("Unable to execute Byepervisor on firmware version: " +
                         ((fw >> 8) & 0xFF) + "." + ((fw & 0xFF) < 10 ? "0" : "") + (fw & 0xFF));
                 return;
             }
 
-            kbaseAddress = KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS);
-            offsets = sdk.KERNEL_OFFSETS;
+            kbaseAddress = KernelPointer.valueOf(sdk.kernelBaseAddress);
+            offsets = sdk.kernelOffsets;
 
             // Find current process
             ProcessUtils procUtils = new ProcessUtils(libKernel, kbaseAddress, offsets);
-            Process curProc = new Process(KernelPointer.valueOf(sdk.CUR_PROC_ADDRESS));
+            Process curProc = new Process(KernelPointer.valueOf(sdk.curProcAddress));
 
             boolean alreadyApplied = checkRwFlag(false);
 
@@ -68,7 +68,7 @@ public class Byepervisor implements Runnable {
             }
 
             // Become root
-            int[] origIds = procUtils.setUserGroup(curProc, new int[] { 0, 0, 0, 1, 0 });
+            int[] origIds = procUtils.setUserGroup(curProc, new int[] { 0, 0, 0, 1, 0, 0, 0 });
 
             // Relax process privileges
             long[] origPrivs = procUtils.setPrivs(curProc, new long[] {

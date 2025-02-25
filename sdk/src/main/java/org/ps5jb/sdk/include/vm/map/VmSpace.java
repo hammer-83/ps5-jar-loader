@@ -2,11 +2,7 @@ package org.ps5jb.sdk.include.vm.map;
 
 import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
-import org.ps5jb.sdk.include.inet.in.ProtocolType;
 import org.ps5jb.sdk.include.machine.pmap.PhysicalMap;
-import org.ps5jb.sdk.include.machine.pmap.PhysicalMapFlag;
-import org.ps5jb.sdk.include.machine.pmap.PhysicalMapType;
-import org.ps5jb.sdk.include.sys.mutex.MutexType;
 import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
@@ -36,7 +32,7 @@ public class VmSpace {
      * @return Returns the value of <code>vm_map</code> field of <code>vmspace</code> structure.
      */
     public KernelPointer getMap() {
-        return new KernelPointer(this.ptr.read8(OFFSET_VM_MAP), null, this.ptr.getKernelAccessor());
+        return this.ptr.pptr(OFFSET_VM_MAP);
     }
 
     /**

@@ -104,25 +104,26 @@ public class KernelPointer extends AbstractPointer {
      *   It's cached at the time of first access to memory.
      */
     public KernelPointer(long addr, Long size, boolean cacheAccessor) {
-        this(addr, size, null);
-        this.cacheKernelAccessor = cacheAccessor;
+        this(addr, size, cacheAccessor, null);
     }
 
     /**
      * Constructor of kernel pointer from a memory address and
      * a given size. Access beyond the range defined by addr + size
-     * will result in an exception, if size is non null. Use
-     * a specific instance of kernel accessor and cache it for
-     * the lifetime of this pointer instance.
+     * will result in an exception, if size is non null. Control
+     * whether kernel accessor will be cached, and if so, which
+     * accessor instance is cached.
      *
      * @param addr Start address of this pointer.
      * @param size Size of the area.
      * @param kernelAccessor Kernel accessor instance to use and cache.
      */
-    public KernelPointer(long addr, Long size, KernelAccessor kernelAccessor) {
+    public KernelPointer(long addr, Long size, boolean cacheAccessor, KernelAccessor kernelAccessor) {
         super(addr, size);
-        this.cacheKernelAccessor = true;
-        this.kernelAccessor = kernelAccessor;
+        this.cacheKernelAccessor = cacheAccessor;
+        if (this.cacheKernelAccessor) {
+            this.kernelAccessor = kernelAccessor;
+        }
     }
 
     /**
@@ -142,6 +143,17 @@ public class KernelPointer extends AbstractPointer {
             }
         }
         return result;
+    }
+
+    /**
+     * Whether the current pointer instance is caching the kernel accessor.
+     * If accessor is not cached, then the pointer will use the new
+     * accessor instance if switches globally.
+     *
+     * @return Whether accessor is cached or not.
+     */
+    public boolean isCacheKernelAccessor() {
+        return cacheKernelAccessor;
     }
 
     /**
@@ -290,11 +302,41 @@ public class KernelPointer extends AbstractPointer {
         long newAddr = this.addr + delta;
 
         // Size is intentionally left unknown
+        return new KernelPointer(newAddr, null, this.cacheKernelAccessor, this.getKernelAccessor());
+    }
+
+    /**
+     * Same as {@link #pptr(long, Long)} with no size.
+     *
+     * @param offset Offset from he start of this pointer
+     *   at which to read the pointer address.
+     * @return Equivalent of calling {@link  #pptr(long, Long) pptr(offset, null)}.
+     */
+    public KernelPointer pptr(long offset) {
+        return pptr(offset, null);
+    }
+
+    /**
+     * Read a long value at the given offset and treat it as a kernel
+     * pointer using the same accessor caching parameters as the
+     * current pointer.
+     *
+     * @param offset Offset from he start of this pointer
+     *   at which to read the pointer address.
+     * @param size Size of the returned pointer. May be null
+     *   to disable overflow checks.
+     * @return New pointer instance whose accessor caching parameters are the
+     *   same as this pointer instance. If the address read from
+     *   the offset is 0, the {@link KernelPointer#NULL} is returned.
+     */
+    public KernelPointer pptr(long offset, Long size) {
+        long newAddr = this.read8(offset);
+
         KernelPointer result;
-        if (this.cacheKernelAccessor) {
-            result = new KernelPointer(newAddr, null, this.getKernelAccessor());
+        if (newAddr == 0) {
+            result = KernelPointer.NULL;
         } else {
-            result = new KernelPointer(newAddr, null, false);
+            result = new KernelPointer(newAddr, null, this.cacheKernelAccessor, this.getKernelAccessor());
         }
 
         return result;

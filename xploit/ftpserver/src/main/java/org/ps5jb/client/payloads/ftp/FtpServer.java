@@ -31,8 +31,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.tv.xlet.Xlet;
-
 import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
 import org.dvb.event.UserEvent;
@@ -126,33 +124,37 @@ public class FtpServer extends SocketListener implements UserEventListener {
 
     @Override
     public void run() {
-        // Disable I/O proxies
-        disableIOProxyFactory();
+        try {
+            // Disable I/O proxies
+            disableIOProxyFactory();
 
-        // Execute the socket listener
-        super.run();
+            // Execute the socket listener
+            super.run();
 
-        // Unsubscribe from events
-        EventManager eventManager = EventManager.getInstance();
-        if (eventManager != null) {
-            eventManager.removeUserEventListener(this);
-        }
-
-        // Close all the workers
-        Iterator workerIter = workers.iterator();
-        while (workerIter.hasNext()) {
-            FtpWorker worker = (FtpWorker) workerIter.next();
-            worker.terminate();
-        }
-
-        workerIter = workers.iterator();
-        while (workerIter.hasNext()) {
-            FtpWorker worker = (FtpWorker) workerIter.next();
-            try {
-                worker.join(5000);
-            } catch (InterruptedException e) {
-                Status.printStackTrace(e.getMessage(), e);
+            // Unsubscribe from events
+            EventManager eventManager = EventManager.getInstance();
+            if (eventManager != null) {
+                eventManager.removeUserEventListener(this);
             }
+
+            // Close all the workers
+            Iterator workerIter = workers.iterator();
+            while (workerIter.hasNext()) {
+                FtpWorker worker = (FtpWorker) workerIter.next();
+                worker.terminate();
+            }
+
+            workerIter = workers.iterator();
+            while (workerIter.hasNext()) {
+                FtpWorker worker = (FtpWorker) workerIter.next();
+                try {
+                    worker.join(5000);
+                } catch (InterruptedException e) {
+                    Status.printStackTrace(e.getMessage(), e);
+                }
+            }
+        } finally {
+            free();
         }
     }
 

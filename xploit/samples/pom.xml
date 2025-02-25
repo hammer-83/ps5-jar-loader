@@ -24,6 +24,7 @@
 
     <modules>
         <module>dumpclasspath</module>
+        <module>dumpcurproc</module>
         <module>minitennis</module>
         <module>printsysprops</module>
         <module>listdirents</module>

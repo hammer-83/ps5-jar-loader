@@ -210,7 +210,17 @@
                 </dependency>
                 <dependency>
                     <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>debugsettings</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
                     <artifactId>ftpserver</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit</groupId>
+                    <artifactId>jailbreak</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
@@ -221,6 +231,11 @@
                 <dependency>
                     <groupId>org.ps5jb.xploit.samples</groupId>
                     <artifactId>dumpclasspath</artifactId>
+                    <version>${project.parent.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.ps5jb.xploit.samples</groupId>
+                    <artifactId>dumpcurproc</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
                 <dependency>
@@ -241,11 +256,6 @@
                 <dependency>
                     <groupId>org.ps5jb.xploit.umtx</groupId>
                     <artifactId>umtx1</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.ps5jb.xploit</groupId>
-                    <artifactId>debugsettings</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
             </dependencies>

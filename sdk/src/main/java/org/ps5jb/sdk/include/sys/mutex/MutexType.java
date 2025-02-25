@@ -35,7 +35,7 @@ public class MutexType {
             AbstractPointer lockPointer;
             Long lockPointerSize = new Long(LockObjectType.SIZE);
             if (ptr instanceof KernelPointer) {
-                lockPointer = new KernelPointer(ptr.read8(OFFSET_MTX_LOCK_OBJECT), lockPointerSize, ((KernelPointer) ptr).getKernelAccessor());
+                lockPointer = ((KernelPointer) ptr).pptr(OFFSET_MTX_LOCK_OBJECT, lockPointerSize);
             } else {
                 lockPointer = new Pointer(ptr.read8(OFFSET_MTX_LOCK_OBJECT), lockPointerSize);
             }

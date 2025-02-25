@@ -11,6 +11,7 @@ import org.ps5jb.sdk.include.sys.RtPrio;
 import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.include.sys.rtprio.RtPrioType;
 import org.ps5jb.sdk.include.sys.rtprio.SchedulingClass;
+import org.ps5jb.sdk.include.sys.ucred.UCred;
 import org.ps5jb.sdk.lib.LibKernel;
 
 /**
@@ -61,9 +62,26 @@ public class ProcessUtils {
      *
      * @return Current process' <code>proc</code> structure.
      */
-    public org.ps5jb.sdk.include.sys.proc.Process getCurrentProcess() {
+    public Process getCurrentProcess() {
         int curPid = libKernel.getpid();
+        return getProcessByPid(curPid);
+    }
 
+    /**
+     * Interface to search processes.
+     */
+    public interface MatchProcess {
+        boolean isMatching(Process proc);
+    }
+
+    /**
+     * Search process using a custom matching logic.
+     *
+     * @param procMatch Object which determines whether a given process is a match.
+     * @return The matching process or <code>null</code> if no matches are found.
+     * @throws NullPointerException If kernel's allproc offset is not known (null).
+     */
+    public Process searchProcess(MatchProcess procMatch) {
         KernelPointer allproc = KernelPointer.NULL;
         if (KernelPointer.NULL.equals(kbaseAddress) || kbaseAddress == null) {
             String allProcAddrStr = System.getProperty(PayloadConstants.ALLPROC_ADDRESS_PROPERTY);
@@ -77,33 +95,64 @@ public class ProcessUtils {
 
         KernelPointer.nonNull(allproc, "Kernel allproc address could not be determined");
 
-        Process curProc = new Process(KernelPointer.valueOf(allproc.read8()));
+        Process curProc = new Process(allproc.pptr(0));
         while (curProc != null) {
-            int pid = libKernel.getpid();
-            if (pid == curPid) {
+            if (procMatch.isMatching(curProc)) {
                 break;
             }
             curProc = curProc.getNextProcess();
         }
-
         return curProc;
+    }
+
+    /**
+     * Get <code>proc</code> structure of the process with a given PID.
+     *
+     * @param pid {@link Process#getPid() PID} to search for.
+     * @return Process' <code>proc</code> structure or null if
+     *   the process with the given PID is not found.
+     * @throws NullPointerException If kernel's allproc offset is not known (null).
+     */
+    public Process getProcessByPid(final int pid) {
+        return searchProcess((proc) -> proc.getPid() == pid);
+    }
+
+    /**
+     * Get <code>proc</code> structure of the process with a given name.
+     *
+     * @param name {@link Process#getName() Name} to search for.
+     * @return Process' <code>proc</code> structure or null if
+     *   the process with the given name is not found.
+     * @throws NullPointerException If kernel's allproc offset is not known (null) or
+     *   if <code>name</code> is null.
+     */
+    public Process getProcessByName(final String name) {
+        return searchProcess((proc) -> name.equals(proc.getName()));
     }
 
     /**
      * Returns the ids for the user and group of a given process.
      *
      * @param proc Process whose user/group to set.
-     * @return Array of ids for user/group values in that order: uid, ruid, svuid, ngroups and rgid.
+     * @return Array of ids for user/group values in that order:
+     *   uid, ruid, svuid, ngroups, rgid, svgid, gid1, ... gidN
+     *   where N is the number of groups (<code>ngroups</code>).
      */
     public int[] getUserGroup(Process proc) {
-        KernelPointer ucredAddr = proc.getUCred();
+        UCred ucred = proc.getUserCredentials();
+        KernelPointer groups = ucred.getGroups();
+        int groupCount = ucred.getNgroups();
 
-        int[] result = new int[5];
-        result[0] = ucredAddr.read4(0x04);   // cr_uid
-        result[1] = ucredAddr.read4(0x08);   // cr_ruid
-        result[2] = ucredAddr.read4(0x0C);   // cr_svuid
-        result[3] = ucredAddr.read4(0x10);   // cr_ngroups
-        result[4] = ucredAddr.read4(0x14);   // cr_rgid
+        int[] result = new int[6 + groupCount];
+        result[0] = ucred.getUid();
+        result[1] = ucred.getRuid();
+        result[2] = ucred.getSvuid();
+        result[3] = groupCount;
+        result[4] = ucred.getRgid();
+        result[5] = ucred.getSvgid();
+        for (int groupIndex = 0; groupIndex < groupCount; ++groupIndex) {
+            result[6 + groupIndex] = groups.read4(groupIndex * 4L);
+        }
 
         return result;
     }
@@ -112,18 +161,31 @@ public class ProcessUtils {
      * Set the ids for the user and group of a given process.
      *
      * @param proc Process whose user/group to set.
-     * @param ids Array of ids to set in that order: uid, ruid, svuid, ngroups and rgid.
+     * @param ids Array of ids to set in that order:
+     *   uid, ruid, svuid, ngroups, rgid, svgid, gid1, ... gidN.
+     *   For backwards compatibility reasons, it's not necessary to
+     *   specify svgid or actual group ids. If the array lenth is
+     *   5, only the first 5 elements will be applied.
      * @return Value of ids before the modification.
      */
     public int[] setUserGroup(Process proc, int[] ids) {
         int[] prevValue = getUserGroup(proc);
 
-        KernelPointer ucredAddr = proc.getUCred();
-        ucredAddr.write4(0x04, ids[0]);   // cr_uid
-        ucredAddr.write4(0x08, ids[1]);   // cr_ruid
-        ucredAddr.write4(0x0C, ids[2]);   // cr_svuid
-        ucredAddr.write4(0x10, ids[3]);   // cr_ngroups
-        ucredAddr.write4(0x14, ids[4]);   // cr_rgid
+        UCred ucred = proc.getUserCredentials();
+        ucred.setUid(ids[0]);
+        ucred.setRuid(ids[1]);
+        ucred.setSvuid(ids[2]);
+        ucred.setNgroups(ids[3]);
+        ucred.setRgid(ids[4]);
+
+        // Compatibility with older implementation, which didn't need svgid or gids
+        if (ids.length > 5) {
+            ucred.setSvgid(ids[5]);
+            KernelPointer groups = ucred.getGroups();
+            for (int groupIndex = 0; groupIndex < ids[3]; ++groupIndex) {
+                groups.write4(groupIndex * 4L, ids[6] + groupIndex);
+            }
+        }
 
         return prevValue;
     }
@@ -132,16 +194,16 @@ public class ProcessUtils {
      * Gets PS5-specific privileges for a given process.
      *
      * @param proc Process whose privileges to get.
-     * @return Array of privileges in that order: authId, caps0, caps1, attrs.
+     * @return Array of privileges in that order: authId, caps1, caps2, attrs[3].
      */
     public long[] getPrivs(Process proc) {
-        KernelPointer ucredAddr = proc.getUCred();
+        UCred ucred = proc.getUserCredentials();
 
         long[] result = new long[4];
-        result[0] = ucredAddr.read8(0x58);         // cr_sceAuthId
-        result[1] = ucredAddr.read8(0x60);         // cr_sceCaps[0]
-        result[2] = ucredAddr.read8(0x68);         // cr_sceCaps[1]
-        result[3] = ucredAddr.read1(0x83);         // cr_sceAttr[0]
+        result[0] = ucred.getSceAuthId();
+        result[1] = ucred.getSceCaps1();
+        result[2] = ucred.getSceCaps2();
+        result[3] = ucred.getSceAttrs()[3];
 
         return result;
     }
@@ -150,17 +212,21 @@ public class ProcessUtils {
      * Sets PS5-specific privileges for a given process.
      *
      * @param proc Process whose privileges to set.
-     * @param privs Array of privileges in that order: authId, caps0, caps1, attrs.
+     * @param privs Array of privileges in that order: authId, caps0, caps1, attrs[3].
      * @return Value of privs before the modification.
      */
     public long[] setPrivs(Process proc, long[] privs) {
         long[] prevValue = getPrivs(proc);
 
-        KernelPointer ucredAddr = proc.getUCred();
-        ucredAddr.write8(0x58, privs[0]);         // cr_sceAuthId
-        ucredAddr.write8(0x60, privs[1]);         // cr_sceCaps[0]
-        ucredAddr.write8(0x68, privs[2]);         // cr_sceCaps[1]
-        ucredAddr.write1(0x83, (byte) privs[3]);  // cr_sceAttr[0]
+        UCred ucred = proc.getUserCredentials();
+        ucred.setSceAuthId(privs[0]);
+        ucred.setSceCaps1(privs[1]);
+        ucred.setSceCaps2(privs[2]);
+
+        // Attrs are set this way for backwards compatibility.
+        byte[] attrs = ucred.getSceAttrs();
+        attrs[3] = (byte) privs[3];
+        ucred.setSceAttrs(attrs);
 
         return prevValue;
     }

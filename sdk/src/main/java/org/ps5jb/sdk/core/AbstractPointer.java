@@ -46,6 +46,9 @@ public abstract class AbstractPointer implements Serializable {
                 throw new IndexOutOfBoundsException(Long.toString(offset + size));
             }
         }
+
+        // Do not allow to read from null pointer, even with offset
+        nonNull(pointer, null);
     }
 
     /** Native memory address pointed to by this instance. */

@@ -32,12 +32,15 @@ public class LibKernel extends Library {
     private Pointer getpid;
     private Pointer open;
     private Pointer close;
+    private Pointer chdir;
     private Pointer getdents;
     private Pointer stat;
     private Pointer fstat;
     private Pointer sceKernelCheckReachability;
     private Pointer pthread_rename_np;
+    private Pointer pthread_getthreadid_np;
     private Pointer pthread_self;
+    private Pointer pthread_getspecific;
     private Pointer rtprio_thread;
     private Pointer pipe;
     private Pointer shm_open;
@@ -58,6 +61,9 @@ public class LibKernel extends Library {
     private Pointer setsockopt;
     private Pointer getsockopt;
     private Pointer usleep;
+    private Pointer sysctl;
+    private Pointer sysctlbyname;
+    private Pointer sysctlnametomib;
     private Pointer is_in_sandbox;
     private Pointer sceKernelNotifySystemSuspendStart;
     private Pointer sceKernelSetEventFlag;
@@ -68,6 +74,9 @@ public class LibKernel extends Library {
     private Pointer sceKernelMapDirectMemory;
     private Pointer sceKernelGetDirectMemorySize;
     private Pointer sceKernelMunmap;
+    private Pointer sceKernelSpawn;
+    private Pointer sceKernelGetModuleList;
+    private Pointer sceKernelGetModuleInfo;
 
     /**
      * Constructor.
@@ -210,7 +219,7 @@ public class LibKernel extends Library {
      * @param path File name to open.
      * @param flags One or more flags determining the mode of the file opening.
      * @return If successful, return a non-negative integer, termined a file descriptor.
-     *   Return -1 on failer, and set {@link ErrNo#errno() errno} to indicate the error.
+     *   Return -1 on failure, and set {@link ErrNo#errno() errno} to indicate the error.
      */
     public int open(String path, int flags) {
         if (open == null) {
@@ -237,6 +246,27 @@ public class LibKernel extends Library {
             close = addrOf("close");
         }
         return (int) call(close, fd);
+    }
+
+    /**
+     * Causes the named directory to become the current working directory,
+     * that is, the starting point for path searches of pathnames not beginning with a slash, '/'.
+     *
+     * @param path New current working directory.
+     * @return Upon successful completion, the value 0 is returned.
+     *   Return -1 on failure, and set {@link ErrNo#errno() errno} to indicate the error.
+     */
+    public int chdir(String path) {
+        if (chdir == null) {
+            chdir = addrOf("chdir");
+        }
+
+        Pointer buf = Pointer.fromString(path);
+        try {
+            return (int) call(chdir, buf.addr());
+        } finally {
+            buf.free();
+        }
     }
 
     /**
@@ -321,12 +351,28 @@ public class LibKernel extends Library {
         }
     }
 
+    public int pthread_getthreadid_np() {
+        if (pthread_getthreadid_np == null) {
+            pthread_getthreadid_np = addrOf("pthread_getthreadid_np");
+        }
+
+        return (int) call(pthread_getthreadid_np);
+    }
+
     public Pointer pthread_self() {
         if (pthread_self == null) {
             pthread_self = addrOf("pthread_self");
         }
 
         return Pointer.valueOf(call(pthread_self));
+    }
+
+    public Pointer pthread_getspecific(int key) {
+        if (pthread_getspecific == null) {
+            pthread_getspecific = addrOf("pthread_getspecific");
+        }
+
+        return Pointer.valueOf(call(pthread_getspecific, key));
     }
 
     public int rtprio_thread(int function, int lwpid, Pointer rtprio) {
@@ -485,6 +531,48 @@ public class LibKernel extends Library {
     }
 
     /**
+     * Retrieves system information and allows processes with appropriate privileges to set system information.
+     *
+     * @param name "Management Information Base"-style name of the state to retrieve or set, which is an array
+     *   of integers.
+     * @param namelen Length of <code>name</code> array, in number of integers.
+     * @param oldp The information is copied into this buffer. The size of the available data can be determined
+     *   by calling the function with <code>oldp</code> set to <code>NULL</code>.
+     * @param oldlenp The size of the <code>oldp</code> before the call,
+     *   and the amount of data copied after a successful call and
+     *   after a call that returns with the error code <code>ENOMEM</code>.
+     * @param newp New value to set. If a new value is not to be set,
+     *   <code>newp</code> should be set to <code>NULL</code> and
+     *   <code>newlen</code> set to <code>0</code>.
+     * @param newlen Length of <code>newp</code> buffer.
+     * @return Upon successful completion, the value 0 is returned;
+     *   otherwise the value -1 is returned and the global variable errno is set  to indicate the error.
+     */
+    public int sysctl(Pointer name, int namelen, Pointer oldp, Pointer oldlenp, Pointer newp, long newlen) {
+        if (sysctl == null) {
+            sysctl = addrOf("sysctl");
+        }
+
+        return (int) call(sysctl, name.addr(), namelen, oldp.addr(), oldlenp.addr(), newp.addr(), newlen);
+    }
+
+    public int sysctlbyname(Pointer name, Pointer oldp, Pointer oldlenp, Pointer newp, long newlen) {
+        if (sysctlbyname == null) {
+            sysctlbyname = addrOf("sysctlbyname");
+        }
+
+        return (int) call(sysctlbyname, name.addr(), oldp.addr(), oldlenp.addr(), newp.addr(), newlen);
+    }
+
+    public int sysctlnametomib(Pointer name, Pointer mibp, Pointer sizep) {
+        if (sysctlnametomib == null) {
+            sysctlnametomib = addrOf("sysctlnametomib");
+        }
+
+        return (int) call(sysctlnametomib, name.addr(), mibp.addr(), sizep.addr());
+    }
+
+    /**
      * Retrieve the PS5 system software version information.
      *
      * @return Buffer with the version information.
@@ -611,5 +699,29 @@ public class LibKernel extends Library {
         }
 
         return (int) call(sceKernelMunmap, addr.addr(), len);
+    }
+
+    public int sceKernelSpawn(Pointer newPid, int unused, Pointer elfPath, Pointer rootPath, Pointer arguments) {
+        if (sceKernelSpawn == null) {
+            sceKernelSpawn = addrOf("sceKernelSpawn");
+        }
+
+        return (int) call(sceKernelSpawn, newPid.addr(), unused, elfPath.addr(), rootPath.addr(), arguments.addr());
+    }
+
+    public int sceKernelGetModuleList(Pointer result, long resultSize, Pointer actualSize) {
+        if (sceKernelGetModuleList == null) {
+            sceKernelGetModuleList = addrOf("sceKernelGetModuleList");
+        }
+
+        return (int) call(sceKernelGetModuleList, result.addr(), resultSize, actualSize.addr());
+    }
+
+    public int sceKernelGetModuleInfo(int handle, Pointer result) {
+        if (sceKernelGetModuleInfo == null) {
+            sceKernelGetModuleInfo = addrOf("sceKernelGetModuleInfo");
+        }
+
+        return (int) call(sceKernelGetModuleInfo, handle, result.addr());
     }
 }

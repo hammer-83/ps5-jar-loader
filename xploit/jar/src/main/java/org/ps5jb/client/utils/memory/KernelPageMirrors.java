@@ -52,7 +52,7 @@ public class KernelPageMirrors {
      *
      * @param curProc Address of the proc structure in kernel for the current process.
      *   Can be obtained using {@link ProcessUtils#getCurrentProcess()} or
-     *   {@link org.ps5jb.client.utils.init.SdkInit#CUR_PROC_ADDRESS}.
+     *   {@link org.ps5jb.client.utils.init.SdkInit#curProcAddress}.
      */
     public KernelPageMirrors(Process curProc) {
         this.libKernel = new LibKernel();
@@ -133,7 +133,8 @@ public class KernelPageMirrors {
         if (pageStartAddr == kernelVa.addr()) {
             return kernelVa;
         }
-        return new KernelPointer(pageStartAddr, null, kernelVa.getKernelAccessor());
+        return new KernelPointer(pageStartAddr, null,
+                kernelVa.isCacheKernelAccessor(), kernelVa.getKernelAccessor());
     }
 
     /**

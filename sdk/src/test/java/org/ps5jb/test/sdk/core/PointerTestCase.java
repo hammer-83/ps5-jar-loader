@@ -172,6 +172,19 @@ public class PointerTestCase {
     }
 
     @Test
+    public void testCopyToSuccess() {
+        byte[] writeValue = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A };
+        ptr.write(0, writeValue, 0, writeValue.length);
+
+        Pointer newPtr = Pointer.calloc(ptr.size().longValue());
+        ptr.copyTo(newPtr, 5, 5);
+        byte[] res = newPtr.read(10);
+        Assertions.assertArrayEquals(new byte[] {
+                0x06, 0x07, 0x08, 0x09, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00
+        }, res);
+    }
+
+    @Test
     public void testPerformance() {
         final int iterationCount = 10000000;
         final int elemCount = ptr.size().intValue() / 8;

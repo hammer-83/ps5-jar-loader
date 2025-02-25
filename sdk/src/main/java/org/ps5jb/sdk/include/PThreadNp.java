@@ -43,4 +43,8 @@ public class PThreadNp {
             }
         }
     }
+
+    public int getThreadId() {
+        return libKernel.pthread_getthreadid_np();
+    }
 }

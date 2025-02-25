@@ -23,13 +23,15 @@ public class GpuPMap {
     }
 
     private static KernelPointer gpu_pmap_pml4e(GpuVm gpuVm, long va) {
-        return new KernelPointer(gpuVm.getPageDirectoryVa() + PMap.pmap_pml4e_index(va) * 8, new Long(8), gpuVm.getPointer().getKernelAccessor());
+        return new KernelPointer(gpuVm.getPageDirectoryVa() + PMap.pmap_pml4e_index(va) * 8, new Long(8),
+                gpuVm.getPointer().isCacheKernelAccessor(), gpuVm.getPointer().getKernelAccessor());
     }
 
     private static KernelPointer gpu_pmap_pml4e_to_pdpe(KernelPointer pml4e, long va) {
         long pml4eFrame = pml4e.read8() & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
         long pdpe = VmParam.PHYS_TO_DMAP(pml4eFrame);
-        return new KernelPointer(pdpe + PMap.pmap_pdpe_index(va) * 8, new Long(8), pml4e.getKernelAccessor());
+        return new KernelPointer(pdpe + PMap.pmap_pdpe_index(va) * 8, new Long(8),
+                pml4e.isCacheKernelAccessor(), pml4e.getKernelAccessor());
     }
 
     private static KernelPointer gpu_pmap_pdpe(GpuVm gpuVm, long va) {
@@ -44,7 +46,8 @@ public class GpuPMap {
     private static KernelPointer gpu_pmap_pdpe_to_pde(KernelPointer pdpe, long va) {
         long pdpeFrame = pdpe.read8() & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
         long pde = VmParam.PHYS_TO_DMAP(pdpeFrame);
-        return new KernelPointer(pde + PMap.pmap_pde_index(va) * 8, new Long(8), pdpe.getKernelAccessor());
+        return new KernelPointer(pde + PMap.pmap_pde_index(va) * 8, new Long(8),
+                pdpe.isCacheKernelAccessor(), pdpe.getKernelAccessor());
     }
 
     public static KernelPointer gpu_pmap_pde(GpuVm gpuVm, long va) {
@@ -59,7 +62,8 @@ public class GpuPMap {
     private static KernelPointer gpu_pmap_pde_to_pte(KernelPointer pde, long va) {
         long pdeFrame = pde.read8() & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
         long pte = VmParam.PHYS_TO_DMAP(pdeFrame);
-        return new KernelPointer(pte + PMap.pmap_pte_index(va) * 8, new Long(8), pde.getKernelAccessor());
+        return new KernelPointer(pte + PMap.pmap_pte_index(va) * 8, new Long(8),
+                pde.isCacheKernelAccessor(), pde.getKernelAccessor());
     }
 
     public static KernelPointer gpu_pmap_pte(GpuVm gpuVm, long va) {
@@ -93,7 +97,8 @@ public class GpuPMap {
             throw new SdkRuntimeException(ErrorMessages.getClassErrorMessage(GpuPMap.class, "vaInvalid", "0x" + Long.toHexString(va)));
         }
 
-        KernelPointer pdAddr = new KernelPointer(gpuVm.getPageDirectoryVa(), null, gpuVm.getPointer().getKernelAccessor());
+        KernelPointer pdAddr = new KernelPointer(gpuVm.getPageDirectoryVa(), null,
+                gpuVm.getPointer().isCacheKernelAccessor(), gpuVm.getPointer().getKernelAccessor());
         if (KernelPointer.NULL.equals(pdAddr)) {
             return null;
         }
@@ -122,21 +127,24 @@ public class GpuPMap {
             long pdeFrame = pde & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
             long pteBase = VmParam.PHYS_TO_DMAP(pdeFrame);
             long pteIndex = (relativeVa & Param.PDRMASK) >>> 0x0D;
-            KernelPointer pteAddr = new KernelPointer(pteBase + pteIndex * 8, new Long(8), gpuVm.getPointer().getKernelAccessor());
+            KernelPointer pteAddr = new KernelPointer(pteBase + pteIndex * 8, new Long(8),
+                    gpuVm.getPointer().isCacheKernelAccessor(), gpuVm.getPointer().getKernelAccessor());
             return new long[] { pteAddr.addr(), 0x2000 };
         }
 
         long pdeFrame = pde & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
         long pteBase = VmParam.PHYS_TO_DMAP(pdeFrame);
         long pteIndex = (relativeVa & Param.PDRMASK) >>> 0x10;
-        KernelPointer pteAddr = new KernelPointer(pteBase + pteIndex * 8, new Long(8), gpuVm.getPointer().getKernelAccessor());
+        KernelPointer pteAddr = new KernelPointer(pteBase + pteIndex * 8, new Long(8),
+                gpuVm.getPointer().isCacheKernelAccessor(), gpuVm.getPointer().getKernelAccessor());
         long pte = pteAddr.read8();
         long PG_V_57 = gpu_pmap_valid_mask(gpuVm) | GpuPhysicalMapEntryMask.GPU_PG_57.value();
         if ((pte & PG_V_57) == PG_V_57) {
             long pteFrame = pte & GpuPhysicalMapEntryMask.GPU_PG_FRAME.value();
             long pa = VmParam.PHYS_TO_DMAP(pteFrame);
             long paIndex = (relativeVa >>> 13) & 7;
-            KernelPointer paAddr = new KernelPointer(pa + paIndex * 8, new Long(8), gpuVm.getPointer().getKernelAccessor());
+            KernelPointer paAddr = new KernelPointer(pa + paIndex * 8, new Long(8),
+                    gpuVm.getPointer().isCacheKernelAccessor(), gpuVm.getPointer().getKernelAccessor());
             return new long[] { paAddr.addr(), 0x2000 };
         }
 

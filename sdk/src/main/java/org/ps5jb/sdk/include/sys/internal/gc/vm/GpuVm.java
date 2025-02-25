@@ -110,9 +110,9 @@ public class GpuVm {
      */
     public Process getProcess() {
         Process result = null;
-        long ptr = this.ptr.read8(OFFSET_GVM_PROC);
-        if (ptr != 0) {
-            result = new Process(new KernelPointer(ptr, null, this.ptr.getKernelAccessor()));
+        KernelPointer ptr = this.ptr.pptr(OFFSET_GVM_PROC);
+        if (!KernelPointer.NULL.equals(ptr)) {
+            result = new Process(ptr);
         }
         return result;
     }

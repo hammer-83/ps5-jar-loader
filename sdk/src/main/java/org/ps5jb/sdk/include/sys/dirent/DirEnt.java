@@ -38,7 +38,7 @@ public class DirEnt {
      *   size, null is returned.
      */
     public DirEnt next(int remainingSize) {
-        short reclen = this.ptr.read2(4);
+        long reclen = this.ptr.read2(4) & 0xFFFF;
 
         DirEnt result;
         if (reclen >= 8 && reclen <= remainingSize) {

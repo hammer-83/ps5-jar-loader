@@ -67,9 +67,10 @@ public class KernelDump extends SocketListener implements UserEventListener {
             SdkInit sdk;
             try {
                 sdk = SdkInit.init(true, false);
-                kbaseAddress = KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS);
-                kdataAddress = KernelPointer.valueOf(sdk.KERNEL_DATA_ADDRESS);
-                offsets = sdk.KERNEL_OFFSETS;
+
+                offsets = sdk.kernelOffsets;
+                kdataAddress = new KernelPointer(sdk.kernelDataAddress, new Long(sdk.kernelOffsets.SIZE_KERNEL_DATA));
+                kbaseAddress = new KernelPointer(sdk.kernelBaseAddress, new Long(sdk.kernelOffsets.OFFSET_KERNEL_DATA + sdk.kernelOffsets.SIZE_KERNEL_DATA));
 
                 // If switched to AGC, need to switch back because AGC is not able to read text segment
                 sdk.restoreNonAgcKernelReadWrite();
@@ -110,9 +111,19 @@ public class KernelDump extends SocketListener implements UserEventListener {
             // Listen for connection
             super.run();
         } finally {
-            libKernel.closeLibrary();
+            free();
 
             EventManager.getInstance().removeUserEventListener(this);
+        }
+    }
+
+    @Override
+    protected void free() {
+        super.free();
+
+        if (libKernel != null) {
+            libKernel.closeLibrary();
+            libKernel = null;
         }
     }
 
@@ -137,7 +148,7 @@ public class KernelDump extends SocketListener implements UserEventListener {
                 Status.println("Dumping kernel data to " + clientAddress + ". Start: " + kernelSpace + "; size: 0x" + Long.toHexString(kernelSpace.size().longValue()));
             } else {
                 // 0x3000 pages is an arbitrary limit which will likely crash the console
-                kernelSpace = new KernelPointer(kdataAddress.addr(), new Long(0x3000 + Param.PAGE_SIZE));
+                kernelSpace = new KernelPointer(kdataAddress.addr(), new Long(0x3000 * Param.PAGE_SIZE));
                 Status.println("Dumping kernel data until crash to " + clientAddress + ". Start: " + kernelSpace);
             }
 

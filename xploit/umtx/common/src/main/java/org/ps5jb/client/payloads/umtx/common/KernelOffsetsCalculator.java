@@ -8,13 +8,12 @@ import org.ps5jb.sdk.core.kernel.KernelOffsets;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.machine.VmParam;
 import org.ps5jb.sdk.include.sys.proc.Process;
+import org.ps5jb.sdk.include.sys.proc.Thread;
 
 /**
  * Calculator of important absolute kernel addresses.
  */
 public class KernelOffsetsCalculator {
-    private static final long OFFSET_THREAD_TD_NAME = 660L;
-    private static final long OFFSET_THREAD_TD_PROC = 8L;
     private static final long OFFSET_FDESCENTTBL_FDT_OFILES = 0x08L;
 
     public static final int MAX_RECLAIM_THREAD_NAME = 0x10;
@@ -64,10 +63,10 @@ public class KernelOffsetsCalculator {
         final Long potentialThreadAddress = classifier.getMostOccuredHeapAddress(DEFAULT_KERNEL_THREAD_POINTER_OCCURRENCE_THRESHOLD);
         if (potentialThreadAddress != null) {
             final KernelPointer threadAddressPtr = KernelPointer.valueOf(potentialThreadAddress.longValue(), false);
-            final String threadNameCheck = threadAddressPtr.readString(OFFSET_THREAD_TD_NAME, new Integer(MAX_RECLAIM_THREAD_NAME - 1), Charset.defaultCharset().name());
+            final String threadNameCheck = threadAddressPtr.readString(Thread.OFFSET_TD_NAME, new Integer(MAX_RECLAIM_THREAD_NAME - 1), Charset.defaultCharset().name());
             if (threadNameCheck.equals(reclaimThreadName)) {
                 threadAddress = threadAddressPtr;
-                processAddress = KernelPointer.valueOf(threadAddress.read8(OFFSET_THREAD_TD_PROC), false);
+                processAddress = KernelPointer.valueOf(threadAddress.read8(Thread.OFFSET_TD_PROC), false);
 
                 final KernelPointer p_fd = KernelPointer.valueOf(processAddress.read8(Process.OFFSET_P_FD), false);
                 processOpenFilesAddress = KernelPointer.valueOf(p_fd.read8() + OFFSET_FDESCENTTBL_FDT_OFILES, false);

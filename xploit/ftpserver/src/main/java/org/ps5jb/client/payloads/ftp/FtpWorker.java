@@ -119,6 +119,7 @@ public class FtpWorker extends Thread {
      * @param client The socket for the current client.
      * @param dataPort The port for the data connection.
      * @param name Name of the worker thread.
+     * @param useNativeCalls Whether the platform can use native calls for I/O.
      * @throws IOException If any I/O errors occur.
      */
     public FtpWorker(FtpServer server, Socket client, int dataPort, String name, boolean useNativeCalls) throws IOException {

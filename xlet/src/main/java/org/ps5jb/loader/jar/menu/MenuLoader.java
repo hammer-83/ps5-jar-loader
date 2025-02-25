@@ -4,6 +4,7 @@ import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
 import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
+import org.dvb.event.UserEventRepository;
 import org.havi.ui.HContainer;
 import org.havi.ui.HScene;
 import org.havi.ui.HSceneFactory;
@@ -25,10 +26,12 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
     private boolean active = true;
     private boolean terminated = false;
     private boolean waiting = false;
+    private int terminateRemoteJarLoaderPressCount;
 
     private Ps5MenuLoader ps5MenuLoader;
 
     private File discPayloadPath = null;
+    private JarLoader remoteJarLoaderJob = null;
     private Thread remoteJarLoaderThread = null;
 
     public MenuLoader() throws IOException {
@@ -37,17 +40,21 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
 
     @Override
     public void run() {
-        EventManager.getInstance().addUserEventListener(this, new OverallRepository());
-        try {
-            Status.println("MenuLoader starting...");
-            for (String payload : listPayloads()) {
-                Status.println("[Payload] " + payload);
-            }
+        EventManager em = EventManager.getInstance();
+        UserEventRepository evRep = new OverallRepository();
 
+        Status.println("MenuLoader starting...");
+        for (String payload : listPayloads()) {
+            Status.println("[Payload] " + payload);
+        }
+
+        em.addUserEventListener(this, evRep);
+        try {
             while (!terminated) {
                 if (!active) {
                     if (!waiting) {
                         if (discPayloadPath != null) {
+                            em.removeUserEventListener(this);
                             try {
                                 loadJar(discPayloadPath, false);
                             } catch (InterruptedException e) {
@@ -55,17 +62,19 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                             } catch (Throwable ex) {
                                 // JAR execution didn't work, notify and wait to return to the menu
                                 Status.printStackTrace("Could not load JAR from disc", ex);
+                            } finally {
+                                em.addUserEventListener(this, evRep);
                             }
                             discPayloadPath = null;
                         } else if (remoteJarLoaderThread != null) {
                             try {
                                 // Wait on remote JAR loader to finish
-                                // (note: there is currently no way to terminate it)
                                 remoteJarLoaderThread.join();
-                                remoteJarLoaderThread = null;
                             } catch (InterruptedException e) {
                                 // Ignore
                             }
+                            remoteJarLoaderThread = null;
+                            remoteJarLoaderJob = null;
                         }
 
                         // Reload the menu in case paths to payloads changed after JAR execution
@@ -85,7 +94,7 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
             Status.printStackTrace("Unhandled exception", ex);
             terminated = true;
         } finally {
-            EventManager.getInstance().removeUserEventListener(this);
+            em.removeUserEventListener(this);
         }
     }
 
@@ -157,14 +166,45 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
 
     @Override
     public void userEventReceived(UserEvent userEvent) {
-        if (!active) {
-            if (!waiting || (userEvent.getCode() != HRcEvent.VK_ENTER)) {
-                return;
-            }
-        }
-
         if (userEvent.getType() == HRcEvent.KEY_RELEASED) {
+            // Exit early if running a payload and not waiting for specific user input
+            boolean isTerminateRemoteJarLoaderSeq = false;
+            if (!active) {
+                isTerminateRemoteJarLoaderSeq =
+                        ((userEvent.getCode() == HRcEvent.VK_3) && (terminateRemoteJarLoaderPressCount == 0)) ||
+                                ((userEvent.getCode() == HRcEvent.VK_2) && (terminateRemoteJarLoaderPressCount == 1)) ||
+                                ((userEvent.getCode() == HRcEvent.VK_1) && (terminateRemoteJarLoaderPressCount == 2));
+                if (!isTerminateRemoteJarLoaderSeq) {
+                    if (!waiting || (userEvent.getCode() != HRcEvent.VK_ENTER)) {
+                        return;
+                    }
+                }
+            }
+
+            // Reset sequence to exit Remote JAR loader
+            if (!isTerminateRemoteJarLoaderSeq && (terminateRemoteJarLoaderPressCount > 0) && remoteJarLoaderThread != null) {
+                terminateRemoteJarLoaderPressCount = 0;
+            }
+
             switch (userEvent.getCode()) {
+                case HRcEvent.VK_3:
+                case HRcEvent.VK_2:
+                case HRcEvent.VK_1:
+                    if (isTerminateRemoteJarLoaderSeq) {
+                        if (terminateRemoteJarLoaderPressCount == 2) {
+                            if (remoteJarLoaderJob != null) {
+                                try {
+                                    remoteJarLoaderJob.terminate();
+                                    terminateRemoteJarLoaderPressCount = 0;
+                                } catch (Throwable ex) {
+                                    Status.printStackTrace("Remote JAR loader could not be terminated.", ex);
+                                }
+                            }
+                        } else {
+                            ++terminateRemoteJarLoaderPressCount;
+                        }
+                    }
+                    break;
                 case HRcEvent.VK_RIGHT:
                     if (ps5MenuLoader.getSelected() < ps5MenuLoader.getMenuItems().length) {
                         ps5MenuLoader.setSelected(ps5MenuLoader.getSelected() + 1);
@@ -205,11 +245,11 @@ public class MenuLoader extends HContainer implements Runnable, UserEventListene
                         waiting = false;
                     } else if (ps5MenuLoader.getSelected() == 1 && remoteJarLoaderThread == null) {
                         try {
-                            JarLoader jarLoader = new RemoteJarLoader(Config.getLoaderPort());
-                            remoteJarLoaderThread = new Thread(jarLoader, "RemoteJarLoader");
+                            remoteJarLoaderJob = new RemoteJarLoader(Config.getLoaderPort());
+                            remoteJarLoaderThread = new Thread(remoteJarLoaderJob, "RemoteJarLoader");
 
                             // Notify the user that this is a one time switch and that BD-J restart is required to return to the menu
-                            Status.println("Starting remote JAR loader. To return to the loader menu, restart the BD-J process");
+                            Status.println("Starting remote JAR loader. To return to the loader menu, press 3-2-1");
                             remoteJarLoaderThread.start();
                         } catch (Throwable ex) {
                             Status.printStackTrace("Remote JAR loader could not be initialized. Press X to continue", ex);

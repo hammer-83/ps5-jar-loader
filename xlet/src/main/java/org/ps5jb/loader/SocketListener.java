@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 
 /**
  * Base class that can be used to listen for incoming network connections and send back the data.
@@ -16,10 +17,21 @@ public abstract class SocketListener implements Runnable {
     protected boolean terminated;
     /** Established server socket. */
     protected ServerSocket serverSocket;
-    /** Determined local IP address on which the server socket is listening. */
-    protected String netAddress;
     /** Name of this listener, used in the output of various messages. */
     protected String listenerName;
+
+    /** Determined local IP address on which the server socket is listening. */
+    protected static String netAddress;
+
+    static {
+        // Determine network interface address to print it on screen
+        try {
+            netAddress = determineNetAddress();
+        } catch (Throwable e) {
+            // Ignore timeout, network address will remain undetermined
+            Status.println("Warning, IP address could not be determined. Exception: " + e.getClass().getName() + ". Message: " + e.getMessage());
+        }
+    }
 
     /**
      * Socket listener constructor.
@@ -34,16 +46,20 @@ public abstract class SocketListener implements Runnable {
 
         serverSocket = new ServerSocket(port);
         serverSocket.setSoTimeout(5000);
+    }
 
-        // Determine network interface address to print it on screen
+    /**
+     * Determines network IP address.
+     *
+     * @throws SocketException If socket exception occurs.
+     * @throws UnknownHostException If a hostname resolution exception occurs.
+     */
+    protected static String determineNetAddress() throws SocketException, UnknownHostException {
         final DatagramSocket tempSocket = new DatagramSocket();
         try {
             tempSocket.setSoTimeout(1000);
             tempSocket.connect(InetAddress.getByName("8.8.8.8"), 53);
-            netAddress = tempSocket.getLocalAddress().getHostAddress();
-        } catch (Throwable e) {
-            // Ignore timeout, network address will remain undetermined
-            Status.println("Warning, IP address could not be determined. Exception: " + e.getClass().getName() + ". Message: " + e.getMessage());
+            return tempSocket.getLocalAddress().getHostAddress();
         } finally {
             tempSocket.close();
         }
@@ -54,7 +70,7 @@ public abstract class SocketListener implements Runnable {
      *
      * @return IPv4 address of the server.
      */
-    public String getNetAddress() {
+    public static String getNetAddress() {
         return netAddress;
     }
 
@@ -98,6 +114,9 @@ public abstract class SocketListener implements Runnable {
                 handleException(e);
             }
         }
+
+        free();
+
         Status.println(this.listenerName + " terminated!");
     }
 
@@ -146,5 +165,19 @@ public abstract class SocketListener implements Runnable {
     public void terminate() throws IOException {
         terminated = true;
         serverSocket.close();
+    }
+
+    /**
+     * Called just before the listener is done to free up the resources.
+     */
+    protected void free() {
+        if (!terminated || !serverSocket.isClosed()) {
+            try {
+                terminate();
+            } catch (IOException | RuntimeException e) {
+                // Ignore exceptions during cleanup
+                Status.println(e.getClass() + " occurred while freeing the listener: " + e.getMessage());
+            }
+        }
     }
 }

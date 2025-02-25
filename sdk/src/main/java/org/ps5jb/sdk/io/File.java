@@ -22,12 +22,15 @@ import org.ps5jb.sdk.include.sys.stat.StatType;
 import org.ps5jb.sdk.lib.LibKernel;
 
 public class File extends java.io.File {
+    private static final long serialVersionUID = -34161568608618887L;
+
     private boolean reacheable;
     private long size;
     private Set modes;
     private long modificationTime;
     private int uid;
     private int gid;
+    private int blockSize;
 
     public File(java.io.File parent, String child) {
         super(parent, child);
@@ -75,11 +78,12 @@ public class File extends java.io.File {
                         modificationTime = statType.getMtim().getSec() * 1000L + statType.getMtim().getNsec() / 1000000L;
                         uid = statType.getUid();
                         gid = statType.getGid();
+                        blockSize = statType.getBlkSize();
                     } finally {
                         statType.free();
                     }
                 } catch (SdkException e) {
-                    Status.printStackTrace("", e);
+                    Status.printStackTrace(e.getMessage(), e);
                     reacheable = false;
                 }
             }
@@ -155,7 +159,7 @@ public class File extends java.io.File {
     public String[] list() {
         String[] result = null;
 
-        int BUF_SIZE = 16 * 1024;
+        int BUF_SIZE = Math.max(16 * 1024, blockSize);
         Pointer db = Pointer.malloc(BUF_SIZE);
         try {
             LibKernel libKernel = new LibKernel();
@@ -166,20 +170,24 @@ public class File extends java.io.File {
                     try {
                         DirEnt dirEnt = null;
                         int remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
-                        while (remainingSize > 0 && remainingSize <= BUF_SIZE) {
-                            if (dirEnt == null) {
-                                dirEnt = new DirEnt(db);
-                            }
-                            if (!dirEnt.getName().equals(".") && !dirEnt.getName().equals("..")) {
-                                dirEnts.add(dirEnt.getName());
-                            }
+                        if (remainingSize != -1) {
+                            while (remainingSize > 0 && remainingSize <= BUF_SIZE) {
+                                if (dirEnt == null) {
+                                    dirEnt = new DirEnt(db);
+                                }
 
-                            long oldAddr = dirEnt.getPointer().addr();
-                            dirEnt = dirEnt.next(remainingSize);
-                            if (dirEnt == null) {
-                                remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
-                            } else {
-                                remainingSize -= (int) (dirEnt.getPointer().addr() - oldAddr);
+                                String dirEntName = dirEnt.getName();
+                                if (!dirEntName.equals(".") && !dirEntName.equals("..") && !dirEntName.equals("")) {
+                                    dirEnts.add(dirEntName);
+                                }
+
+                                long oldAddr = dirEnt.getPointer().addr();
+                                dirEnt = dirEnt.next(remainingSize);
+                                if (dirEnt == null) {
+                                    remainingSize = libKernel.getdents(fd, db, BUF_SIZE);
+                                } else {
+                                    remainingSize -= (int) (dirEnt.getPointer().addr() - oldAddr);
+                                }
                             }
                         }
                     } finally {

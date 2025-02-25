@@ -19,13 +19,13 @@ import org.ps5jb.sdk.lib.LibKernel;
  */
 public class SdkInit {
     /** Base address of kernel text segment. May be 0 if this value could not be determined. */
-    public final long KERNEL_BASE_ADDRESS;
+    public final long kernelBaseAddress;
     /** Base address of kernel data segment. May be 0 if this value could not be determined. */
-    public final long KERNEL_DATA_ADDRESS;
+    public final long kernelDataAddress;
     /** Database of important kernel offsets for the current firmware version. May be null. */
-    public final KernelOffsets KERNEL_OFFSETS;
+    public final KernelOffsets kernelOffsets;
     /** Current process address. May be 0 if this value could not be determined. */
-    public final long CUR_PROC_ADDRESS;
+    public final long curProcAddress;
 
     private static SdkInit instance;
 
@@ -36,7 +36,7 @@ public class SdkInit {
      *
      * @return Singleton instance of <code>SdkInit</code> class.
      */
-    public static SdkInit INSTANCE() {
+    public static SdkInit instance() {
         if (instance == null) {
             throw new IllegalStateException("Call init() before getting the instance of this class");
         }
@@ -50,7 +50,7 @@ public class SdkInit {
      * @param requireKernelReadWrite Whether to raise an exception if kernel r/w is not available.
      * @param requireKnownKernelBase Whether to raise an exception if kernel base address is not known.
      * @return Singleton instance of <code>SdkInit</code> class. The same instance can later be retrieved
-     *   with {@link #INSTANCE()} method.
+     *   with {@link #instance()} method.
      * @throws IllegalStateException If instance was already initialized or if one of the
      *   <code>require*</code> parameters are true, but the desired state is not active.
      * @throws SdkSoftwareVersionUnsupportedException If current firmware version is not supported.
@@ -80,32 +80,32 @@ public class SdkInit {
         final LibKernel libKernel = new LibKernel();
         try {
             final int swVer = libKernel.getSystemSoftwareVersion();
-            KERNEL_OFFSETS = new KernelOffsets(swVer);
+            kernelOffsets = new KernelOffsets(swVer);
 
             final KernelAccessor ka = KernelReadWrite.getAccessor(getClass().getClassLoader());
             if (ka != null) {
                 final long kaKernelBase = ka.getKernelBase();
                 if (kaKernelBase != 0) {
-                    KERNEL_BASE_ADDRESS = kaKernelBase;
-                    KERNEL_DATA_ADDRESS = kaKernelBase + KERNEL_OFFSETS.OFFSET_KERNEL_DATA;
+                    kernelBaseAddress = kaKernelBase;
+                    kernelDataAddress = kaKernelBase + kernelOffsets.OFFSET_KERNEL_DATA;
                 } else {
                     final String allProcAddrStr = System.getProperty(PayloadConstants.ALLPROC_ADDRESS_PROPERTY);
                     final long sysPropAllProcAddr = (allProcAddrStr != null) ? Long.parseLong(allProcAddrStr) : 0;
 
                     if (sysPropAllProcAddr != 0) {
-                        KERNEL_DATA_ADDRESS = sysPropAllProcAddr - KERNEL_OFFSETS.OFFSET_KERNEL_DATA_BASE_ALLPROC;
-                        KERNEL_BASE_ADDRESS = KERNEL_DATA_ADDRESS - KERNEL_OFFSETS.OFFSET_KERNEL_DATA;
+                        kernelDataAddress = sysPropAllProcAddr - kernelOffsets.OFFSET_KERNEL_DATA_BASE_ALLPROC;
+                        kernelBaseAddress = kernelDataAddress - kernelOffsets.OFFSET_KERNEL_DATA;
                     } else {
-                        KERNEL_BASE_ADDRESS = 0;
-                        KERNEL_DATA_ADDRESS = 0;
+                        kernelBaseAddress = 0;
+                        kernelDataAddress = 0;
                     }
                 }
 
-                KernelPointer kBase = KernelPointer.valueOf(KERNEL_BASE_ADDRESS);
-                ProcessUtils procUtils = new ProcessUtils(libKernel, kBase, KERNEL_OFFSETS);
-                CUR_PROC_ADDRESS = procUtils.getCurrentProcess().getPointer().addr();
+                KernelPointer kBase = KernelPointer.valueOf(kernelBaseAddress);
+                ProcessUtils procUtils = new ProcessUtils(libKernel, kBase, kernelOffsets);
+                curProcAddress = procUtils.getCurrentProcess().getPointer().addr();
 
-                if (KERNEL_BASE_ADDRESS != 0) {
+                if (kernelBaseAddress != 0) {
                     initSdkStructures();
                 }
             } else {
@@ -113,15 +113,15 @@ public class SdkInit {
                     throw new KernelReadWriteUnavailableException("Kernel R/W is not available");
                 }
 
-                KERNEL_BASE_ADDRESS = 0;
-                KERNEL_DATA_ADDRESS = 0;
-                CUR_PROC_ADDRESS = 0;
+                kernelBaseAddress = 0;
+                kernelDataAddress = 0;
+                curProcAddress = 0;
             }
         } finally {
             libKernel.closeLibrary();
         }
 
-        if (requireKnownKernelBase && KERNEL_BASE_ADDRESS == 0) {
+        if (requireKnownKernelBase && kernelBaseAddress == 0) {
             throw new KernelBaseUnknownException("Kernel base address is not known");
         }
     }
@@ -143,8 +143,8 @@ public class SdkInit {
             KernelAccessor ka = KernelReadWrite.getAccessor(getClass().getClassLoader());
             if (!(ka instanceof KernelAccessorAgc)) {
                 // Note: the DMA writes may only be necessary on 7.xx.
-                if (!onlyIfNecessary || KERNEL_OFFSETS.SOFTWARE_VERSION >= 0x0600) {
-                    KernelReadWrite.setAccessor(new KernelAccessorAgc(KernelPointer.valueOf(CUR_PROC_ADDRESS)));
+                if (!onlyIfNecessary || kernelOffsets.SOFTWARE_VERSION >= 0x0700) {
+                    KernelReadWrite.setAccessor(new KernelAccessorAgc(KernelPointer.valueOf(curProcAddress)));
                     result = true;
                 }
             } else {
@@ -173,23 +173,26 @@ public class SdkInit {
      * Some SDK structures are firmware dependent, initialize them right away.
      */
     private void initSdkStructures() {
-        KernelPointer kernelBase = KernelPointer.valueOf(KERNEL_BASE_ADDRESS);
-        Process curProc = new Process(KernelPointer.valueOf(CUR_PROC_ADDRESS));
+        KernelPointer kernelBase = KernelPointer.valueOf(kernelBaseAddress);
+        Process curProc = new Process(KernelPointer.valueOf(curProcAddress));
+
+        // CurProc offsets are dynamic
+        curProc.getTitleId();
 
         // PMap and GPU VM id offsets are dynamic
         curProc.getVmSpace().getPhysicalMap();
         curProc.getVmSpace().getGpuVmId();
 
         // GPU VM struct size is dynamic and offset to VM id in the process is dynamic too
-        new GpuVm(kernelBase.inc(KERNEL_OFFSETS.OFFSET_KERNEL_DATA + KERNEL_OFFSETS.OFFSET_KERNEL_DATA_BASE_GBASE_VM));
+        new GpuVm(kernelBase.inc(kernelOffsets.OFFSET_KERNEL_DATA + kernelOffsets.OFFSET_KERNEL_DATA_BASE_GBASE_VM));
 
         // PMap params are dynamic
         if (PMap.DMPDPI == 0) {
-            KernelPointer kernelPmap = kernelBase.inc(KERNEL_OFFSETS.OFFSET_KERNEL_DATA + KERNEL_OFFSETS.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE);
+            KernelPointer kernelPmap = kernelBase.inc(kernelOffsets.OFFSET_KERNEL_DATA + kernelOffsets.OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE);
             PMap.refresh(
-                    kernelPmap.inc(KERNEL_OFFSETS.OFFSET_PMAP_STORE_DMPML4I),
-                    kernelPmap.inc(KERNEL_OFFSETS.OFFSET_PMAP_STORE_DMPDPI),
-                    kernelPmap.inc(KERNEL_OFFSETS.OFFSET_PMAP_STORE_PML4PML4I)
+                    kernelPmap.inc(kernelOffsets.OFFSET_PMAP_STORE_DMPML4I),
+                    kernelPmap.inc(kernelOffsets.OFFSET_PMAP_STORE_DMPDPI),
+                    kernelPmap.inc(kernelOffsets.OFFSET_PMAP_STORE_PML4PML4I)
             );
         }
     }

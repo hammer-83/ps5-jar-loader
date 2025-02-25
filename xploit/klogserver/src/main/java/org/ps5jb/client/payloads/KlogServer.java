@@ -3,6 +3,7 @@ package org.ps5jb.client.payloads;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 
 import org.dvb.event.EventManager;
 import org.dvb.event.OverallRepository;
@@ -17,6 +18,7 @@ import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.CpuSet;
+import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.include.sys.FCntl;
 import org.ps5jb.sdk.include.sys.Select;
 import org.ps5jb.sdk.include.sys.fcntl.OpenFlag;
@@ -40,6 +42,15 @@ public class KlogServer extends SocketListener implements UserEventListener {
 
     private int exitConfirmCount;
 
+    private int[] oldUserIds;
+    private long[] oldPrivs;
+
+    private int origQaFlags = -1;
+    private int origSecurityFlags = -1;
+
+    private KernelPointer qaFlags;
+    private KernelPointer securityFlags;
+
     public KlogServer() throws IOException {
         // Use same port as webkit implementation from sb
         super("Klog Server v" + ManifestUtils.getClassImplementationVersion(KlogServer.class, "klogserver"), 3232);
@@ -57,12 +68,9 @@ public class KlogServer extends SocketListener implements UserEventListener {
         try {
             SdkInit sdk = SdkInit.init(true, true);
 
-            // Abort if the process does not have root privileges
-            int uid = libKernel.getuid();
-            if (uid != 0) {
-                Status.println("Current user is not root. Aborting.");
-                return;
-            }
+            KernelPointer kdata = KernelPointer.valueOf(sdk.kernelDataAddress, false);
+            securityFlags = kdata.inc(sdk.kernelOffsets.OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS);
+            qaFlags = kdata.inc(sdk.kernelOffsets.OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS);
 
             // When a connection is established, for some reason the rest of the system starts to lag.
             // Sending parallel JARs locks randomly for multiple seconds then resumes.
@@ -71,30 +79,120 @@ public class KlogServer extends SocketListener implements UserEventListener {
             // Disconnecting the client connection removes the lagging.
 
             // Set thread to a lower priority
-            ProcessUtils procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS), sdk.KERNEL_OFFSETS);
+            ProcessUtils procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.kernelBaseAddress), sdk.kernelOffsets);
             procUtils.setCurrentThreadPriority(new Integer(Thread.MIN_PRIORITY), new Short((short) 767));
+            Process curProc = procUtils.getCurrentProcess();
 
             // Pin to a single CPU
             CpuSet cpuSet = new CpuSet(libKernel);
             cpuSet.setCurrentThreadCore(1);
 
-            Status.println("Use netcat to receive klog over network: nc -q 1 " + getNetAddress() + " " + serverSocket.getLocalPort());
-            Status.println("Disclamer: there is a known issue where the BD-J process becomes sluggish when the network client is connect.");
-            Status.println("Disconnecting the client (terminating netcat) restores the performance.");
-            Status.println("To exit " + this.listenerName + ", press Blue Square button 3 times in a row.");
+            // Set user id to root
+            if (libKernel.getuid() != 0) {
+                oldUserIds = procUtils.getUserGroup(procUtils.getCurrentProcess());
+                procUtils.setUserGroup(curProc, new int[] {
+                        0, // cr_uid
+                        0, // cr_ruid
+                        0, // cr_svuid
+                        1, // cr_ngroups
+                        0, // cr_rgid
+                        0, // cr_svid
+                        0, // gid0
+                });
+                Status.println("Set process uid => " + libKernel.getuid());
+            }
+            try {
+                // Set permissive privs
+                oldPrivs = procUtils.getPrivs(curProc);
+                final long[] newPrivs = new long[] {
+                        oldPrivs[0],         // cr_sceAuthId
+                        0xFFFFFFFFFFFFFFFFL, // cr_sceCaps[0]
+                        0xFFFFFFFFFFFFFFFFL, // cr_sceCaps[1]
+                        0x80                 // cr_sceAttr[0]
+                };
+                if (!Arrays.equals(oldPrivs, newPrivs)) {
+                    procUtils.setPrivs(curProc, newPrivs);
+                    Status.println("Relaxed process privileges");
+                }
 
-            // Listen for connection
-            super.run();
+                sdk.switchToAgcKernelReadWrite(true);
+                try {
+                    origSecurityFlags = securityFlags.read4();
+                    int newSecurityFlags = origSecurityFlags | 0x14;
+                    if (origSecurityFlags != newSecurityFlags) {
+                        Status.println("Security flags: 0x" + Integer.toHexString(origSecurityFlags) + " => 0x" + Integer.toHexString(newSecurityFlags));
+                        securityFlags.write4(newSecurityFlags);
+                    } else {
+                        origSecurityFlags = -1;
+                    }
 
-            // Unsubscribe from events
-            EventManager eventManager = EventManager.getInstance();
-            if (eventManager != null) {
-                eventManager.removeUserEventListener(this);
+                    origQaFlags = qaFlags.read4();
+                    int newQaFlags = origQaFlags | 0x10300;
+                    if (origQaFlags != newQaFlags) {
+                        Status.println("QA flags: 0x" + Integer.toHexString(origQaFlags) + " => 0x" + Integer.toHexString(newQaFlags));
+                        qaFlags.write4(newQaFlags);
+                    } else {
+                        origQaFlags = -1;
+                    }
+                } finally {
+                    sdk.restoreNonAgcKernelReadWrite();
+                }
+
+                Status.println("Use netcat to receive klog over network: nc -q 1 " + getNetAddress() + " " + serverSocket.getLocalPort());
+                Status.println("Disclamer: there is a known issue where the BD-J process becomes sluggish when the network client is connect.");
+                Status.println("Disconnecting the client (terminating netcat) restores the performance.");
+                Status.println("To exit " + this.listenerName + ", press Blue Square button 3 times in a row.");
+
+                // Listen for connection
+                super.run();
+
+                // Unsubscribe from events
+                EventManager eventManager = EventManager.getInstance();
+                if (eventManager != null) {
+                    eventManager.removeUserEventListener(this);
+                }
+            } finally {
+                if (oldUserIds != null) {
+                    procUtils.setUserGroup(curProc, oldUserIds);
+                    Status.println("Restored process user to " + libKernel.getuid());
+                }
+
+                if (oldPrivs != null) {
+                    procUtils.setPrivs(curProc, oldPrivs);
+                    Status.println("Restored process privileges");
+                }
+
+                if (origQaFlags != -1 || origSecurityFlags != -1) {
+                    sdk.switchToAgcKernelReadWrite(true);
+                    try {
+                        if (origSecurityFlags != -1) {
+                            securityFlags.write4(origSecurityFlags);
+                            Status.println("Restored security flags");
+                        }
+
+                        if (origQaFlags != -1) {
+                            qaFlags.write4(origQaFlags);
+                            Status.println("Restored QA flags");
+                        }
+                    } finally {
+                        sdk.restoreNonAgcKernelReadWrite();
+                    }
+                }
             }
         } catch (Throwable e) {
             handleException(e);
         } finally {
+            free();
+        }
+    }
+
+    @Override
+    protected void free() {
+        super.free();
+
+        if (libKernel != null) {
             libKernel.closeLibrary();
+            libKernel = null;
         }
     }
 

@@ -21,6 +21,8 @@ import java.util.Stack;
 import java.util.Set;
 import java.util.jar.JarFile;
 
+import org.ps5jb.client.utils.init.KernelBaseUnknownException;
+import org.ps5jb.client.utils.init.KernelReadWriteUnavailableException;
 import org.ps5jb.client.utils.init.SdkInit;
 import org.ps5jb.client.utils.process.ProcessUtils;
 import org.ps5jb.loader.Status;
@@ -41,11 +43,13 @@ import org.ps5jb.sdk.lib.LibKernel;
  * It requires an active Kernel R/W
  */
 public class Jailbreak implements Runnable {
-    private static final String SANDBOX_PATH = "/mnt/sandbox/NPXS40140_000";
+    private static final String SANDBOX_PATH = "/mnt/sandbox/" + Process.BDJ_PROCESS_P_TITLE_ID + "_000";
     private static final String ORIG_JAVA_HOME = "/app0/cdc/";
     private static final String ORIG_DOWNLOAD_0 = "/OS/HDD/download0/";
     private static final String NEW_JAVA_HOME = SANDBOX_PATH + ORIG_JAVA_HOME;
     private static final String NEW_DOWNLOAD_0 = SANDBOX_PATH + "/download0/";
+
+    private static final String BDMV_PLAYER_COMM = "BdmvPlayerCore.elf";
 
     private static final boolean VERBOSE = false;
 
@@ -57,8 +61,8 @@ public class Jailbreak implements Runnable {
         try {
             SdkInit sdk = SdkInit.init(true, true);
 
-            procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.KERNEL_BASE_ADDRESS), sdk.KERNEL_OFFSETS);
-            KernelPointer kdataAddress = KernelPointer.valueOf(sdk.KERNEL_DATA_ADDRESS);
+            procUtils = new ProcessUtils(libKernel, KernelPointer.valueOf(sdk.kernelBaseAddress), sdk.kernelOffsets);
+            KernelPointer kdataAddress = KernelPointer.valueOf(sdk.kernelDataAddress);
 
             int curUid = libKernel.getuid();
             int curPid = libKernel.getpid();
@@ -71,54 +75,60 @@ public class Jailbreak implements Runnable {
                 return;
             }
 
-            Process curProc = new Process(KernelPointer.valueOf(sdk.CUR_PROC_ADDRESS));
-            if (curProc != null) {
-                String curProcName = curProc.getName();
-                println("Found current process at " + curProc.getPointer() + " named " + curProcName, true);
+            Process curProc = new Process(KernelPointer.valueOf(sdk.curProcAddress));
+            String curProcName = curProc.getName();
+            println("Found current process at " + curProc.getPointer() + " named " + curProcName, true);
 
-                KernelPointer rootvnode = KernelPointer.valueOf(kdataAddress.read8(sdk.KERNEL_OFFSETS.OFFSET_KERNEL_DATA_BASE_ROOTVNODE));
-
-                // Patch the current and the parent process
-                patchProcess(curProc, rootvnode);
-                Process parentProc = curProc.getParentProcess();
-                if (parentProc != null) {
-                    patchProcess(parentProc, rootvnode);
-                }
-
-                // Check root
-                curUid = libKernel.getuid();
-                println("New UID: " + curUid + (curUid == 0 ? " (root!)" : ""));
-
-                // Check sandbox again
-                println("In Sandbox? " + (libKernel.is_in_sandbox() ? "Yes" : "No"));
-
-                // Update java home
-                redirectJavaHome();
-
-                // Reset JAR file factory which caches open JARs
-                resetJarFileFactory();
-
-                // Update classpath of xlet classloader
-                redirectXletClassLoader();
-
-                // Update classpath of boot classloader
-                redirectBootLoader();
-            } else {
-                println("Current process not found, privileges not escalated");
+            Process bdmvPlayerProcess = findBdPlayerProcess();
+            if (bdmvPlayerProcess == null) {
+                println("BdmvPlayerCore process could not be found. Aborting!");
+                return;
             }
+
+            KernelPointer rootvnode = kdataAddress.pptr(sdk.kernelOffsets.OFFSET_KERNEL_DATA_BASE_ROOTVNODE);
+
+            // Patch the bd-j process creds
+            patchProcess(curProc, rootvnode);
+            // Patch the bdmv process creds (if not done, loading of other jars stops working)
+            patchProcess(bdmvPlayerProcess, rootvnode);
+
+            // Check root
+            curUid = libKernel.getuid();
+            println("New UID: " + curUid + (curUid == 0 ? " (root!)" : ""));
+
+            // Check sandbox again
+            println("In Sandbox? " + (libKernel.is_in_sandbox() ? "Yes" : "No"));
+
+            // Update java home
+            redirectJavaHome();
+
+            // Reset JAR file factory which caches open JARs
+            resetJarFileFactory();
+
+            // Update classpath of xlet classloader
+            redirectXletClassLoader();
+
+            // Update classpath of boot classloader
+            redirectBootLoader();
+        } catch (KernelReadWriteUnavailableException | KernelBaseUnknownException e) {
+            Status.println("Kernel R/W is not available or kernel data address has not been determined, aborting.");
+        } catch (Throwable e) {
+            Status.printStackTrace(e.getMessage(), e);
         } finally {
             libKernel.closeLibrary();
         }
     }
 
-    protected KernelPointer[] patchProcess(Process process, KernelPointer vnode) {
+    private KernelPointer[] patchProcess(Process process, KernelPointer rootVnode) {
         // Patch ucred
         procUtils.setUserGroup(process, new int[] {
             0, // cr_uid
             0, // cr_ruid
             0, // cr_svuid
             1, // cr_ngroups
-            0 // cr_rgid
+            0, // cr_rgid
+            0, // cr_svid
+            0, // gid0
         });
 
         // Escalate sony privs
@@ -130,21 +140,29 @@ public class Jailbreak implements Runnable {
                 0x80                 // cr_sceAttr[0]
         });
 
-        // Remove dynlib restriction
+        // Remove dynlib and syscall restrictions (credits to Specter and cheburek3000)
         KernelPointer dynlibAddr = process.getDynLib();
         dynlibAddr.write4(0x118, 0);
         dynlibAddr.write8(0x18, 1);
+        dynlibAddr.write8(0xF0, 0);
+        dynlibAddr.write8(0xF8, 0xFFFFFFFFFFFFFFFFL);
 
         // Escape sandbox
-        KernelPointer procFdAddr = process.getFd();
         KernelPointer[] result = new KernelPointer[2];
-        result[0] = KernelPointer.valueOf(procFdAddr.read8(0x10));
-        result[1] = KernelPointer.valueOf(procFdAddr.read8(0x18));
-        procFdAddr.write8(0x10, vnode.addr()); // fd_rdir
-        procFdAddr.write8(0x18, vnode.addr()); // fd_jdir
+        result[0] = process.getOpenFiles().getRootDir();
+        result[1] = process.getOpenFiles().getJailDir();
+        process.getOpenFiles().setRootDir(rootVnode);
+        process.getOpenFiles().setJailDir(rootVnode);
 
-        // Return original vnode
+        // Return original values
         return result;
+    }
+
+    private Process findBdPlayerProcess() {
+        return procUtils.searchProcess((proc) -> {
+            return Process.BDJ_PROCESS_P_TITLE_ID.equals(proc.getTitleId()) &&
+                    BDMV_PLAYER_COMM.equals(proc.getName());
+        });
     }
 
     private String replacePattern(String value, String oldPattern, String newPattern) {

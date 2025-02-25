@@ -326,7 +326,16 @@ public class Pointer extends AbstractPointer {
         long readAddr = addrOf(value) + baseOffset;
         long readStart = ((long) valueIndex) * indexScale;
 
-        UNSAFE.copyMemory(readAddr + readStart,this.addr + offset, writeSize);
+        UNSAFE.copyMemory(readAddr + readStart, this.addr + offset, writeSize);
+    }
+
+    @Override
+    public void copyTo(AbstractPointer dest, long offset, int size) {
+        if (dest instanceof Pointer) {
+            UNSAFE.copyMemory(addr + offset, dest.addr, size);
+        } else {
+            super.copyTo(dest, offset, size);
+        }
     }
 
     /**
