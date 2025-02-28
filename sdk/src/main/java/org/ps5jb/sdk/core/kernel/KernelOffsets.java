@@ -131,6 +131,7 @@ public class KernelOffsets {
                 break;
             }
             case 0x0300:
+            case 0x0310:
             case 0x0320:
             case 0x0321:
             {
@@ -178,39 +179,20 @@ public class KernelOffsets {
             }
             case 0x0500:
             case 0x0502:
-            {
-                OFFSET_KERNEL_DATA = 0x0C50000;
-                SIZE_KERNEL_DATA = 0x08911930;
-
-                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
-                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06869C00;
-                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0290DD00;
-                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066366EC;
-                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06843510;
-                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03388A88;
-                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06310000;  // Unconfirmed
-
-                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x065F3FC0;
-
-                OFFSET_PMAP_STORE_PML4PML4I = -0x105C;
-                OFFSET_PMAP_STORE_DMPML4I = 0x29C;
-                OFFSET_PMAP_STORE_DMPDPI = 0x2A0;
-                break;
-            }
             case 0x0510:
             {
-                OFFSET_KERNEL_DATA = 0x0C50000;
-                SIZE_KERNEL_DATA = 0x08911930;
+                OFFSET_KERNEL_DATA = 0x0C40000;
+                SIZE_KERNEL_DATA = 0x08921930;
 
-                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
-                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06869C00;
-                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0290DD00;
-                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066366EC;
-                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06843510;
-                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03388A88;
-                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06310000;  // Unconfirmed
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06879C00;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0291DD00;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066466EC;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06853510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03398A88;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06320000;  // Unconfirmed
 
-                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x065F3FB0;
+                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x06603FB0;
 
                 OFFSET_PMAP_STORE_PML4PML4I = -0x105C;
                 OFFSET_PMAP_STORE_DMPML4I = 0x29C;
@@ -219,18 +201,18 @@ public class KernelOffsets {
             }
             case 0x0550:
             {
-                OFFSET_KERNEL_DATA = 0x0C50000;
-                SIZE_KERNEL_DATA = 0x08911930;
+                OFFSET_KERNEL_DATA = 0x0C40000;
+                SIZE_KERNEL_DATA = 0x08921930;
 
-                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
-                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06869C00;
-                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0290DD00;
-                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066366EC;
-                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06843510;
-                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03384A88;
-                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06310000;  // Unconfirmed
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x06879C00;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x0291DD00;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x066466EC;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x06853510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x03394A88;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06320000;  // Unconfirmed
 
-                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x065F3FB0;
+                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x06603FB0;
 
                 OFFSET_PMAP_STORE_PML4PML4I = -0x105C;
                 OFFSET_PMAP_STORE_DMPML4I = 0x29C;
@@ -241,18 +223,18 @@ public class KernelOffsets {
             case 0x0602:
             case 0x0650:
             {
-                OFFSET_KERNEL_DATA = 0x0A40000;  // Unconfirmed
-                SIZE_KERNEL_DATA = 0x08851930;
+                OFFSET_KERNEL_DATA = 0x0C60000;
+                SIZE_KERNEL_DATA = 0x08861930;
 
-                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00000000;
-                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067B5C10;
-                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02859D20;
-                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x065868EC;
-                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x0678F510;
-                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x032D4358;
-                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06260000;  // Unconfirmed
+                OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;
+                OFFSET_KERNEL_DATA_BASE_TO_DYNAMIC = 0x067C5C10;
+                OFFSET_KERNEL_DATA_BASE_ALLPROC = 0x02869D20;
+                OFFSET_KERNEL_DATA_BASE_SECURITY_FLAGS = 0x065968EC;
+                OFFSET_KERNEL_DATA_BASE_ROOTVNODE = 0x0679F510;
+                OFFSET_KERNEL_DATA_BASE_KERNEL_PMAP_STORE = 0x032E4358;
+                OFFSET_KERNEL_DATA_BASE_DATA_CAVE = 0x06270000;  // Unconfirmed
 
-                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x065440F0;
+                OFFSET_KERNEL_DATA_BASE_GBASE_VM = 0x065540F0;
 
                 OFFSET_PMAP_STORE_PML4PML4I = -0x105C;
                 OFFSET_PMAP_STORE_DMPML4I = 0x29C;
@@ -266,7 +248,7 @@ public class KernelOffsets {
             case 0x0760:
             case 0x0761:
             {
-                OFFSET_KERNEL_DATA = 0x0C60000;
+                OFFSET_KERNEL_DATA = 0x0C50000;
                 SIZE_KERNEL_DATA = 0x05191930;
 
                 OFFSET_KERNEL_DATA_BASE_DYNAMIC = 0x00010000;

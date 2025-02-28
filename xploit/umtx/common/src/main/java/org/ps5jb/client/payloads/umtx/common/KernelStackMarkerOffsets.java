@@ -31,12 +31,12 @@ public class KernelStackMarkerOffsets {
             case 0x0650:
             {
                 OFFSET_RET_FROM_MARKER = -0xC4;
-                OFFSET_KBASE_FROM_RET = -0x002CC189;
+                OFFSET_KBASE_FROM_RET = -0x004FC189;
                 break;
             }
             case 0x0720:
                 OFFSET_RET_FROM_MARKER = -0xC4;
-                OFFSET_KBASE_FROM_RET = -0x00505C55;
+                OFFSET_KBASE_FROM_RET = -0x004F5C55;
                 break;
             default:
                 throw new SdkSoftwareVersionUnsupportedException("Firmware not supported: 0x" + Integer.toHexString(softwareVersion));
