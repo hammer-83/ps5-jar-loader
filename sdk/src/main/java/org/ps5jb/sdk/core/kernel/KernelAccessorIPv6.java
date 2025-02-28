@@ -108,6 +108,18 @@ public class KernelAccessorIPv6 implements KernelAccessor {
         return victim_sock;
     }
 
+    public KernelPointer getPipeAddress() {
+        return pipe_addr;
+    }
+
+    public int getPipeReadFd() {
+        return pipe_fd[0];
+    }
+
+    public int getPipeWriteFd() {
+        return pipe_fd[1];
+    }
+
     /**
      * Frees resources in use by this accessor. After calling this method
      * this instance should not be used and kernel access is no longer available.

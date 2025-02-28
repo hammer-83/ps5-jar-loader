@@ -25,6 +25,14 @@ public class Param {
 
     public static final long KSTACK_PAGES = 1L;
 
+    public static long round_page(long x) {
+        return (x + PAGE_MASK) & ~PAGE_MASK;
+    }
+
+    public static long trunc_page(long x) {
+        return x & ~PAGE_MASK;
+    }
+
     public static long atop(long x) {
         return x >>> PAGE_SHIFT;
     }

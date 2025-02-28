@@ -67,7 +67,7 @@ public class FtpServer extends SocketListener implements UserEventListener {
         Status.println("Welcome to " + this.listenerName +
                 ". You can login anonymously using the username '" + FtpWorker.DEFAULT_USERNAME + "' and " +
                 (FtpWorker.DEFAULT_PASSWORD.equals("") ? "no password." : "password '" + FtpWorker.DEFAULT_PASSWORD + "'.") +
-                " Exit the " + this.listenerName + " by issuing a custom 'TERM' command or by pressing the RED button.");
+                " Exit the " + this.listenerName + " by issuing a custom 'TERM' command or by pressing the RED button 3 times.");
     }
 
     @Override

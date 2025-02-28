@@ -77,6 +77,9 @@ public class LibKernel extends Library {
     private Pointer sceKernelSpawn;
     private Pointer sceKernelGetModuleList;
     private Pointer sceKernelGetModuleInfo;
+    private Pointer sceKernelJitCreateSharedMemory;
+    private Pointer sceKernelJitCreateAliasOfSharedMemory;
+    private Pointer sceKernelJitMapSharedMemory;
 
     /**
      * Constructor.
@@ -723,5 +726,36 @@ public class LibKernel extends Library {
         }
 
         return (int) call(sceKernelGetModuleInfo, handle, result.addr());
+    }
+
+    public int sceKernelJitCreateSharedMemory(String name, long size, int prot, Pointer fd) {
+        if (sceKernelJitCreateSharedMemory == null) {
+            sceKernelJitCreateSharedMemory = addrOf("sceKernelJitCreateSharedMemory");
+        }
+
+        Pointer nameParam = (name == null) ? Pointer.NULL : Pointer.fromString(name);
+        try {
+            return (int) call(sceKernelJitCreateSharedMemory, nameParam.addr(), size, prot, fd.addr());
+        } finally {
+            if (!Pointer.NULL.equals(nameParam)) {
+                nameParam.free();
+            }
+        }
+    }
+
+    public int sceKernelJitCreateAliasOfSharedMemory(int fd, int prot, Pointer aliasFd) {
+        if (sceKernelJitCreateAliasOfSharedMemory == null) {
+            sceKernelJitCreateAliasOfSharedMemory = addrOf("sceKernelJitCreateAliasOfSharedMemory");
+        }
+
+        return (int) call(sceKernelJitCreateAliasOfSharedMemory, fd, prot, aliasFd.addr());
+    }
+
+    public int sceKernelJitMapSharedMemory(int fd, int prot, Pointer result) {
+        if (sceKernelJitMapSharedMemory == null) {
+            sceKernelJitMapSharedMemory = addrOf("sceKernelJitMapSharedMemory");
+        }
+
+        return (int) call(sceKernelJitMapSharedMemory, fd, prot, result.addr());
     }
 }
