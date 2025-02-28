@@ -28,6 +28,12 @@ public class KernelStackMarkerOffsets {
                 OFFSET_KBASE_FROM_RET = -0x0049F85E;
                 break;
             }
+            case 0x0602:
+            {
+                OFFSET_RET_FROM_MARKER = -0xC4;
+                OFFSET_KBASE_FROM_RET = -0x004FC109;
+                break;
+            }
             case 0x0650:
             {
                 OFFSET_RET_FROM_MARKER = -0xC4;
