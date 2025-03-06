@@ -12,6 +12,7 @@ import org.ps5jb.sdk.core.Pointer;
 import org.ps5jb.sdk.core.SdkSoftwareVersionUnsupportedException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.filedesc.FileDesc;
+import org.ps5jb.sdk.include.sys.jail.Prison;
 import org.ps5jb.sdk.include.sys.mman.ProtectionFlag;
 import org.ps5jb.sdk.include.sys.proc.Process;
 import org.ps5jb.sdk.include.sys.proc.Thread;
@@ -24,7 +25,7 @@ import org.ps5jb.sdk.lib.LibKernel;
  */
 public class DumpCurProc implements Runnable {
     private static final long PROC_SIZE = 0x1400;
-    
+
     private LibKernel libKernel;
 
     private int libJvmKey;
@@ -41,110 +42,11 @@ public class DumpCurProc implements Runnable {
         try {
             SdkInit sdk = SdkInit.init(true, false);
 
+            Status.println("Current Process:");
             Process curProc = new Process(KernelPointer.valueOf(sdk.curProcAddress));
-            Status.println("Process " + curProc.getPointer() + ":");
-            MemoryDumper.dump(curProc.getPointer(), PROC_SIZE, true);
-            Status.println("Ucred " + curProc.getUserCredentials().getPointer() + ":");
-            MemoryDumper.dump(curProc.getUserCredentials().getPointer(), UCred.SIZE, true);
-            Status.println("Fd " + curProc.getOpenFiles().getPointer() + ":");
-            MemoryDumper.dump(curProc.getOpenFiles().getPointer(), FileDesc.OFFSET_FD_JDIR + 0x20, true);
-
-            Status.println("Process Data:");
-            Status.println("  PID: " + curProc.getPid());
-            Status.println("  Title ID: " + curProc.getTitleId());
-            Status.println("  Content ID: " + curProc.getContentId());
-            Status.println("  GPU VM ID: " + curProc.getVmSpace().getGpuVmId());
-            Status.println("  Command: " + curProc.getName());
-            Status.println("  Arguments: " + curProc.getArguments());
-            Process next = curProc.getNextProcess();
-            if (next != null) {
-                Status.println("  Next: " + printProcess(next));
-            } else {
-                Status.println("  Last in allproc");
-            }
-            Process prev = curProc.getPreviousProcess();
-            if (prev != null) {
-                Status.println("  Previous: " + printProcess(prev));
-            } else {
-                Status.println("  First in allproc");
-            }
-            Process groupEntry = curProc.getNextProcessInGroup();
-            if (groupEntry != null) {
-                Status.println("  Next in group:");
-                while (groupEntry != null) {
-                    Status.println("    " + printProcess(groupEntry));
-                    groupEntry = groupEntry.getNextProcessInGroup();
-                }
-            }
-            Process parent = curProc.getParentProcess();
-            if (parent != null) {
-                String indent = "  ";
-                Status.println(indent + "Parent(s):");
-                while (parent != null) {
-                    indent += "  ";
-                    Status.println(indent + printProcess(parent));
-                    parent = parent.getParentProcess();
-                }
-            }
-            Process sibling = curProc.getNextSiblingProcess();
-            if (sibling != null) {
-                Status.println("  Next sibling(s):");
-                while (sibling != null) {
-                    Status.println("    " + printProcess(sibling));
-                    sibling = sibling.getNextSiblingProcess();
-                }
-            }
-            sibling = curProc.getPreviousSiblingProcess();
-            if (sibling != null) {
-                Status.println("  Prev sibling(s):");
-                while (sibling != null) {
-                    Status.println("    " + printProcess(sibling));
-                    sibling = sibling.getPreviousSiblingProcess();
-                }
-            }
-            Process child = curProc.getNextChildProcess();
-            if (child != null) {
-                Status.println("  Children:");
-                while (child != null) {
-                    Status.println("    " + printProcess(child));
-                    child = child.getNextSiblingProcess();
-                }
-            }
-            Process reaper = curProc.getReaperProcess();
-            if (reaper != null) {
-                Status.println("  Reaper: " + printProcess(reaper));
-            }
-            Process reapEntry = curProc.getNextReapListSiblingProcess();
-            if (reapEntry != null) {
-                Status.println("  Next reap sibling(s) of the reaper:");
-                while (reapEntry != null) {
-                    Status.println("    " + printProcess(reapEntry));
-                    reapEntry = reapEntry.getNextReapListSiblingProcess();
-                }
-            }
-            reapEntry = curProc.getPreviousReapListSiblingProcess();
-            if (reapEntry != null) {
-                Status.println("  Prev reap sibling(s) of the reaper:");
-                while (reapEntry != null) {
-                    Status.println("    " + printProcess(reapEntry));
-                    reapEntry = reapEntry.getPreviousReapListSiblingProcess();
-                }
-            }
-            Process reapChild = curProc.getNextProcessInReapList();
-            if (reapChild != null) {
-                Status.println("  Reap list (of this process):");
-                while (reapChild != null) {
-                    Status.println("    " + printProcess(reapChild));
-                    reapChild = reapChild.getNextReapListSiblingProcess();
-                }
-            }
-
-            printModuleList();
-
-            int curTid = libKernel.pthread_getthreadid_np();
-            printNativeThreadList(curProc, curTid);
-
+            printProc(curProc);
             printJavaThreadList();
+            printModuleList();
         } catch (KernelReadWriteUnavailableException e) {
             Status.println("Kernel R/W is not available, aborting");
         } catch (SdkSoftwareVersionUnsupportedException e) {
@@ -154,6 +56,138 @@ public class DumpCurProc implements Runnable {
         } finally {
             libKernel.closeLibrary();
         }
+    }
+
+    private void printProc(Process process) {
+        UCred ucred = process.getUserCredentials();
+        Prison prison = ucred.getPrison();
+
+        Status.println("Process " + process.getPointer() + ":");
+        MemoryDumper.dump(process.getPointer(), PROC_SIZE, true);
+        Status.println("Ucred " + ucred.getPointer() + ":");
+        MemoryDumper.dump(ucred.getPointer(), UCred.SIZE, true);
+        Status.println("Prison " + prison.getPointer() + ":");
+        MemoryDumper.dump(prison.getPointer(), Prison.SIZE, true);
+        Status.println("Fd " + process.getOpenFiles().getPointer() + ":");
+        MemoryDumper.dump(process.getOpenFiles().getPointer(), FileDesc.OFFSET_FD_JDIR + 0x20, true);
+
+        Status.println("Process Data:");
+        Status.println("  PID: " + process.getPid());
+        Status.println("  Title ID: " + process.getTitleId());
+        Status.println("  Content ID: " + process.getContentId());
+        Status.println("  GPU VM ID: " + process.getVmSpace().getGpuVmId());
+        Status.println("  Command: " + process.getName());
+        Status.println("  Arguments: " + process.getArguments());
+        Status.println("  Open Files:");
+        Status.println("    Cur Vnode: " + process.getOpenFiles().getCurDir());
+        Status.println("    Root Vnode: " + process.getOpenFiles().getRootDir());
+        Status.println("    Jail Vnode: " + process.getOpenFiles().getJailDir());
+        Status.println("  User Credentials:");
+        Status.println("    Uid: " + ucred.getUid());
+        for (int i = 0; i < ucred.getNgroups(); ++i) {
+            Status.println("    Gid" + (i == 0 ? "" : " " + (i + 1)) + ": " + ucred.getGroups().read4(i * 4L));
+        }
+        Status.println("  Prison:");
+        Status.println("    Ref Count: " + prison.getRef());
+        Status.println("    Uref Count: " + prison.getUref());
+        Status.println("    Root Vnode: " + prison.getRoot());
+        if (prison.getIpv4Count() > 0) {
+            KernelPointer ipv4 = prison.getIpv4();
+            if (!KernelPointer.NULL.equals(ipv4)) {
+                Status.println("    IPv4: 0x" + Integer.toHexString(ipv4.read4()));
+            }
+        }
+        Status.println("    Name: " + prison.getName());
+        Status.println("    Hostname: " + prison.getHostname());
+        Status.println("    Domain Name: " + prison.getDomainName());
+        Status.println("    Host UUID: " + prison.getHostUuid());
+        Status.println("    OS Release Date: " + prison.getOsRelDate());
+        Status.println("    OS Release: " + prison.getOsRelease());
+        Process next = process.getNextProcess();
+        if (next != null) {
+            Status.println("  Next: " + printProcess(next));
+        } else {
+            Status.println("  Last in allproc");
+        }
+        Process prev = process.getPreviousProcess();
+        if (prev != null) {
+            Status.println("  Previous: " + printProcess(prev));
+        } else {
+            Status.println("  First in allproc");
+        }
+        Process groupEntry = process.getNextProcessInGroup();
+        if (groupEntry != null) {
+            Status.println("  Next in group:");
+            while (groupEntry != null) {
+                Status.println("    " + printProcess(groupEntry));
+                groupEntry = groupEntry.getNextProcessInGroup();
+            }
+        }
+        Process parent = process.getParentProcess();
+        if (parent != null) {
+            String indent = "  ";
+            Status.println(indent + "Parent(s):");
+            while (parent != null) {
+                indent += "  ";
+                Status.println(indent + printProcess(parent));
+                parent = parent.getParentProcess();
+            }
+        }
+        Process sibling = process.getNextSiblingProcess();
+        if (sibling != null) {
+            Status.println("  Next sibling(s):");
+            while (sibling != null) {
+                Status.println("    " + printProcess(sibling));
+                sibling = sibling.getNextSiblingProcess();
+            }
+        }
+        sibling = process.getPreviousSiblingProcess();
+        if (sibling != null) {
+            Status.println("  Prev sibling(s):");
+            while (sibling != null) {
+                Status.println("    " + printProcess(sibling));
+                sibling = sibling.getPreviousSiblingProcess();
+            }
+        }
+        Process child = process.getNextChildProcess();
+        if (child != null) {
+            Status.println("  Children:");
+            while (child != null) {
+                Status.println("    " + printProcess(child));
+                child = child.getNextSiblingProcess();
+            }
+        }
+        Process reaper = process.getReaperProcess();
+        if (reaper != null) {
+            Status.println("  Reaper: " + printProcess(reaper));
+        }
+        Process reapEntry = process.getNextReapListSiblingProcess();
+        if (reapEntry != null) {
+            Status.println("  Next reap sibling(s) of the reaper:");
+            while (reapEntry != null) {
+                Status.println("    " + printProcess(reapEntry));
+                reapEntry = reapEntry.getNextReapListSiblingProcess();
+            }
+        }
+        reapEntry = process.getPreviousReapListSiblingProcess();
+        if (reapEntry != null) {
+            Status.println("  Prev reap sibling(s) of the reaper:");
+            while (reapEntry != null) {
+                Status.println("    " + printProcess(reapEntry));
+                reapEntry = reapEntry.getPreviousReapListSiblingProcess();
+            }
+        }
+        Process reapChild = process.getNextProcessInReapList();
+        if (reapChild != null) {
+            Status.println("  Reap list (of this process):");
+            while (reapChild != null) {
+                Status.println("    " + printProcess(reapChild));
+                reapChild = reapChild.getNextReapListSiblingProcess();
+            }
+        }
+
+        int curTid = libKernel.pthread_getthreadid_np();
+        printNativeThreadList(process, curTid);
     }
 
     private void printJavaThreadList() throws NoSuchFieldException, IllegalAccessException {

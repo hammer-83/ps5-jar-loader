@@ -1,7 +1,5 @@
 package org.ps5jb.sdk.include.sys;
 
-import java.util.Arrays;
-
 import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.include.sys.errno.BadFileDescriptorException;
 import org.ps5jb.sdk.include.sys.errno.DeadlockException;
@@ -321,5 +319,37 @@ public class ErrNo {
         }
 
         return result;
+    }
+
+    /**
+     * Throws an exception corresponding to the last error code if the given
+     * return value is -1.
+     *
+     * @param returnValue Actual return value.
+     * @param clazz Class used to generate the exception message.
+     * @param keySuffix Key used to generate the exception message.
+     * @param formatArgs Arguments to use to generate the exception message.
+     * @return Value of returnValue.
+     * @throws SdkException If return value is not -1.
+     */
+    public long checkLastException(long returnValue, Class clazz, String keySuffix, Object ... formatArgs) throws SdkException {
+        if (returnValue == -1) {
+            throw getLastException(clazz, keySuffix, formatArgs);
+        }
+        return returnValue;
+    }
+
+    /**
+     * Same as {@link #checkLastException(long, Class, String, Object...)} but for integer return types.
+     *
+     * @param returnValue Actual return value.
+     * @param clazz Class used to generate the exception message.
+     * @param keySuffix Key used to generate the exception message.
+     * @param formatArgs Arguments to use to generate the exception message.
+     * @return Value of returnValue.
+     * @throws SdkException If return value is not -1.
+     */
+    public int checkLastException(int returnValue, Class clazz, String keySuffix, Object ... formatArgs) throws SdkException {
+        return (int) checkLastException((long) returnValue, clazz, keySuffix, formatArgs);
     }
 }

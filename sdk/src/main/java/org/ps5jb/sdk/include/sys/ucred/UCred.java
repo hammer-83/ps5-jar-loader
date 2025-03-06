@@ -1,6 +1,7 @@
 package org.ps5jb.sdk.include.sys.ucred;
 
 import org.ps5jb.sdk.core.kernel.KernelPointer;
+import org.ps5jb.sdk.include.sys.jail.Prison;
 import org.ps5jb.sdk.res.ErrorMessages;
 
 /**
@@ -176,10 +177,15 @@ public class UCred {
     /**
      * Jail.
      *
-     * @return Returns the value of <code>cr_prison</code> field of <code>filedesc</code> structure.
+     * @return Returns the value of <code>cr_prison</code> field of <code>ucred</code> structure.
+     *   Returns <code>null</code> if prison pointer is {@link KernelPointer#NULL}.
      */
-    public KernelPointer getPrison() {
-        return ptr.pptr(OFFSET_CR_PRISON);
+    public Prison getPrison() {
+        KernelPointer prisonPtr = ptr.pptr(OFFSET_CR_PRISON);
+        if (KernelPointer.NULL.equals(prisonPtr)) {
+            return null;
+        }
+        return new Prison(prisonPtr);
     }
 
     /**
@@ -187,8 +193,8 @@ public class UCred {
      *
      * @param prison New jail value.
      */
-    public void setPrison(KernelPointer prison) {
-        ptr.write8(OFFSET_CR_PRISON, prison.addr());
+    public void setPrison(Prison prison) {
+        ptr.write8(OFFSET_CR_PRISON, prison == null ? 0 : prison.getPointer().addr());
     }
 
     /**

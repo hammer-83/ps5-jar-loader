@@ -33,6 +33,32 @@ public class Socket {
         return ret;
     }
 
+    /**
+     * Creates an unnamed pair of connected sockets in the specified communications domain,
+     * of the specified type, and using the optionally specified protocol.
+     * The two sockets are indistinguishable.
+     *
+     * @param domain Specifies a communications domain within which communication will take place.
+     * @param socketType The socket has the indicated type, which specifies the semantics of communication.
+     * @param protocol The protocol argument specifies a particular protocol to be used with the socket.
+     *   Normally only a single protocol exists to support a particular socket type within a given protocol family.
+     * @return Array containing two file descriptors of the created sockets.
+     * @throws SdkException If sockets could not be created.
+     */
+    public int[] createSocketPair(AddressFamilyType domain, SocketType socketType, ProtocolType protocol) throws SdkException {
+        Pointer sv = Pointer.calloc(8);
+        try {
+            int ret = libKernel.socketpair(domain.value(), socketType.value(), protocol.value(), sv);
+            if (ret == -1) {
+                throw errNo.getLastException(getClass(), "createSocketPair");
+            }
+
+            return new int[] { sv.read4(), sv.read4(4) };
+        } finally {
+            sv.free();
+        }
+    }
+
     public void setSocketOptionsIPv6(int socket, OptionIPv6 optionName, Pointer optionValue) throws SdkException {
         long optSize = optionValue.size().longValue();
         int ret = libKernel.setsockopt(socket, ProtocolType.IPPROTO_IPV6.value(), optionName.value(), optionValue, optSize);

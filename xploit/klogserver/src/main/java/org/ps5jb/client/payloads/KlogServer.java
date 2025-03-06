@@ -16,6 +16,7 @@ import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
 import org.ps5jb.sdk.core.Pointer;
+import org.ps5jb.sdk.core.SdkException;
 import org.ps5jb.sdk.core.kernel.KernelPointer;
 import org.ps5jb.sdk.include.sys.CpuSet;
 import org.ps5jb.sdk.include.sys.proc.Process;
@@ -39,6 +40,7 @@ import org.ps5jb.sdk.lib.LibKernel;
  */
 public class KlogServer extends SocketListener implements UserEventListener {
     private LibKernel libKernel;
+    private Select selectWrapper;
 
     private int exitConfirmCount;
 
@@ -65,6 +67,7 @@ public class KlogServer extends SocketListener implements UserEventListener {
     @Override
     public void run() {
         libKernel = new LibKernel();
+        selectWrapper = new Select(libKernel);
         try {
             SdkInit sdk = SdkInit.init(true, true);
 
@@ -196,6 +199,26 @@ public class KlogServer extends SocketListener implements UserEventListener {
         }
     }
 
+    private void sendKlog(int readFd, FdSetType fdSet, TimevalType timeval, Pointer inBuf, byte[] outBuf, OutputStream out) throws SdkException, IOException {
+        // Set fd
+        fdSet.zero();
+        fdSet.set(readFd);
+
+        // Unblock after a second
+        timeval.setSec(1);
+        timeval.setUsec(0);
+
+        int selectCount = selectWrapper.select(readFd + 1, fdSet, null, null, timeval);
+
+        if (selectCount > 0 && fdSet.isSet(readFd)) {
+            int readCount = (int) libKernel.read(readFd, inBuf, inBuf.size().longValue());
+            if (readCount > 0) {
+                inBuf.read(0, outBuf, 0, readCount);
+                out.write(outBuf, 0, readCount);
+            }
+        }
+    }
+
     @Override
     protected void acceptClient(Socket clientSocket) throws Exception {
         OutputStream out = clientSocket.getOutputStream();
@@ -208,33 +231,25 @@ public class KlogServer extends SocketListener implements UserEventListener {
                 int fd = fcnctl.open("/dev/klog", OpenFlag.O_RDONLY);
                 try {
                     FdSetType fdSet = new FdSetType();
-                    FdSetType fdSetCopy = new FdSetType();
                     TimevalType timeval = new TimevalType();
                     try {
-                        fdSetCopy.zero();
-                        fdSetCopy.set(fd);
-
-                        // Unblock every couple of seconds just to check for termination signal
-                        timeval.setSec(2);
-                        timeval.setUsec(0);
-
-                        Select selectWrapper = new Select(libKernel);
-                        while (!terminated) {
-                            fdSet.copy(fdSetCopy);
-                            int selectCount = selectWrapper.select(fd + 1, fdSet, null, null, timeval);
-
-                            if (selectCount > 0 && fdSet.isSet(fd)) {
-                                int readCount = (int) libKernel.read(fd, inBuf, bufSize);
-                                if (readCount > 0) {
-                                    inBuf.read(0, outBuf, 0, readCount);
-                                    out.write(outBuf, 0, readCount);
+                        Thread sendThread = new Thread(() -> {
+                            while (!terminated) {
+                                try {
+                                    sendKlog(fd, fdSet, timeval, inBuf, outBuf, out);
+                                } catch (Throwable e) {
+                                    handleException(e);
                                 }
                             }
+                        }, "Klog Reader");
+
+                        sendThread.start();
+                        while (sendThread.isAlive()) {
+                            Thread.yield();
                         }
                     } finally {
                         timeval.free();
                         fdSet.free();
-                        fdSetCopy.free();
                     }
                 } finally {
                     fcnctl.close(fd);

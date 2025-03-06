@@ -36,6 +36,7 @@ import org.dvb.event.OverallRepository;
 import org.dvb.event.UserEvent;
 import org.dvb.event.UserEventListener;
 import org.havi.ui.event.HRcEvent;
+import org.ps5jb.client.utils.init.SdkInit;
 import org.ps5jb.loader.ManifestUtils;
 import org.ps5jb.loader.SocketListener;
 import org.ps5jb.loader.Status;
@@ -127,6 +128,11 @@ public class FtpServer extends SocketListener implements UserEventListener {
         try {
             // Disable I/O proxies
             disableIOProxyFactory();
+
+            // When using native calls, activate the SDK
+            if (useNativeCalls) {
+                SdkInit.init(false, false);
+            }
 
             // Execute the socket listener
             super.run();

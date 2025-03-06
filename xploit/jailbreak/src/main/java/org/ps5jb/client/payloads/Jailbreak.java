@@ -128,7 +128,7 @@ public class Jailbreak implements Runnable {
             1, // cr_ngroups
             0, // cr_rgid
             0, // cr_svid
-            0, // gid0
+            0  // gid0
         });
 
         // Escalate sony privs

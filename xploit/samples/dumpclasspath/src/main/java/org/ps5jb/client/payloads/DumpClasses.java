@@ -60,7 +60,7 @@ public class DumpClasses extends SocketListener {
      * @throws IOException If listening socket could not be created.
      */
     public DumpClasses(int port) throws IOException {
-        super("Classpath Dumper v" + ManifestUtils.getClassImplementationVersion(DumpClasses.class, "dumpclassspath"), port);
+        super("Classpath Dumper v" + ManifestUtils.getClassImplementationVersion(DumpClasses.class, "dumpclasspath"), port);
     }
 
     /**

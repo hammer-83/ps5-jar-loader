@@ -30,6 +30,8 @@ public class LibKernel extends Library {
     private Pointer getuid;
     private Pointer setuid;
     private Pointer getpid;
+    private Pointer dup;
+    private Pointer dup2;
     private Pointer open;
     private Pointer close;
     private Pointer chdir;
@@ -60,6 +62,7 @@ public class LibKernel extends Library {
     private Pointer socket;
     private Pointer setsockopt;
     private Pointer getsockopt;
+    private Pointer socketpair;
     private Pointer usleep;
     private Pointer sysctl;
     private Pointer sysctlbyname;
@@ -214,6 +217,41 @@ public class LibKernel extends Library {
             getpid = addrOf("getpid");
         }
         return (int) call(getpid);
+    }
+
+    /**
+     * Duplicates an existing object descriptor and returns its value to the calling process.
+     *
+     * @param oldd Descriptor to duplicate
+     * @return New file descriptor if successful. Return -1 on failure,
+     *   and set {@link ErrNo#errno() errno} to indicate the error.
+     */
+    public int dup(int oldd) {
+        if (dup == null) {
+            dup = addrOf("dup");
+        }
+        return (int) call(dup, oldd);
+    }
+
+    /**
+     * Duplicates an existing object descriptor and
+     * returns its value to the calling process.
+     * If this descriptor is already in use and <code>oldd != newd</code>,
+     * the descriptor is first deallocated as if the {@link #close(int)} had been used.
+     * If <code>oldd</code> is not a valid descriptor,
+     * then <code>newd</code> is not closed. If <code>oldd == newd</code> and
+     * <code>oldd</code> is a valid descriptor, then do nothing.
+     *
+     * @param oldd Descriptor to duplicate.
+     * @param newd New descriptor value.
+     * @return New file descriptor if successful. Return -1 on failure,
+     *   and set {@link ErrNo#errno() errno} to indicate the error.
+     */
+    public int dup2(int	oldd, int newd) {
+        if (dup2 == null) {
+            dup2 = addrOf("dup2");
+        }
+        return (int) call(dup2, oldd, newd);
     }
 
     /**
@@ -488,6 +526,14 @@ public class LibKernel extends Library {
         }
 
         return (int) call(setsockopt, s, level, optname, optval.addr(), optlen);
+    }
+
+    public int socketpair(int domain, int type, int	protocol, Pointer sv) {
+        if (socketpair == null) {
+            socketpair = addrOf("socketpair");
+        }
+
+        return (int) call(socketpair, domain, type, protocol, sv.addr());
     }
 
     public int _umtx_op(Pointer obj, int op, long val, Pointer uaddr, Pointer uaddr2) {

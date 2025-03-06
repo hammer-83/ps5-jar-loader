@@ -183,7 +183,7 @@ public class ProcessUtils {
             ucred.setSvgid(ids[5]);
             KernelPointer groups = ucred.getGroups();
             for (int groupIndex = 0; groupIndex < ids[3]; ++groupIndex) {
-                groups.write4(groupIndex * 4L, ids[6] + groupIndex);
+                groups.write4(groupIndex * 4L, ids[6 + groupIndex]);
             }
         }
 

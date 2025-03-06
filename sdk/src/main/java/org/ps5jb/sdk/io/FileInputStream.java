@@ -7,8 +7,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.ps5jb.sdk.core.SdkRuntimeException;
+import org.ps5jb.sdk.include.ErrNo;
 import org.ps5jb.sdk.include.sys.fcntl.OpenFlag;
 import org.ps5jb.sdk.lib.LibKernel;
+import org.ps5jb.sdk.res.ErrorMessages;
 
 public class FileInputStream extends java.io.FileInputStream {
     public FileInputStream(String name) throws FileNotFoundException {
@@ -33,19 +35,17 @@ public class FileInputStream extends java.io.FileInputStream {
             Field proxyField = java.io.FileInputStream.class.getDeclaredField("proxy");
             proxyField.setAccessible(true);
             proxyField.set(this, null);
-
-            FileDescriptor fd = getFd();
-            proxyField = java.io.FileDescriptor.class.getDeclaredField("proxy");
-            proxyField.setAccessible(true);
-            proxyField.set(fd, null);
         } catch (NoSuchFieldException e) {
             // Ignore
         } catch (IllegalAccessException e) {
             throw new SdkRuntimeException(e);
         }
+
+        FileDescriptor fd = getFd();
+        FileDescriptorFactory.disableFileDescriptorProxy(fd);
     }
 
-    private FileDescriptor getFd() {
+    public FileDescriptor getFd() {
         try {
             Field fdField = java.io.FileInputStream.class.getDeclaredField("fd");
             fdField.setAccessible(true);
@@ -57,9 +57,16 @@ public class FileInputStream extends java.io.FileInputStream {
 
     private void openFile(java.io.File file) throws FileNotFoundException {
         LibKernel libKernel = new LibKernel();
-        int fd = libKernel.open(file.getAbsolutePath(), OpenFlag.or(OpenFlag.O_RDONLY));
-        if (fd == -1) {
-            throw new FileNotFoundException();
+        int fd;
+        try {
+            fd = libKernel.open(file.getAbsolutePath(), OpenFlag.or(OpenFlag.O_RDONLY));
+            if (fd == -1) {
+                ErrNo errNo = new ErrNo(libKernel);
+                throw new FileNotFoundException(ErrorMessages.getClassErrorMessage(getClass(),
+                        "fileOpenException", file.getAbsolutePath(), errNo.getLastError()));
+            }
+        } finally {
+            libKernel.closeLibrary();
         }
 
         try {

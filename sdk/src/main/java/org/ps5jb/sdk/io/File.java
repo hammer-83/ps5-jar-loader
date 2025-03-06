@@ -128,6 +128,13 @@ public class File extends java.io.File {
         return super.isDirectory();
     }
 
+    public boolean isDevice() {
+        if (modes != null) {
+            return modes.contains(FileStatusMode.S_IFCHR) || modes.contains(FileStatusMode.S_IFBLK);
+        }
+        return false;
+    }
+
     @Override
     public boolean isFile() {
         if (modes != null) {

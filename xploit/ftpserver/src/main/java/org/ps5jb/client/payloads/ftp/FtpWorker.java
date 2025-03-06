@@ -44,6 +44,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+
+import org.ps5jb.client.utils.init.SdkInit;
+import org.ps5jb.sdk.core.kernel.KernelPointer;
+import org.ps5jb.sdk.include.sys.proc.Process;
 import java.util.StringTokenizer;
 
 import org.ps5jb.loader.Status;
@@ -58,6 +62,9 @@ import org.ps5jb.sdk.include.sys.stat.FileStatusMode;
 public class FtpWorker extends Thread {
     static final String DEFAULT_USERNAME = "ps5jb";
     static final String DEFAULT_PASSWORD = "";
+
+    /** SceAuthId set during file download to grant access to restricted files */
+    static final long DOWNLOAD_SCE_AUTH_ID = 0x4801000000000013L;
 
     /**
      * Enable debugging output to console
@@ -265,6 +272,26 @@ public class FtpWorker extends Thread {
             valid = file.getAbsolutePath().startsWith(root);
         }
         return valid;
+    }
+
+    private boolean isFileReadable(File file) {
+        boolean readable = false;
+
+        try {
+            file = file.getCanonicalFile();
+            if (!file.isFile()) {
+                if (file instanceof org.ps5jb.sdk.io.File) {
+                    org.ps5jb.sdk.io.File sdkFile = (org.ps5jb.sdk.io.File) file;
+                    readable = sdkFile.isDevice();
+                }
+            } else {
+                readable = true;
+            }
+        } catch (IOException e) {
+            // leave as not readable
+        }
+
+        return readable;
     }
 
     private boolean isFileExists(File file) {
@@ -874,92 +901,110 @@ public class FtpWorker extends Thread {
     private void handleRetr(String file) {
         File f = toAbsoluteFile(file);
 
-        if (!isFileValid(f, true) || !f.isFile()) {
+        if (!isFileValid(f, true)) {
             sendMsgToClient("550 Invalid file name");
+        } else if (!isFileReadable(f)) {
+            sendMsgToClient("550 File not readable");
         }
         else {
-            // Binary mode
-            if (transferMode == transferType.BINARY) {
-                sendMsgToClient("150 Opening binary mode data connection for requested file " + f.getName());
-
-                BufferedInputStream fin = null;
-                try {
-                    fin = new BufferedInputStream(createFileInputStream(f));
-                } catch (Exception e) {
-                    Status.printStackTrace("Could not create input stream", e);
-                    sendMsgToClient("550 Could not open requested file");
-                    return;
+            // Some files need special auth id
+            Process proc = null;
+            long oldSceAuthId = 0;
+            if (useNativeCalls) {
+                SdkInit sdk = SdkInit.instance();
+                if (sdk.curProcAddress != 0) {
+                    proc = new Process(KernelPointer.valueOf(sdk.curProcAddress));
+                    oldSceAuthId = proc.getUserCredentials().getSceAuthId();
+                    proc.getUserCredentials().setSceAuthId(DOWNLOAD_SCE_AUTH_ID);
                 }
-
-                BufferedOutputStream fout = null;
-                try {
-                    // create streams
-                    fout = new BufferedOutputStream(dataConnection.getOutputStream());
-                } catch (Exception e) {
-                    Status.printStackTrace("Could not create output stream", e);
-                    sendMsgToClient("550 Error writing to data connection");
-                    return;
-                }
-
-                debugOutput("Starting file transmission of " + f.getName());
-
-                // write file with buffer
-                byte[] buf = new byte[1024];
-                int l = 0;
-                try {
-                    while ((l = fin.read(buf, 0, 1024)) != -1) {
-                        fout.write(buf, 0, l);
-                    }
-                } catch (IOException e) {
-                    Status.printStackTrace("Could not read from or write to file streams", e);
-                }
-
-                // close streams
-                try {
-                    fin.close();
-                    fout.close();
-                } catch (IOException e) {
-                    Status.printStackTrace("Could not close file streams", e);
-                }
-
-                debugOutput("Completed file transmission of " + f.getName());
-                sendMsgToClient("226 File transfer successful. Closing data connection.");
             }
+            try {
+                // Binary mode
+                if (transferMode == transferType.BINARY) {
+                    sendMsgToClient("150 Opening binary mode data connection for requested file " + f.getName());
 
-            // ASCII mode
-            else {
-                sendMsgToClient("150 Opening ASCII mode data connection for requested file " + f.getName());
-
-                BufferedReader rin = null;
-                PrintWriter rout = null;
-
-                try {
-                    rin = new BufferedReader(new FileReader(f));
-                    rout = new PrintWriter(dataConnection.getOutputStream(), true);
-
-                } catch (IOException e) {
-                    debugOutput("Could not create file streams");
-                }
-
-                String s;
-
-                try {
-                    while ((s = rin.readLine()) != null) {
-                        rout.println(s);
+                    BufferedInputStream fin;
+                    try {
+                        fin = new BufferedInputStream(createFileInputStream(f));
+                    } catch (Exception e) {
+                        Status.printStackTrace("Could not create input stream", e);
+                        sendMsgToClient("550 Could not open requested file");
+                        return;
                     }
-                } catch (IOException e) {
-                    Status.printStackTrace("Could not read from or write to file streams", e);
+
+                    BufferedOutputStream fout;
+                    try {
+                        // create streams
+                        fout = new BufferedOutputStream(dataConnection.getOutputStream());
+                    } catch (Exception e) {
+                        Status.printStackTrace("Could not create output stream", e);
+                        sendMsgToClient("550 Error writing to data connection");
+                        return;
+                    }
+
+                    debugOutput("Starting file transmission of " + f.getName());
+
+                    // write file with buffer
+                    byte[] buf = new byte[1024];
+                    int l = 0;
+                    try {
+                        while ((l = fin.read(buf, 0, 1024)) != -1) {
+                            fout.write(buf, 0, l);
+                        }
+                    } catch (IOException e) {
+                        Status.printStackTrace("Could not read from or write to file streams", e);
+                    }
+
+                    // close streams
+                    try {
+                        fin.close();
+                        fout.close();
+                    } catch (IOException e) {
+                        Status.printStackTrace("Could not close file streams", e);
+                    }
+
+                    debugOutput("Completed file transmission of " + f.getName());
+                    sendMsgToClient("226 File transfer successful. Closing data connection.");
                 }
 
-                try {
-                    rout.close();
-                    rin.close();
-                } catch (IOException e) {
-                    Status.printStackTrace("Could not close file streams", e);
+                // ASCII mode
+                else {
+                    sendMsgToClient("150 Opening ASCII mode data connection for requested file " + f.getName());
+
+                    BufferedReader rin = null;
+                    PrintWriter rout = null;
+
+                    try {
+                        rin = new BufferedReader(new FileReader(f));
+                        rout = new PrintWriter(dataConnection.getOutputStream(), true);
+
+                    } catch (IOException e) {
+                        debugOutput("Could not create file streams");
+                    }
+
+                    String s;
+
+                    try {
+                        while ((s = rin.readLine()) != null) {
+                            rout.println(s);
+                        }
+                    } catch (IOException e) {
+                        Status.printStackTrace("Could not read from or write to file streams", e);
+                    }
+
+                    try {
+                        rout.close();
+                        rin.close();
+                    } catch (IOException e) {
+                        Status.printStackTrace("Could not close file streams", e);
+                    }
+                    sendMsgToClient("226 File transfer successful. Closing data connection.");
                 }
-                sendMsgToClient("226 File transfer successful. Closing data connection.");
+            } finally {
+                if (proc != null) {
+                    proc.getUserCredentials().setSceAuthId(oldSceAuthId);
+                }
             }
-
         }
         closeDataConnection();
 
