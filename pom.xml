@@ -32,7 +32,7 @@
         <loader.payload.root>jar-payloads</loader.payload.root>
 
         <!-- Do not use the same version as parent project for Xlet because it will be modified less frequently. We only want to burn new disc if Xlet changes -->
-        <xlet.version>4.1.0</xlet.version>
+        <xlet.version>4.1.1</xlet.version>
     </properties>
 
     <modules>
@@ -154,8 +154,13 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.0</version>
                     <configuration>
-                        <!-- PS5 does not use compressed OOPs -->
-                        <argLine>-XX:-UseCompressedOops</argLine>
+                        <!--
+                        Various default PS5 JVM parameters for unit tests:
+                        - Don't use compressed memory Oops
+                        - Use serial GC
+                        - Use specific memory limits. Note that metaspace limit is 14M but this is too small to run within Maven
+                        -->
+                        <argLine>-XX:-UseCompressedOops -XX:+UseSerialGC -Xms16M -Xmx256M -Xss1M</argLine>
                     </configuration>
                 </plugin>
 

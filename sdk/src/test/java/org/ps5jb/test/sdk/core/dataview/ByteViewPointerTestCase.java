@@ -225,10 +225,6 @@ public class ByteViewPointerTestCase {
                 Assertions.assertEquals(origAddr, addr);
             }
 
-            // These two nullings are not necessary on PS5 but crash JVM (tested on Windows)
-            val[0] = null;
-            dataView = null;
-
             System.gc();
         }
     }
