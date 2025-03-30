@@ -7,6 +7,8 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Ps5MenuLoader {
     private int selected = 1;
@@ -14,7 +16,7 @@ public class Ps5MenuLoader {
     private boolean subMenuActive = false;
 
     private final Ps5MenuItem[] menuItems;
-    private Ps5MenuItem[] submenuItems;
+    private Map submenuItems = new HashMap();
 
     public Ps5MenuLoader(final Ps5MenuItem[] menuItems) {
         this.menuItems = menuItems;
@@ -42,9 +44,10 @@ public class Ps5MenuLoader {
 
             if (i+1 == selected && subMenuActive) {
                 int nextY = 0;
-                if (submenuItems != null) {
-                    for (int j = 0; j < submenuItems.length; j++) {
-                        final Ps5MenuItem subItem = submenuItems[j];
+                Ps5MenuItem[] subItems = (Ps5MenuItem[]) submenuItems.get(new Integer(i+1));
+                if (subItems != null && subItems.length > 0) {
+                    for (int j = 0; j < subItems.length; j++) {
+                        final Ps5MenuItem subItem = subItems[j];
 
                         if (getSelectedSub()-1 == j) {
                             g2d.setColor(Color.WHITE);
@@ -57,10 +60,11 @@ public class Ps5MenuLoader {
                         }
                         nextY += 35;
                     }
+                } else {
+                    g2d.setColor(Color.WHITE);
+                    g2d.setFont(new Font("Sans", Font.PLAIN, 25));
+                    g2d.drawString("Not available!", nextX, 100 + 256 + 30 + 50 + nextY);
                 }
-
-                g2d.setColor(new Color(64, 156, 217, 51));
-                g2d.fillRoundRect(iconSpaceing - 10 + (selected-1)*(256+50), 100 - 10, 256 + 10 + 10, 256 + 10 + 10 + 30, 40, 40);
             }
 
             nextX += 256 + 50;
@@ -81,7 +85,7 @@ public class Ps5MenuLoader {
 
         g2d.setColor(Color.LIGHT_GRAY);
         g2d.setFont(new Font("Sans", Font.PLAIN, 16));
-        g2d.drawString("Press X to select JAR loader.", 30, 50);
+        g2d.drawString("Press X to select menu entry.", 30, 50);
     }
 
     public int getSelected() {
@@ -106,17 +110,18 @@ public class Ps5MenuLoader {
 
     public void setSubMenuActive(boolean subMenuActive) {
         this.subMenuActive = subMenuActive;
+        this.setSelectedSub(1);
     }
 
     public Ps5MenuItem[] getMenuItems() {
         return menuItems;
     }
 
-    public Ps5MenuItem[] getSubmenuItems() {
-        return submenuItems;
+    public Ps5MenuItem[] getSubmenuItems(int mainItemId) {
+        return (Ps5MenuItem[]) submenuItems.get(new Integer(mainItemId));
     }
 
-    public void setSubmenuItems(Ps5MenuItem[] submenuItems) {
-        this.submenuItems = submenuItems;
+    public void setSubmenuItems(int mainItemId, Ps5MenuItem[] submenuItems) {
+        this.submenuItems.put(new Integer(mainItemId), submenuItems);
     }
 }

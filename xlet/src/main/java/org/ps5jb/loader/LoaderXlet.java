@@ -2,12 +2,6 @@ package org.ps5jb.loader;
 
 import java.awt.BorderLayout;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.Enumeration;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import javax.tv.xlet.Xlet;
 import javax.tv.xlet.XletContext;
 
@@ -71,7 +65,7 @@ public class LoaderXlet implements Xlet {
         try {
             if (System.getSecurityManager() == null) {
                 final String jarLoaderThreadName;
-                if (MenuLoader.listPayloads().length > 0) {
+                if (MenuLoader.listJarPayloads().length > 0) {
                     jarLoader = new MenuLoader();
                     jarLoaderThreadName = "MenuLoader";
                 } else {

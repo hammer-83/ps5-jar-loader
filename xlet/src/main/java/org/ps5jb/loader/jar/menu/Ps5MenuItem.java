@@ -14,27 +14,29 @@ public class Ps5MenuItem {
     public Ps5MenuItem(String label, String imagePath) throws IOException {
         this.label = label;
 
-        InputStream iconStream = this.getClass().getResourceAsStream(imagePath);
-        if (iconStream == null) {
-            throw new FileNotFoundException(imagePath);
-        }
-
-        byte[] iconBytes;
-        try {
-            int iconSize = iconStream.available();
-            int iconWriteStart = 0;
-            int iconRead = 0;
-            iconBytes = new byte[iconSize];
-            while ((iconWriteStart < iconSize) && (iconRead != -1)) {
-                iconRead = iconStream.read(iconBytes, iconWriteStart, iconSize);
-                if (iconRead > 0) {
-                    iconWriteStart += iconRead;
-                }
+        if (imagePath != null) {
+            InputStream iconStream = this.getClass().getResourceAsStream(imagePath);
+            if (iconStream == null) {
+                throw new FileNotFoundException(imagePath);
             }
-        } finally {
-            iconStream.close();
+
+            byte[] iconBytes;
+            try {
+                int iconSize = iconStream.available();
+                int iconWriteStart = 0;
+                int iconRead = 0;
+                iconBytes = new byte[iconSize];
+                while ((iconWriteStart < iconSize) && (iconRead != -1)) {
+                    iconRead = iconStream.read(iconBytes, iconWriteStart, iconSize);
+                    if (iconRead > 0) {
+                        iconWriteStart += iconRead;
+                    }
+                }
+            } finally {
+                iconStream.close();
+            }
+            this.icon = Toolkit.getDefaultToolkit().createImage(iconBytes);
         }
-        this.icon = Toolkit.getDefaultToolkit().createImage(iconBytes);
     }
 
     public String getLabel() {
